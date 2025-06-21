@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{:config('sys_name')}后台管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
+    <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
+    <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+
+    <style>
+
+        .filtrate-warp{
+            margin-bottom: 10px;
+        }
+
+        .filtrate-warp .title{
+            padding: 5px 12px 7px 12px;
+            font-size: 14px;
+            font-weight: normal;
+            text-align: left;
+            cursor: pointer;
+            width: 90px;
+            background-color: transparent!important;
+            color: black!important;
+        }
+
+        .filtrate-warp .title:hover{
+            color: black;
+        }
+
+        .filtrate-warp .flag{
+            padding: 6px 12px 6px 12px;
+            cursor: pointer;
+        }
+
+        .filtrate-warp .flag:hover{
+            color: black;
+        }
+
+        .filtrate-warp .layui-badge:hover{
+            color: white!important;
+        }
+
+    </style>
+
+</head>
+<body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
+
+<div class="admin-main layui-anim layui-anim-upbit">
+
+    <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+</div>
+
+
+
+<script type="text/html" id="action">
+    <a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
+</script>
+
+
+
+<script type="text/html" id="topBtn">
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加行业类别</button>
+</script>
+
+
+{include file="common/foot"/}
+<script>
+    layui.use(['table','form','upload','util','laydate'], function() {
+        var table = layui.table,form = layui.form,laydate = layui.laydate, $ = layui.jquery,upload = layui.upload,util = layui.util;
+        var tableIn = table.render({
+            elem: '#table-list',
+            url: '{:url("hangyeList")}',
+            method: 'post',
+            toolbar: '#topBtn',
+            page: true,
+            cols: [[
+                {checkbox:true,fixed: true},
+                {field: 'id', title: 'ID', width: 120, fixed: true},
+                {field: 'hy_name', title: '行业类别', },
+                {field: 'add_time', title:'创建时间',templet:function (res) {
+                        return util.toDateString(res.add_time = (res.add_time * 1000));
+                    }},
+                {title:'操作',width: 260, align: 'center', toolbar: '#action'}
+            ]],
+            limit: 10 //每页默认显示的数量
+        });
+
+
+        table.on('tool(table-list)', function(obj) {
+            var data = obj.data;
+
+            if (obj.event === 'del') {
+                layer.confirm('您确定要删除吗？', function(index){
+                    var loading = layer.load(1, {shade: [0.1, '#fff']});
+                    $.post("{:url('hangyeDel')}",{id:data.id},function(res){
+                        layer.close(loading);
+                        if(res.code===0){
+                            layer.msg(res.msg,{time:1000,icon:1});
+                            tableIn.reload();
+                        }else{
+                            layer.msg('操作失败！',{time:1000,icon:2});
+                        }
+                    });
+                    layer.close(index);
+                });
+            }else if(obj.event === 'edit'){
+                layer_add("编辑行业类别","{:url('Client/hangyeEdit')}?id="+data.id);
+            }
+        });
+
+
+
+
+        $('body').on('click','#add',function() {
+            var indexOpen = layer.open({
+                type: 2,
+                title: '添加行业类别',
+                closeBtn: 1, //是否显示关闭按钮
+                area: ['500px','260px'],
+                anim: 2,  //动画
+                shadeClose: false,  //点击空白处是否关闭
+                maxmin: false, //开启最大化最小化按钮
+                content: ["{:url('Client/hangyeAdd')}"]
+            });
+        })
+
+
+    });
+</script>
+
+
+<script>
+
+    /*添加*/
+    function layer_add(title,url){
+        var index = layer.open({
+            type: 2,
+            title: title,
+            closeBtn: 1, //是否显示关闭按钮
+            area: ['550px', '350px'],
+            anim: 2,  //动画
+            shadeClose: false,  //点击空白处是否关闭
+            maxmin: true, //开启最大化最小化按钮
+            content: [url,'no']
+        });
+    }
+
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{:config('sys_name')}后台管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
+    <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
+    <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+    <style>
+
+        .filtrate-warp{
+            margin-bottom: 10px;
+        }
+
+        .filtrate-warp .title{
+            padding: 5px 12px 7px 12px;
+            font-size: 14px;
+            font-weight: normal;
+            text-align: left;
+            cursor: pointer;
+            width: 90px;
+            background-color: transparent!important;
+            color: black!important;
+        }
+
+        .filtrate-warp .title:hover{
+            color: black;
+        }
+
+        .filtrate-warp .flag{
+            padding: 6px 12px 6px 12px;
+            cursor: pointer;
+        }
+
+        .filtrate-warp .flag:hover{
+            color: black;
+        }
+
+        .filtrate-warp .layui-badge:hover{
+            color: white!important;
+        }
+
+    </style>
+
+</head>
+<body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
+
+<div class="admin-main layui-anim layui-anim-upbit">
+
+
+
+    <fieldset class="layui-elem-field " >
+        <legend>高级查询</legend>
+
+        <div class="layui-card" style="box-shadow: none;margin-top: 10px">
+            <div class="layui-form layui-card-header layuiadmin-card-header-auto" style="border-bottom: transparent;height: auto" >
+
+                <div class="layui-form-item" style="text-align: left;padding-left: 20px;">
+
+                    <div class="layui-inline">
+                        <label class="layui-form-label">日期查询：</label>
+                        <div class="layui-input-inline">
+                            <input type="text" class="layui-input" autocomplete="off" name="at_time" id="at_time" placeholder="请输入日期查询">
+                        </div>
+
+                    </div>
+
+                    <div class="layui-inline">
+                        <label class="layui-form-label" style="margin-left: 5px">公海类型：</label>
+                        <div class="layui-input-inline">
+                            <select name="pr_gh_type" id="pr_gh_type">
+                                <option value="">请选择公海类型</option>
+
+                                {volist name='ghTypeList' id='vo'}
+                                <option value="{$vo.type_name}">{$vo.type_name}</option>
+                                {/volist}
+
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label">手机：</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="phone" name="phone" placeholder="请输入手机号码" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label" style="">客户名称：</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="kh_name" name="kh_name" placeholder="请输入客户名称" class="layui-input">
+                        </div>
+                    </div>
+                    <!-- <div class="layui-inline">
+                        <label class="layui-form-label" style="">时间查询：</label>
+                        <div class="layui-input-inline">
+                            <select name="timebucket">
+                                <option value="">请选择时间</option>
+                                <option value="today">今天</option>
+                                <option value="yesterday">昨天</option>
+                                <option value="week">本周</option>
+                                <option value="last week">上周</option>
+                                <option value="month">本月</option>
+                                <option value="last month">上月</option>
+                                <option value="year">今年</option>
+                                <option value="last year">去年</option>
+                                <option value="-2 hours">两个小时内</option>
+                            </select>
+                        </div>
+                    </div> -->
+
+
+                </div>
+
+
+
+                <div class="layui-inline" style="float: right;padding-bottom: 15px">
+                    <button class="layui-btn layuiadmin-btn-list"  lay-submit lay-filter="LAY-app-contlist-search">
+                        <i class="layui-icon layui-icon-search layuiadmin-button-btn"  style="vertical-align: sub;"></i>查询数据
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+
+
+    </fieldset>
+
+
+
+
+
+
+    <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+</div>
+
+
+
+<script type="text/html" id="action">
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="robClient" style="font-size: 14px"><i class="fa fa-user-o"></i> 提取客户</a>
+</script>
+
+
+<!--<script type="text/html" id="topBtn">
+    <button type="button" class="layui-btn layui-btn-warm layui-btn-sm" id="robAllClient" style="font-size: 14px"><i class="fa fa-user-o"></i>  抢</button>
+</script>-->
+
+
+{include file="common/foot"/}
+<script>
+    layui.use(['table','form','upload','util','laydate'], function() {
+        var table = layui.table,form = layui.form,laydate = layui.laydate, $ = layui.jquery,upload = layui.upload,util = layui.util;
+        var tableIn = table.render({
+            elem: '#table-list',
+            url: '{:url("index")}',
+            method: 'post',
+            toolbar: '#topBtn',
+            page: true,
+            cols: [[
+                {checkbox:true,fixed: true},
+                {field: 'id', title: 'ID', width: 80, fixed: true,hide:true},
+                {field: 'kh_name', title: '客户名称'},
+                {field: 'kh_rank', title: '客户级别', },
+                {field: 'xs_area', title: '国家地区', },
+                {field: 'kh_status', title: '客户来源',},
+                 {field: 'kh_contact', title: 'Whatsapp' },
+                {field: 'kh_hangye', title: '邮箱' },
+                {field: 'phone', title: '电话' },
+                {field: 'remark', title: '备注', },
+                {field: 'at_time', title: '创建时间'},
+                {field: 'to_gh_time', title: '最新转入时间'},
+                {field: 'at_user', title: '创建人'},
+                {field: 'pr_user_bef', title: '前负责人', },
+                {title:'操作',width: 160, align: 'center', toolbar: '#action'}
+            ]],
+            limit: 10 //每页默认显示的数量
+        });
+
+
+        table.on('tool(table-list)', function(obj) {
+            var data = obj.data;
+
+            if (obj.event === 'robClient') {
+                layer.confirm('您确定要抢这个客户吗？', function(index){
+                    var loading = layer.load(1, {shade: [0.1, '#fff']});
+                    $.post("{:url('robClient')}",{id:data.id},function(res){
+                        layer.close(loading);
+                        if(res.code===0){
+                            layer.msg(res.msg,{time:1000,icon:1});
+                            tableIn.reload();
+                        }else{
+                            layer.msg('操作失败！',{time:1000,icon:2});
+                        }
+                    });
+                    layer.close(index);
+                });
+            }
+        });
+
+
+        //监听搜索
+        form.on('submit(LAY-app-contlist-search)', function(data){
+            var field = data.field;
+
+            /* layer.alert(JSON.stringify(data.field), {
+                  title: '最终的提交信息'
+                })
+                return false;*/
+
+
+            table.reload('table-list', {
+                url:"{:url('Liberum/liberumSearch')}",
+                where: {
+                    keyword: data.field
+                },
+                page:{
+                    curr:1
+                }
+            });
+
+
+        });
+
+        laydate.render({
+            elem: '#at_time'
+        });
+
+
+    });
+</script>
+
+
+<script>
+
+
+</script>
+</body>
+</html>

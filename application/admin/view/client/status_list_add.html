@@ -1,0 +1,56 @@
+{include file="common/head"/}
+<div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
+
+    <form class="layui-form layui-form-pane">
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">客户来源</label>
+            <div class="layui-input-4">
+                <input type="text" id="status_name" name="status_name" lay-verify="required" placeholder="请输入客户来源名称" class="layui-input">
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn"  lay-submit="" lay-filter="submit">提交保存</button>
+
+            </div>
+        </div>
+    </form>
+</div>
+{include file="common/foot"/}
+
+<script>
+
+
+        layui.use(['form', 'layer'], function () {
+            var form = layui.form, layer = layui.layer,$= layui.jquery;
+
+
+            //监听提交
+            form.on('submit(submit)', function(data){
+
+              /*  layer.alert(JSON.stringify(data.field), {
+                    title: '最终的提交信息'
+                })
+                return false;*/
+
+                $.post("{:url('Client/statusAdd')}",data.field,function (res) {
+
+
+                    if (res.code == 0){
+                        layer.msg(res.msg,{time:2000});
+                        layer.close(layer.index);
+                        window.parent.location.reload();
+                    }else {
+                        layer.msg(res.msg,{time:2000});
+                    }
+
+                },'json')
+
+                return false;
+            });
+        });
+</script>
+</body>
+</html>

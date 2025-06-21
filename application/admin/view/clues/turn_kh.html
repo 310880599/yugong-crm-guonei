@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{:config('sys_name')}后台管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
+    <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
+    <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+    <style>
+
+        .layui-form-pane .layui-form-label {
+            width: 110px;
+            padding: 8px 15px;
+            height: 38px;
+            line-height: 20px;
+            border-width: 0px;
+            border-style: none;
+            border-radius: 2px 0 0 2px;
+            text-align: center;
+            background-color: #FBFBFB;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+    </style>
+</head>
+<body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
+
+
+<div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
+
+    <form class="layui-form layui-form-pane">
+
+        <input type="hidden" id="id" name="id" lay-verify="required" value="{$result.id}" class="layui-input">
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">线索名称</label>
+            <div class="layui-input-4">
+                <input type="text" id="xs_name" disabled name="xs_name" value="{$result.xs_name}" lay-verify="required" placeholder="请输入线索名称" class="layui-input">
+            </div>
+        </div>
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">联系号码</label>
+            <div class="layui-input-4">
+                <input type="text" disabled id="phone" disabled  name="phone" value="{$result.phone}" lay-verify="required" placeholder="请输入联系号码" class="layui-input">
+            </div>
+        </div>
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">客户名称</label>
+            <div class="layui-input-4">
+                <input type="text" id="kh_name" name="kh_name" lay-verify="required" placeholder="请输入客户名称" class="layui-input">
+            </div>
+        </div>
+
+
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">客户级别</label>
+            <div class="layui-input-4">
+                <select name="kh_rank" id="kh_rank">
+                    <option value="">请选择客户级别</option>
+
+                    {volist name='khRankList' id='vo'}
+                    <option value="{$vo.rank_name}">{$vo.rank_name}</option>
+                    {/volist}
+
+                </select>
+            </div>
+        </div>
+
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">客户状态</label>
+            <div class="layui-input-4">
+                <select name="kh_status" id="kh_status">
+                    <option value="">请选择客户状态</option>
+
+                    {volist name='khStatusList' id='vo'}
+                    <option value="{$vo.status_name}">{$vo.status_name}</option>
+                    {/volist}
+
+                </select>
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">客户需求</label>
+            <div class="layui-input-4">
+                <textarea placeholder="请输入客户需求" class="layui-textarea" name="kh_need"></textarea>
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn"  lay-submit="" lay-filter="submit">提交保存</button>
+
+            </div>
+        </div>
+    </form>
+</div>
+{include file="common/foot"/}
+
+<script>
+
+
+        layui.use(['form', 'layer'], function () {
+            var form = layui.form, layer = layui.layer,$= layui.jquery;
+
+
+            //监听提交
+            form.on('submit(submit)', function(data){
+
+             /* layer.alert(JSON.stringify(data.field), {
+                    title: '最终的提交信息'
+                })
+                return false;*/
+
+                $.post("{:url('Clues/toTurnKh')}",data.field,function (res) {
+
+
+                    if (res.code == 0){
+                        layer.msg(res.msg,{time:2000});
+                        layer.close(layer.index);
+                        window.parent.location.reload();
+                    }else {
+                        layer.msg(res.msg,{time:2000});
+                    }
+
+                },'json')
+
+                return false;
+            });
+        });
+</script>
+</body>
+</html>
