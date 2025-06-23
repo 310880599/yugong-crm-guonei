@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>{:config('sys_name')}后台管理</title>
@@ -13,7 +14,6 @@
     <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
     <style>
-
         .layui-form-pane .layui-form-label {
             width: 110px;
             padding: 8px 15px;
@@ -28,144 +28,233 @@
             box-sizing: border-box;
         }
 
+        .input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .add-btn {
+            background-color: #009688;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .remove-btn {
+            background-color: #FF5722;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .phone {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+
+        .phone_code {
+            width: 80px;
+            margin-right: 10px;
+        }
     </style>
 </head>
+
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 
 
-<div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
+    <div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
 
-    <form class="layui-form layui-form-pane">
+        <form class="layui-form layui-form-pane">
 
 
-        <input type="hidden" id="id" name="id" lay-verify="required" value="{$result.id}" class="layui-input">
+            <input type="hidden" id="id" name="id" lay-verify="required" value="{$result.id}" class="layui-input">
 
-        <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户来源、用户名、备注 -->
-        
+            <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户来源、用户名、备注 -->
 
-        <div class="layui-form-item">
-            <label class="layui-form-label">客户名称</label>
-            <div class="layui-input-4">
-                <input type="text" id="kh_name" name="kh_name" value="{$result.kh_name}" lay-verify="required" placeholder="请输入客户名称" class="layui-input">
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户名称</label>
+                <div class="layui-input-4">
+                    <input type="text" id="kh_name" name="kh_name" value="{$result.kh_name}" lay-verify="required"
+                        placeholder="请输入客户名称" class="layui-input">
+                </div>
             </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">地区</label>
-            <div class="layui-input-4">
-                <input type="text" id="xs_area" name="xs_area" lay-verify="required" placeholder="请输入地区" class="layui-input" value="{$result.xs_area}">
-                <!-- <select name="xs_area" id="xs_area">
-                    <option value="">请选择地区</option>
+            <div class="layui-form-item">
+                <label class="layui-form-label">地区</label>
+                <div class="layui-input-4">
+                    <!-- <input type="text" id="xs_area" name="xs_area" lay-verify="required" placeholder="请输入地区" class="layui-input" value="{$result.xs_area}"> -->
+                    <select name="xs_area" lay-filter="xs_area">
+                        <option value="">请选择地区</option>
+                        {foreach $countries as $key=>$vo }
+                        <option value="{$key}" data-code="{$vo}" {in name="$result.xs_area" value="$vo" } selected
+                            {/in}>{$key}</option>
+                        {/foreach}
 
-                    {volist name='xsAreaList' id='vo'}
-                    <option value="{$vo.area_name}" {in name="$result.xs_area" value="$vo.area_name"} selected {/in}>{$vo.area_name}</option>
-                    {/volist}
-
-                </select> -->
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">行业类别</label>
-            <div class="layui-input-4">
-                <input type="text" id="kh_hangye" name="kh_hangye" lay-verify="required" placeholder="请输入地区" class="layui-input" value="{$result.kh_hangye}">
-                <!-- <select name="kh_hangye" id="kh_hangye">
-                    <option value="">请选择行业类别</option>
-
-                    {volist name='xsHangyeList' id='vo'}
-                    <option value="{$vo.hy_name}" {in name="$result.kh_hangye" value="$vo.hy_name"} selected {/in}>{$vo.hy_name}</option>
-                    {/volist}
-
-                </select> -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">邮箱</label>
+                <div class="layui-input-4">
+                    <div class="input-row">
+                        <input type="text" id="email" name="email[]" lay-verify="required|email" placeholder="请输入邮箱"
+                            class="layui-input layui-required">
+                        <button class="add-btn">+</button>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">Whatsapp</label>
-            <div class="layui-input-4">
-                <input type="text" id="kh_contact" name="kh_contact" value="{$result.kh_contact}" lay-verify="required" placeholder="请输入Whatsapp" class="layui-input">
+            <div class="layui-form-item">
+                <label class="layui-form-label">Whatsapp</label>
+                <div class="layui-input-4">
+                    <input type="text" id="whatsapp" name="whatsapp" value="{$result.whatsapp}"
+                        lay-verify="required" placeholder="请输入Whatsapp" class="layui-input">
+                </div>
             </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">联系号码</label>
-            <div class="layui-input-4">
-                <input type="text" id="phone" name="phone" disabled value="{$result.phone}" lay-verify="required" placeholder="请输入手机号码" class="layui-input">
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系号码</label>
+                <div class="layui-input-4">
+                    <div class="input-row">
+                        <div class="phone">
+                            <input type="number" name="phone_code[]" lay-verify="required" min="1" max="99999" step="1"
+                                placeholder="国家号" class="layui-input phone_code" value="">
+                            <input type="text" id="phone" name="phone[]" lay-verify="required|phone" placeholder="号码"
+                                class="layui-input">
+                        </div>
+                        <button class="add-btn">+</button>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">客户级别</label>
-            <div class="layui-input-4">
-                <select name="kh_rank" id="kh_rank">
-                    <option value="">请选择客户级别</option>
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户级别</label>
+                <div class="layui-input-4">
+                    <select name="kh_rank" id="kh_rank">
+                        <option value="">请选择客户级别</option>
 
-                    {volist name='khRankList' id='vo'}
-                    <option value="{$vo.rank_name}" {in name="$result.kh_rank" value="$vo.rank_name"} selected {/in}>{$vo.rank_name}</option>
-                    {/volist}
+                        {volist name='khRankList' id='vo'}
+                        <option value="{$vo.rank_name}" {in name="$result.kh_rank" value="$vo.rank_name" } selected
+                            {/in}>{$vo.rank_name}</option>
+                        {/volist}
 
-                </select>
+                    </select>
+                </div>
             </div>
-        </div>
 
-        <div class="layui-form-item">
-            <label class="layui-form-label">客户来源</label>
-            <div class="layui-input-4">
-                <select name="kh_status" id="kh_status">
-                    <option value="">请选择客户来源</option>
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户来源</label>
+                <div class="layui-input-4">
+                    <select name="kh_status" id="kh_status">
+                        <option value="">请选择客户来源</option>
 
-                    {volist name='khStatusList' id='vo'}
-                    <option value="{$vo.status_name}" {in name="$result.kh_status" value="$vo.status_name"} selected {/in} >{$vo.status_name}</option>
-                    {/volist}
+                        {volist name='khStatusList' id='vo'}
+                        <option value="{$vo.status_name}" {in name="$result.kh_status" value="$vo.status_name" }
+                            selected {/in}>{$vo.status_name}</option>
+                        {/volist}
 
-                </select>
+                    </select>
+                </div>
             </div>
-        </div>
-        <!-- <div class="layui-form-item">
+            <!-- <div class="layui-form-item">
             <label class="layui-form-label">用户名</label>
             <div class="layui-input-4">
                 <input type="text" id="kh_username" name="kh_username" lay-verify="required" placeholder="请输入用户名" value="{$result.kh_username}" class="layui-input">
             </div>
         </div> -->
-        <div class="layui-form-item">
-            <label class="layui-form-label">备注</label>
-            <div class="layui-input-4">
-                <textarea placeholder="请输入备注信息" class="layui-textarea" name="remark">{$result.remark}</textarea>
+            <div class="layui-form-item">
+                <label class="layui-form-label">备注</label>
+                <div class="layui-input-4">
+                    <textarea placeholder="请输入备注信息" class="layui-textarea" name="remark">{$result.remark}</textarea>
+                </div>
             </div>
-        </div>
 
-        <div class="layui-form-item">
-            <div class="layui-input-block">
-                <button type="button" class="layui-btn"  lay-submit="" lay-filter="submit">提交保存</button>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn" lay-submit="" lay-filter="submit">提交保存</button>
 
+                </div>
             </div>
-        </div>
 
 
-    </form>
-</div>
-{include file="common/foot"/}
+        </form>
+    </div>
+    {include file="common/foot"/}
 
-<script>
+    <script>
 
 
         layui.use(['form', 'layer'], function () {
-            var form = layui.form, layer = layui.layer,$= layui.jquery;
+            var form = layui.form, layer = layui.layer, $ = layui.jquery;
+            //验证
+            form.verify({
+                // email: function (value) {
+                //     if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,4}$/.test(value)) {
+                //         return '邮箱格式不正确 (例: example@domain.com)';
+                //     }
+                // },
+                // phone_code: function (value) {
+                //     if (!/^(\+?\d{1,5})$/.test(value)) {
+                //         return '国家码格式错误 (例: +86 或 0086)';
+                //     }
+                // },
+                phone: function (value) {
+                    if (!/^\d{6,15}$/.test(value)) {
+                        return '号码应为6-15位纯数字';
+                    }
+                }
+            });
 
+            //多行
+            $(document).on('click', '.add-btn', function () {
+                var $newRow = $('<div class="input-row">');
+                var $clone = $(this).prev().clone().val('');
+                $newRow.append($clone);
+                $newRow.append('<button class="remove-btn">-</button>');
+                $(this).parent().parent().append($newRow);
+                return false;
+            });
+            // 删除行
+            $(document).on('click', '.remove-btn', function () {
+                $(this).parent().remove();
+                // 如果删除后只剩一行，显示添加按钮
+                if ($('.input-row').length === 1) {
+                    $('.add-btn').show();
+                }
+                return false;
+            });
+            // 新增地区选择监听
+            form.on('select(xs_area)', function (data) {
+                var code = $(data.elem).find('option:selected').data('code');
+                $('.phone_code').val(code || 1);
+            })
 
             //监听提交
-            form.on('submit(submit)', function(data){
+            form.on('submit(submit)', function (data) {
 
-                $.post("{:url('Client/edit')}",data.field,function (res) {
+                $.post("{:url('Client/edit')}", data.field, function (res) {
 
-                    if (res.code == 0){
-                        layer.msg(res.msg,{time:2000});
+                    if (res.code == 0) {
+                        layer.msg(res.msg, { time: 2000 });
                         layer.close(layer.index);
                         window.parent.location.reload();
-                    }else {
-                        layer.msg(res.msg,{time:2000});
+                    } else {
+                        layer.msg(res.msg, { time: 2000 });
                     }
 
-                },'json')
+                }, 'json')
 
                 return false;
             });
         });
-</script>
+    </script>
 </body>
+
 </html>
