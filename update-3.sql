@@ -52,3 +52,15 @@ CREATE TABLE `crm_contacts` (
   INDEX `idx_contact_value` (`contact_value`) USING BTREE COMMENT '联系方式值索引'
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='客户联系方式关系表';
 
+
+
+-- -- 数据初始化
+
+-- -- 客户等级
+-- insert into crm_client_rank (id,rank_name) values (1,'A类客户'),(2,'B类客户'),(3,'C类客户'),(4,'D类客户'),(5,'其他');
+
+-- -- 客户来源
+-- truncate table crm_clues_source;
+-- ALTER table crm_clues_source modify add_time datetime DEFAULT NULL COMMENT '添加时间';
+-- insert into crm_clues_source (id,source_name) values (1,'阿里'),(2,'c端'),(3,'SEM'),(4,'SEO'),(5,'抖音'),(6,'亚马逊');
+

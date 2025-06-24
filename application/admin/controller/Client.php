@@ -14,6 +14,20 @@ class Client extends Common
         'email' => 2,
         'whatsapp' => 3,
     ];
+
+
+    // 添加公共日志
+    private function addOperLog($leads_id, $type, $description)
+    {
+        Db::table('crm_operation_log')->insert([
+            'leads_id' => $leads_id,
+            'oper_type' => $type,
+            'description' => $description,
+            'oper_user' => Session::get('username'),
+            'created_at' => date('Y-m-d H:i:s')
+        ]);
+    }
+
     //客户联系方式格式化
     public function formatContact($contactList)
     {
@@ -685,6 +699,12 @@ class Client extends Common
                 if ($result) {
                     $count++;
                 }
+                // 添加日志记录
+                // $this->addOperLog(
+                //     $value,
+                //     '移入公海',
+                //     "移入 [{$pr_gh_type}] 公海池"
+                // );
             }
             if ($count > 0) {
                 $msg = ['code' => 0, 'msg' => $count . '个客户移入公海成功！', 'data' => []];
@@ -873,7 +893,10 @@ class Client extends Common
         //1，获取提交的线索ID 【1,2,3,4,】
         $ids = Request::param('ids');
         $this->assign('ids', $ids);
-
+        //客户信息
+        $clientList = Db::name('crm_leads')->where('id', 'in', $ids)->field('id,kh_name')->select();
+        $clientName = implode(',', array_column($clientList, 'kh_name'));
+        $this->assign('client_name', $clientName);
 
         //查询所有管理员（去除admin）
         $adminResult = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
@@ -893,6 +916,12 @@ class Client extends Common
                 if ($insertAll) {
                     $count++;
                 }
+                // 添加日志记录
+                // $this->addOperLog(
+                //     $value,
+                //     '转移负责人',
+                //     "从 [{$data['pr_user_bef']['pr_user']}] 转移给 [{$username}]"
+                // );
             }
 
 
@@ -1012,4 +1041,28 @@ class Client extends Common
         cache('countries', $countries);
         return $countries;
     }
+
+    //客户成交
+    public function chengjiao(){
+        $ids = Request::param('ids');
+        if(is_string($ids))$ids = explode(',', $ids);
+        $count = 0;
+        foreach ($ids as $key => $value) {
+            $data['issuccess'] = 1;
+            $data['id'] = $value;
+            $insertAll = Db::name('crm_leads')->update($data);
+            if ($insertAll) {
+                $count++;
+            }
+        }
+        if ($count > 0) {
+            $msg = ['code' => 0, 'msg' => '成交' . $count . '个客户成功！', 'data' => []];
+            return json($msg);
+        } else {
+            $msg = ['code' => 500, 'msg' => '成交失败！', 'data' => []];
+            return json($msg);
+        }
+    }
+
+
 }
