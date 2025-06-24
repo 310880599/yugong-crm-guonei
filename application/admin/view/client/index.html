@@ -214,12 +214,13 @@
             cols: [[
                 {checkbox:true,fixed: true},
                 {field: 'id', title: 'ID', width: 80, fixed: true,hide:true},
-                {field: 'kh_name', title: '客户名称',templet:function (res) {
+                {field: 'kh_name', title: '客户名称',width: 200,templet:function (res) {
                         return "<a href='{:url('dialogue')}?id="+res.id+"'>"+res.kh_name+"</a>";
                     }},
-                {field: 'xs_area', title: '地区' },
-                {field: 'kh_contact', title: 'Whatspp'},
-                {field: 'phone', title: '联系号码' },
+                {field: 'xs_area', title: '地区',width: 180, },
+                // {field: 'whatsapp', title: 'Whatsapp', width: 200,},
+                // {field: 'phone', title: '联系号码', width: 200,},
+                // {field: 'email', title: '联系邮箱', width: 180,},
                 {field: 'kh_rank', title: '客户级别'},
                 {field: 'kh_status', title: '客户来源' },
 

@@ -4,7 +4,6 @@ DROP TABLE IF EXISTS `crm_leads`;
 CREATE TABLE `crm_leads` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `xs_name` varchar(60) DEFAULT NULL COMMENT '线索名称',
---   `phone_code` varchar(20) NOT NULL DEFAULT 1  COMMENT '国家号',
   `xs_status` varchar(100) DEFAULT NULL COMMENT '线索_状态',
   `last_up_records` varchar(200) DEFAULT NULL COMMENT '最新跟进记录',
   `last_up_time` datetime DEFAULT NULL COMMENT '实际跟进时间',
@@ -33,8 +32,8 @@ CREATE TABLE `crm_leads` (
   `issuccess` int(3) NOT NULL DEFAULT '-1' COMMENT '是否成交 1成交 -1未成交',
   `kh_username` varchar(100) DEFAULT NULL COMMENT '客户用户名',
   `ispublic` int(2) DEFAULT '1' COMMENT '1 公共 2 个人',
-  PRIMARY KEY (`id`) USING BTREE,
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='CRM线索单表';
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='CRM线索单表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 

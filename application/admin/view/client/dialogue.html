@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>{:config('sys_name')}后台管理</title>
@@ -18,75 +19,91 @@
             height: 100px;
             margin: 0 10px 0px 0;
         }
-
+        .input-row{
+            margin-bottom: 10px;
+        }
     </style>
 </head>
+
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 
 
-<div class="admin-main layui-anim layui-anim-upbit">
-    <a href="javascript:window.history.back(-1)" class="layui-btn layui-btn-primary">返回上一页</a>
-    <fieldset class="layui-elem-field layui-field-title">
-        <legend>写跟进</legend>
-    </fieldset>
+    <div class="admin-main layui-anim layui-anim-upbit">
+        <a href="javascript:window.history.back(-1)" class="layui-btn layui-btn-primary">返回上一页</a>
+        <fieldset class="layui-elem-field layui-field-title">
+            <legend>写跟进</legend>
+        </fieldset>
 
-    <div class="layui-row" style="">
-        <div class="layui-col-xs6" style="">
+        <div class="layui-row" style="">
+            <div class="layui-col-xs6" style="">
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">ID</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.id}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">ID</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.id}" class="layui-input">
+                    </div>
                 </div>
-            </div>
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">客户名称</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.kh_name}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">客户名称</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.kh_name}" class="layui-input">
+                    </div>
                 </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">地区</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.xs_area}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">地区</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.xs_area}" class="layui-input">
+                    </div>
                 </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">行业类别</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.kh_hangye}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">邮箱</label>
+                    <div class="layui-input-4">
+
+                        {foreach $result.contacts['email'] as $v}
+                        <div class="input-row">
+                            <input type="text" disabled value="{$v}" class="layui-input">
+                        </div>
+                        {/foreach}
+                    </div>
                 </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">Whatsapp</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.kh_contact}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Whatsapp</label>
+                    <div class="layui-input-4">
+                        {foreach $result.contacts['whatsapp'] as $v}
+                        <div class="input-row">
+                            <input type="text" disabled value="{$v}" class="layui-input">
+                        </div>
+                        {/foreach}
+                    </div>
                 </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">联系方式</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.phone}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">联系方式</label>
+                    <div class="layui-input-4">
+                        {foreach $result.contacts['phone'] as $v}
+                        <div class="input-row">
+                            <input type="text" disabled value="{$v}" class="layui-input">
+                        </div>
+                        {/foreach}
+                    </div>
                 </div>
-            </div>
 
 
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">客户来源</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.kh_status}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">客户来源</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.kh_status}" class="layui-input">
+                    </div>
                 </div>
-            </div>
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">客户级别</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.kh_rank}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">客户级别</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.kh_rank}" class="layui-input">
+                    </div>
                 </div>
-            </div>
-           <!--  <div class="layui-form-item">
+                <!--  <div class="layui-form-item">
                 <label class="layui-form-label">客户需求</label>
                 <div class="layui-input-4">
                     <input type="text" disabled value="{$result.kh_need}"  class="layui-input">
@@ -94,261 +111,263 @@
             </div> -->
 
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">跟进时间</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.last_up_time}"  class="layui-input">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">跟进时间</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.last_up_time}" class="layui-input">
+                    </div>
                 </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">跟进记录</label>
+                    <div class="layui-input-4">
+                        <textarea disabled class="layui-textarea">{$result.last_up_records}</textarea>
+                    </div>
+                </div>
+
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">负责人</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.pr_user}" class="layui-input">
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">线索来源</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.xs_source}" class="layui-input">
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">备注信息</label>
+                    <div class="layui-input-4">
+
+                        <textarea disabled class="layui-textarea">{$result.kh_need}</textarea>
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">创建人</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.at_user}" class="layui-input">
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">创建时间</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.at_time}" class="layui-input">
+                    </div>
+                </div>
+
             </div>
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">跟进记录</label>
-                <div class="layui-input-4">
-                    <textarea disabled  class="layui-textarea">{$result.last_up_records}</textarea>
-                </div>
-            </div>
+            <div class="layui-col-xs6" style="padding: 0px 10px 0px 10px;">
 
+                <fieldset class="layui-elem-field " style="padding: 15px 15px 0px 15px">
+                    <legend>跟进记录</legend>
+                    <ul class="layui-timeline">
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">负责人</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.pr_user}"  class="layui-input">
-                </div>
-            </div>
+                        {volist name='$result.comment' id='vo' }
+                        <li class="layui-timeline-item">
+                            <i class="layui-icon layui-timeline-axis"></i>
+                            <div class="layui-timeline-content layui-text">
+                                <h3 class="layui-timeline-title" style="color: rosybrown;font-size: 15px">
 
-            <div class="layui-form-item">
-                <label class="layui-form-label">线索来源</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.xs_source}"  class="layui-input">
-                </div>
-            </div>
-
-            <div class="layui-form-item">
-                <label class="layui-form-label">备注信息</label>
-                <div class="layui-input-4">
-
-                    <textarea disabled  class="layui-textarea">{$result.kh_need}</textarea>
-                </div>
-            </div>
-
-            <div class="layui-form-item">
-                <label class="layui-form-label">创建人</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.at_user}"  class="layui-input">
-                </div>
-            </div>
-
-            <div class="layui-form-item">
-                <label class="layui-form-label">创建时间</label>
-                <div class="layui-input-4">
-                    <input type="text" disabled value="{$result.at_time}"  class="layui-input">
-                </div>
-            </div>
-
-        </div>
-
-        <div class="layui-col-xs6" style="padding: 0px 10px 0px 10px;">
-
-            <fieldset class="layui-elem-field " style="padding: 15px 15px 0px 15px">
-                <legend>跟进记录</legend>
-                <ul class="layui-timeline">
-
-                    {volist name='$result.comment' id='vo'  }
-                    <li class="layui-timeline-item">
-                        <i class="layui-icon layui-timeline-axis"></i>
-                        <div class="layui-timeline-content layui-text">
-                            <h3 class="layui-timeline-title" style="color: rosybrown;font-size: 15px">
-
-                                {$vo.create_date|date='Y年m月d日 H:i'}</h3>
+                                    {$vo.create_date|date='Y年m月d日 H:i'}</h3>
                                 <p>
                                 <div style="display: inline-block">
-                                    <img src="{$vo.avatar}"alt="" style="width: 30px;height: 30px;border-radius: 50%">
+                                    <img src="{$vo.avatar}" alt="" style="width: 30px;height: 30px;border-radius: 50%">
                                     <strong>{$vo.username}：</strong>
                                 </div>
                                 {$vo.reply_msg}
 
                                 </p>
-                        </div>
-                    </li>
-                    {/volist}
+                            </div>
+                        </li>
+                        {/volist}
 
-                </ul>
+                    </ul>
 
 
 
-                <div class="layui-form layui-form-pane">
+                    <div class="layui-form layui-form-pane">
 
                         <div class="layui-form-item layui-form-text">
                             <a name="comment"></a>
                             <div class="layui-input-block">
-                                <textarea name="reply_msg" id="reply_msg"  required lay-verify="required" placeholder="请输入内容"  class="layui-textarea fly-editor" style="height: 150px;"></textarea>
+                                <textarea name="reply_msg" id="reply_msg" required lay-verify="required"
+                                    placeholder="请输入内容" class="layui-textarea fly-editor"
+                                    style="height: 150px;"></textarea>
                             </div>
                         </div>
                         <div class="layui-form-item">
                             <input type="hidden" name="leads_id" value="{$result.id}">
-                            
-                           
-                    
-                          
+
+
+
+
                             {if condition="$group_id eq 1 "}
                             <button class="layui-btn" lay-filter="btn_comment" lay-submit>提交记录</button>
                             {elseif condition="$result.pr_user eq $curname " /}
                             <button class="layui-btn" lay-filter="btn_comment" lay-submit>提交记录</button>
-                             {else/}     
-                             <button class="layui-btn"  lay-submit>禁止提交 </button>
-                             {/if}
-                             
-                             
-                             
+                            {else/}
+                            <button class="layui-btn" lay-submit>禁止提交 </button>
+                            {/if}
+
+
+
                         </div>
 
-                </div>
-                
+                    </div>
 
 
-            </fieldset>
-            <!--{:url('dialogue')}?id={{d.id}}-->
-            <div>
-                
-       
-               
-               
-                {if condition="$result.pr_user eq $curname  OR $group_id eq 1 "}
-               
-                  {if condition="$result.id eq 0 "}
-                 
-                        
-                        
-                            <a class="layui-btn layui-btn-primary">没有了！</a>
-                             {else/}  
-                            
-                                {if condition="$result.id eq 1 "}
-                      <a class="layui-btn layui-btn-primary">最前！</a>
-                     {else/}
-                         <a href="{:url('dialogue')}?id={$result.id+1}" class="layui-btn layui-btn-primary">跟进上一个</a>
-                    
-                        {/if}
-                    
-               
-                     
-                     
-                
-              
-        
-                
-                        {if condition="$result.id eq null "}
-                     <a class="layui-btn layui-btn-primary">没有了！</a>
-                     {else/}
-                        <a href="{:url('dialogue')}?id={$result.id-1}" class="layui-btn layui-btn-primary">跟进下一个</a>
-                 
-                        {/if} 
-                    
+
+                </fieldset>
+                <!--{:url('dialogue')}?id={{d.id}}-->
+                <div>
+
+
+
+
+                    {if condition="$result.pr_user eq $curname OR $group_id eq 1 "}
+
+                    {if condition="$result.id eq 0 "}
+
+
+
+                    <a class="layui-btn layui-btn-primary">没有了！</a>
+                    {else/}
+
+                    {if condition="$result.id eq 1 "}
+                    <a class="layui-btn layui-btn-primary">最前！</a>
+                    {else/}
+                    <a href="{:url('dialogue')}?id={$result.id+1}" class="layui-btn layui-btn-primary">跟进上一个</a>
+
                     {/if}
-                        
-                 
-                 {else/}    
-                     <a class="layui-btn layui-btn-primary">没有权限！</a>
-                {/if}  
-                    
+
+
+
+
+
+
+
+
+                    {if condition="$result.id eq null "}
+                    <a class="layui-btn layui-btn-primary">没有了！</a>
+                    {else/}
+                    <a href="{:url('dialogue')}?id={$result.id-1}" class="layui-btn layui-btn-primary">跟进下一个</a>
+
+                    {/if}
+
+                    {/if}
+
+
+                    {else/}
+                    <a class="layui-btn layui-btn-primary">没有权限！</a>
+                    {/if}
+
                 </div>
 
 
+            </div>
         </div>
+
+
     </div>
+    {include file="common/foot"/}
+
+    <script>
+        layui.use(['form', 'layer', 'jquery'], function () {
+            var form = layui.form, layer = layui.layer, $ = layui.jquery;
 
 
-</div>
-{include file="common/foot"/}
+            form.on('submit(btn_comment)', function (data) {
+                console.log(data.elem) //被执行事件的元素DOM对象，一般为button对象
+                console.log(data.form) //被执行提交的form对象，一般在存在form标签时才会返回
+                console.log(data.field) //当前容器的全部表单字段，名值对形式：{name: value}
+                $.ajax(
+                    {
+                        method: 'post',
+                        url: "{:url('Client/comment')}",
+                        async: false,
+                        data: data.field,
+                        success: function (res) {
+                            layer.msg(res.msg, function () {
+                                /*   window.location = "{:url('Index/index')}"
+                                   return false;*/
+                                $('#reply_msg').val('');
 
-<script>
-    layui.use(['form', 'layer','jquery'], function () {
-        var form = layui.form, layer = layui.layer,$ = layui.jquery;
+                                $('.layui-timeline').append("<li class=\"layui-timeline-item\">\n" +
+                                    "                        <i class=\"layui-icon layui-timeline-axis\"></i>\n" +
+                                    "                        <div class=\"layui-timeline-content layui-text\">\n" +
+                                    "                            <h3 class=\"layui-timeline-title\" style=\"color: rosybrown;font-size: 15px\">\n" +
+                                    "\n" +
+                                    "                                " + res.data.create_date + "</h3>\n" +
+                                    "                                <p>\n" +
+                                    "                                <div style=\"display: inline-block\">\n" +
+                                    "                                    <img src=\"{$Think.session.avatar}\"alt=\"\" style=\"width: 30px;height: 30px;border-radius: 50%\">\n" +
+                                    "                                    <strong>{$Think.session.username}：</strong>\n" +
+                                    "                                </div>\n" +
+                                    "                                " + res.data.reply_msg + "\n" +
+                                    "\n" +
+                                    "                                </p>\n" +
+                                    "                        </div>\n" +
+                                    "                    </li>");
 
+                            });
+                        },
+                        error: function (res) {
 
-        form.on('submit(btn_comment)',function (data) {
-            console.log(data.elem) //被执行事件的元素DOM对象，一般为button对象
-            console.log(data.form) //被执行提交的form对象，一般在存在form标签时才会返回
-            console.log(data.field) //当前容器的全部表单字段，名值对形式：{name: value}
-            $.ajax(
-                {
-                    method:'post',
-                    url:"{:url('Client/comment')}",
-                    async:false,
-                    data:data.field,
-                    success:function (res) {
-                        layer.msg(res.msg,function () {
-                            /*   window.location = "{:url('Index/index')}"
-                               return false;*/
-                            $('#reply_msg').val('');
+                        }
+                    })
 
-                            $('.layui-timeline').append("<li class=\"layui-timeline-item\">\n" +
-                                "                        <i class=\"layui-icon layui-timeline-axis\"></i>\n" +
-                                "                        <div class=\"layui-timeline-content layui-text\">\n" +
-                                "                            <h3 class=\"layui-timeline-title\" style=\"color: rosybrown;font-size: 15px\">\n" +
-                                "\n" +
-                                "                                "+res.data.create_date+"</h3>\n" +
-                                "                                <p>\n" +
-                                "                                <div style=\"display: inline-block\">\n" +
-                                "                                    <img src=\"{$Think.session.avatar}\"alt=\"\" style=\"width: 30px;height: 30px;border-radius: 50%\">\n" +
-                                "                                    <strong>{$Think.session.username}：</strong>\n" +
-                                "                                </div>\n" +
-                                "                                "+ res.data.reply_msg+"\n" +
-                                "\n" +
-                                "                                </p>\n" +
-                                "                        </div>\n" +
-                                "                    </li>");
+                return false; //阻止表单跳转。如果需要表单跳转，去掉这段即可。
+            })
 
-                         });
-                    },
-                    error:function (res) {
+            form.on('submit(btn_reply)', function (data) {
+                console.log(data.elem) //被执行事件的元素DOM对象，一般为button对象
+                console.log(data.form) //被执行提交的form对象，一般在存在form标签时才会返回
+                console.log(data.field) //当前容器的全部表单字段，名值对形式：{name: value}
+                $.ajax(
+                    {
+                        method: 'post',
+                        url: "{:url('Index/reply')}",
+                        async: false,
+                        data: data.field,
+                        success: function (res) {
+                            layer.msg(res.msg, function () {
+                                /*   window.location = "{:url('Index/index')}"
+                                   return false;*/
+                                $('#reply_msg').val('');
 
-                    }
-                })
+                                $('.layui-timeline').append(" <li class=\"layui-timeline-item\">\n" +
+                                    "                <i class=\"layui-icon layui-timeline-axis\"></i>\n" +
+                                    "                <div class=\"layui-timeline-content layui-text\">\n" +
+                                    "                    <h3 class=\"layui-timeline-title\">" + res.data.user_id + "</h3>\n" +
+                                    "                    <p>\n" + res.data.reply_msg + "<small>" + res.data.create_date + "</small>\n" +
+                                    "                    </p>\n" +
+                                    "                </div>\n" +
+                                    "            </li>")
 
-            return false; //阻止表单跳转。如果需要表单跳转，去掉这段即可。
-        })
+                            });
+                        },
+                        error: function (res) {
 
-        form.on('submit(btn_reply)',function (data) {
-            console.log(data.elem) //被执行事件的元素DOM对象，一般为button对象
-            console.log(data.form) //被执行提交的form对象，一般在存在form标签时才会返回
-            console.log(data.field) //当前容器的全部表单字段，名值对形式：{name: value}
-            $.ajax(
-                {
-                    method:'post',
-                    url:"{:url('Index/reply')}",
-                    async:false,
-                    data:data.field,
-                    success:function (res) {
-                        layer.msg(res.msg,function () {
-                            /*   window.location = "{:url('Index/index')}"
-                               return false;*/
-                            $('#reply_msg').val('');
+                        }
+                    })
 
-                            $('.layui-timeline').append(" <li class=\"layui-timeline-item\">\n" +
-                                "                <i class=\"layui-icon layui-timeline-axis\"></i>\n" +
-                                "                <div class=\"layui-timeline-content layui-text\">\n" +
-                                "                    <h3 class=\"layui-timeline-title\">"+res.data.user_id+"</h3>\n" +
-                                "                    <p>\n" + res.data.reply_msg+"<small>"+res.data.create_date+"</small>\n" +
-                                "                    </p>\n" +
-                                "                </div>\n" +
-                                "            </li>")
-
-                        });
-                    },
-                    error:function (res) {
-
-                    }
-                })
-
-            return false; //阻止表单跳转。如果需要表单跳转，去掉这段即可。
-        })
+                return false; //阻止表单跳转。如果需要表单跳转，去掉这段即可。
+            })
 
 
 
 
 
-    });
+        });
 
 
 
-</script>
+    </script>

@@ -96,7 +96,7 @@
                     <select name="xs_area" lay-filter="xs_area">
                         <option value="">请选择地区</option>
                         {foreach $countries as $key=>$vo }
-                        <option value="{$key}" data-code="{$vo}" {in name="$result.xs_area" value="$vo" } selected
+                        <option value="{$key}" data-code="{$vo}" {in name="$result.xs_area" value="$key" } selected
                             {/in}>{$key}</option>
                         {/foreach}
 
@@ -106,32 +106,39 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">邮箱</label>
                 <div class="layui-input-4">
+                    {foreach $contact['email'] as $i=>$e}
                     <div class="input-row">
                         <input type="text" id="email" name="email[]" lay-verify="required|email" placeholder="请输入邮箱"
-                            class="layui-input layui-required">
-                        <button class="add-btn">+</button>
+                            class="layui-input layui-required" value="{$e}">
+                        {if $i==0}<button class="add-btn">+</button>{else}<button class="remove-btn">-</button>{/if}
                     </div>
+                    {/foreach}
                 </div>
             </div>
             <div class="layui-form-item">
                 <label class="layui-form-label">Whatsapp</label>
                 <div class="layui-input-4">
-                    <input type="text" id="whatsapp" name="whatsapp" value="{$result.whatsapp}"
-                        lay-verify="required" placeholder="请输入Whatsapp" class="layui-input">
+                     {foreach $contact['whatsapp'] as $i=>$e}
+                    <input type="text" id="whatsapp" name="whatsapp" value="{$e}" lay-verify="required"
+                        placeholder="请输入Whatsapp" class="layui-input" >
+                    {/foreach}
                 </div>
             </div>
             <div class="layui-form-item">
                 <label class="layui-form-label">联系号码</label>
                 <div class="layui-input-4">
+                     {foreach $contact['phone'] as $i=>$e}
+                     {php}$phone_arr = explode('#',$e); {/php}
                     <div class="input-row">
                         <div class="phone">
                             <input type="number" name="phone_code[]" lay-verify="required" min="1" max="99999" step="1"
-                                placeholder="国家号" class="layui-input phone_code" value="">
-                            <input type="text" id="phone" name="phone[]" lay-verify="required|phone" placeholder="号码"
-                                class="layui-input">
+                                placeholder="国家号" class="layui-input phone_code" value="{$phone_arr[0]}">
+                            <input type="text" name="phone[]" lay-verify="required|phone" placeholder="号码"
+                                class="layui-input phone" value="{$phone_arr[1]}">
                         </div>
-                        <button class="add-btn">+</button>
+                        {if $i==0}<button class="add-btn">+</button>{else}<button class="remove-btn">-</button>{/if}
                     </div>
+                     {/foreach}
                 </div>
             </div>
             <div class="layui-form-item">
@@ -215,7 +222,8 @@
             //多行
             $(document).on('click', '.add-btn', function () {
                 var $newRow = $('<div class="input-row">');
-                var $clone = $(this).prev().clone().val('');
+                var $clone = $(this).prev().clone();
+                $clone.find('.phone').val('');  
                 $newRow.append($clone);
                 $newRow.append('<button class="remove-btn">-</button>');
                 $(this).parent().parent().append($newRow);

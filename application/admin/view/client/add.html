@@ -208,7 +208,8 @@
             //多行
             $(document).on('click', '.add-btn', function () {
                 var $newRow = $('<div class="input-row">');
-                var $clone = $(this).prev().clone().val('');
+                var $clone = $(this).prev().clone();
+                $clone.find('.phone').val('');  
                 $newRow.append($clone);
                 $newRow.append('<button class="remove-btn">-</button>');
                 $(this).parent().parent().append($newRow);

@@ -796,12 +796,36 @@ function importExecl($file = '', $sheet = 0)
     return $data;
 }
 
-function dd($v)
+//模仿laravel框架的dd函数
+
+function dd(...$vars)
 {
-    var_dump($v);
+    echo '<style>
+        pre.dd {
+            background: #f5f5f5;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: auto;
+        }
+    </style>';
+    
+    foreach ($vars as $var) {
+        echo '<pre class="dd">';
+        if (function_exists('dump')) {
+            dump($var);
+        } else {
+            ob_start();
+            var_export($var);
+            $output = ob_get_clean();
+            highlight_string("<?php\n" . $output . ";");
+        }
+        echo '</pre>';
+    }
+    
     die;
 }
-
 
 function getDuplicates(array $arr): array
 {

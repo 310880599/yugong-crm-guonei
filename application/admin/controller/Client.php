@@ -14,6 +14,31 @@ class Client extends Common
         'email' => 2,
         'whatsapp' => 3,
     ];
+    //客户联系方式格式化
+    public function formatContact($contactList)
+    {
+        $contactGroup = [];
+        foreach ($contactList as $contact) {
+            if (isset($contactGroup[$contact['leads_id']][$contact['contact_type']])) {
+                $contactGroup[$contact['leads_id']][$contact['contact_type']][] = $contact['contact_extra'] ? $contact['contact_extra'] . '-' . $contact['contact_value'] : $contact['contact_value'];
+            } else {
+                $contactGroup[$contact['leads_id']][$contact['contact_type']] = [$contact['contact_extra'] ? $contact['contact_extra'] . '-' . $contact['contact_value'] : $contact['contact_value']];
+            }
+        }
+        return $contactGroup;
+    }
+
+    public function getContactType($contactGroup)
+    {
+        $con_map = array_flip(self::CONTACT_MAP);
+        $result = [];
+        foreach ($contactGroup as $key => $vo) {
+            $typeName = $con_map[$key] ?? 'unknown';
+            $result[$typeName] = $vo;
+        }
+        return $result;
+    }
+
     //客户列表
     public function index()
     {
@@ -26,6 +51,16 @@ class Client extends Common
                 ->order('ut_time desc')
                 ->paginate(array('list_rows' => $pageSize, 'page' => $page))
                 ->toArray();
+            // $ids = array_column($list['data'], 'id');
+            // $contactList = db('crm_contacts')->where('leads_id', 'in', $ids)->where('is_delete', 0)->select();
+            // $contactGroup = $this->formatContact($contactList);
+            // foreach ($list['data'] as $key => &$vo) {
+            //     if (isset($contactGroup[$vo['id']])) {
+            //         $vo['phone'] = $contactGroup[$vo['id']][self::CONTACT_MAP['phone']] ?? '';
+            //         $vo['email'] = $contactGroup[$vo['id']][self::CONTACT_MAP['email']] ?? '';
+            //         $vo['whatsapp'] = $contactGroup[$vo['id']][self::CONTACT_MAP['whatsapp']] ?? '';
+            //     }
+            // }
             return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
         }
 
@@ -236,10 +271,10 @@ class Client extends Common
             $contact['phone'] = Request::param('phone');
             $contact['email'] = Request::param('email');
             $contact['whatsapp'] = Request::param('whatsapp');
+            $phone_code = Request::param('phone_code');
 
             $data['kh_name'] = Request::param('kh_name');
             $data['xs_area'] = Request::param('xs_area');
-            $data['phone_code'] = Request::param('phone_code');
             // $data['kh_contact'] = Request::param('kh_contact');
             $data['kh_rank'] = Request::param('kh_rank');
             $data['kh_status'] = Request::param('kh_status');
@@ -256,24 +291,33 @@ class Client extends Common
             $data['ispublic'] = 3;
             //当前录入查重
             $find = db('crm_leads')->whereIn('kh_name', $data['kh_name'])->find();
-            if($find)  return fail($data['kh_name'] . '客户信息已存在,当前所属人'.$find['pr_user']);
-           
-            foreach (['email' => '邮箱', 'phone' => '手机号码'] as $k => $v) {
+            if ($find)  return fail($data['kh_name'] . '客户信息已存在,当前所属人' . $find['pr_user']);
+
+            foreach (['email' => '邮箱', 'phone' => '手机号码', 'whatsapp' => 'whatsapp'] as $k => $v) {
+                if (is_string($contact[$k])) $contact[$k] = explode(',', $contact[$k]);
                 $duplicates = getDuplicates($contact[$k]);
                 if ($duplicates) {
                     return fail($v . ':' . implode(',', $duplicates) . ' 重复录入');
                 }
                 //查询关联表crm_contacts数据表重复
-                $find = db('crm_contacts')->whereIn('contact_value', $contact[$k])->find();
-                if ($find) {
-                    return fail($find['contact_value'] . '客户信息已存在,当前所属人'.$find['pr_user']);
+                $contactExist = db('crm_contacts')->where('is_delete', 0)->whereIn('contact_value', $contact[$k])->find();
+                if ($contactExist) {
+                    $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
+                    return fail($contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']);
                 }
             }
-
             Db::startTrans();
             try {
-                //联系方式保存
+                // 客户信息保存
+                db('crm_leads')->insert($data);
+                $id = Db::getLastInsID();
+                if (!$id) {
+                    return fail('客户信息插入失败');
+                }
                 $contactData = [];
+                $contact['phone'] =  array_map(function ($code, $phone) {
+                    return [$code, $phone];
+                }, $phone_code, $contact['phone']);
                 foreach ($contact as $k => $v) {
                     $contact_type = self::CONTACT_MAP[$k];
                     if (is_string($v)) $v = explode(',', $v);
@@ -281,28 +325,27 @@ class Client extends Common
 
                         $contact_value = $c_v;
                         $contact_extra = '';
-                        if ($k == 'phone') {
-                            $contact_extra = $e;
+                        if (is_array($c_v)) {
+                            $contact_extra = $c_v[0];
+                            $contact_value = $c_v[1];
                         }
-                        $contact_value = is_array($c_v) ? $c_v[0] : $c_v;
                         $contactData[] = [
-                            'leads_id' => $data['id'],
+                            'leads_id' => $id,
                             'contact_type' => $contact_type,
                             'contact_value' => $contact_value,
                             'contact_extra' => $contact_extra,
+                            'created_at' => date("Y-m-d H:i:s", time()),
                         ];
                     }
                 }
                 db('crm_contacts')->insertAll($contactData);
-                //客户信息保存
-                Db::table('crm_leads')->insert($data);
                 // 提交事务
                 Db::commit();
                 return success();
             } catch (\Exception $e) {
                 // 回滚事务
                 Db::rollback();
-                return fail();
+                return fail($e->getMessage());
             }
         }
 
@@ -337,39 +380,43 @@ class Client extends Common
                     return fail($v . ':' . implode(',', $duplicates) . ' 重复录入');
                 }
                 //查询关联表crm_contacts数据表重复
-                $contactExist = db('crm_contacts')->whereIn('contact_value', $contact[$k])->find();
+                $contactExist = db('crm_contacts')->where(['is_delete' => 0])->where('leads_id', '<>', $data['id'])->whereIn('contact_value', $contact[$k])->find();
                 if ($contactExist) {
                     return fail($contactExist['contact_value'] . '客户信息已存在');
                 }
             }
-            $contact['phone'] = array_combine($data['phone_code'], $contact['phone']);
+            $contact['phone'] =  array_map(function ($code, $phone) {
+                return [$code, $phone];
+            }, $data['phone_code'], $contact['phone']);
+            unset($data['phone_code']);
             Db::startTrans();
             try {
                 //删除客户关联联系方式
-                db('crm_contacts')->where(['leads_id'=>$data['id']])->update(['is_delete'=>1]);
+                db('crm_contacts')->where(['leads_id' => $data['id']])->update(['is_delete' => 1]);
                 foreach ($contact as $k => $v) {
                     $contact_type = self::CONTACT_MAP[$k];
                     if (is_string($v)) $v = explode(',', $v);
-                    foreach ($v as $e => $c_v) {
+                    foreach ($v as  $c_v) {
 
                         $contact_value = $c_v;
                         $contact_extra = '';
-                        if ($k == 'phone') {
-                            $contact_extra = $e;
+                        if (is_array($c_v)) {
+                            $contact_extra = $c_v[0];
+                            $contact_value = $c_v[1];
                         }
-                        $contact_value = is_array($c_v) ? $c_v[0] : $c_v;
                         $contactData = [
                             'leads_id' => $data['id'],
                             'contact_type' => $contact_type,
                             'contact_value' => $contact_value,
                             'contact_extra' => $contact_extra,
                             'is_delete' => 0,
+                            'created_at' => date("Y-m-d H:i:s", time()),
                         ];
                         //插入或更新条数
-                        $find = db('crm_contacts')->where(['leads_id'=>$data['id'],'contact_type'=>$contact_type,'contact_value'=>$contact_value])->find();
-                        if($find){
-                            $find->save($contactData);
-                        }else{
+                        $find = db('crm_contacts')->where(['is_delete' => 1, 'leads_id' => $data['id'], 'contact_type' => $contact_type, 'contact_value' => $contact_value])->find();
+                        if ($find) {
+                            db('crm_contacts')->where('id', $find['id'])->update($contactData);
+                        } else {
                             db('crm_contacts')->insert($contactData);
                         }
                     }
@@ -404,7 +451,19 @@ class Client extends Common
         //新增地区联动
         $countries = $this->getCountries();
         $this->assign('countries', $countries);
-
+        //客户关联联系方式
+        $select = db('crm_contacts')->where(['leads_id' => $result['id'], 'is_delete' => 0])->select();
+        $con_map = array_flip(self::CONTACT_MAP);
+        $contact = [];
+        foreach ($con_map as $v) {
+            $contact[$v] = [];
+        }
+        foreach ($select as $c) {
+            $value = $c['contact_extra'] ? $c['contact_extra'] . '#' . $c['contact_value'] : $c['contact_value'];
+            $contact[$con_map[$c['contact_type']]][] = $value;
+        }
+        // dd($contact);
+        $this->assign('contact', $contact);
         return $this->fetch('client/edit');
     }
     //删除客户
@@ -413,6 +472,7 @@ class Client extends Common
         $id = Request::param('id');
         $result = Db::table('crm_leads')->where('id', $id)->where('status', 1)->delete();
         if ($result) {
+            Db::table('crm_contacts')->where('leads_id', $id)->delete();
             $msg = ['code' => 0, 'msg' => '删除成功！', 'data' => []];
             return json($msg);
         } else {
@@ -692,9 +752,13 @@ class Client extends Common
         foreach ($result['comment'] as $k => $v) {
             $result['comment'][$k]['reply'] = Db::table('crm_reply')->where(['comment_id' => $v['id']])->select();
         }
+        $result['contacts'] = Db::table('crm_contacts')->where('is_delete', 0)->where(['leads_id' => Request::param('id')])->select();
+        $contactGroup = $this->formatContact($result['contacts'])[$result['id']];
+        $result['contacts'] = $this->getContactType($contactGroup);
 
 
         $cid = Session::get('aid'); //获取当前登录账号
+        $curname = Session::get('username'); //获取当前登录账号
         $curname = Session::get('username'); //获取当前登录账号
 
 
