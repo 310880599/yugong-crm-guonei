@@ -172,66 +172,55 @@ class Client extends Common
 
 
     public function xlsUpload()
-{
-    $file = request()->file('xlsFile');
-    $savePath = Env::get('root_path') . 'public/uploads/';
-    $info = $file->move($savePath);
-
-    if (!$info) {
-        return json(['code' => -1, 'msg' => '文件上传失败']);
-    }
-
-    $filePath = $savePath . $info->getSaveName();
-    $objPHPExcel = \PHPExcel_IOFactory::load($filePath);
-    $sheet = $objPHPExcel->getActiveSheet();
-    $highestRow = $sheet->getHighestRow();
-
-    $insertData = [];
-
-    for ($i = 2; $i <= $highestRow; $i++) {
-        $row = [
-            'kh_name'     => trim($sheet->getCell("A$i")->getValue()),
-            'kh_rank'     => trim($sheet->getCell("B$i")->getValue()),
-            'pr_gh_type'  => trim($sheet->getCell("K$i")->getValue()),
-            'kh_status'   => trim($sheet->getCell("L$i")->getValue()),
-            'xs_area'     => trim($sheet->getCell("M$i")->getValue()),
-            'kh_contact'  => trim($sheet->getCell("N$i")->getValue()),
-            'kh_hangye'   => trim($sheet->getCell("S$i")->getValue()),
-            'phone'       => trim($sheet->getCell("T$i")->getValue()),
-        ];
-
-        // 多字段去重
-        $exists = Db::name('crm_leads')->where([
-            ['kh_name', '=', $row['kh_name']],
-            ['phone', '=', $row['phone']],
-        ])->find();
-
-        if ($exists) continue;
-
-        $row['pr_user'] = Session::get('username');
-        $row['pr_user_bef'] = Session::get('username');
-        $row['ut_time'] = date('Y-m-d H:i:s');
-        $row['at_time'] = date('Y-m-d H:i:s');
-        $row['at_user'] = Session::get('username');
-        $row['status'] = 1;
-        $row['ispublic'] = 3;
-        $row['issuccess'] = -1;
-
-        $insertData[] = $row;
-    }
-
-    Db::startTrans();
-    try {
-        if (!empty($insertData)) {
-            Db::name('crm_leads')->insertAll($insertData);
+    {
+        $file = request()->file('xlsFile');
+        $savePath = Env::get('root_path') . 'public/uploads/';
+        $info = $file->move($savePath);
+        if (!$info) {
+            return json(['code' => -1, 'msg' => '文件上传失败']);
         }
-        Db::commit();
-        return json(['code' => 0, 'msg' => '成功导入 ' . count($insertData) . ' 条']);
-    } catch (\Exception $e) {
-        Db::rollback();
-        return json(['code' => -1, 'msg' => '导入失败: ' . $e->getMessage()]);
+    
+        $filePath = $savePath . $info->getSaveName();
+        $objPHPExcel = \PHPExcel_IOFactory::load($filePath);
+        $sheet = $objPHPExcel->getActiveSheet();
+        $highestRow = $sheet->getHighestRow();
+    
+        $insertData = [];
+        for ($i = 2; $i <= $highestRow; $i++) {
+            $row = [
+                'kh_name'    => trim($sheet->getCell("A$i")->getValue()),
+                'kh_rank'    => trim($sheet->getCell("B$i")->getValue()),
+                
+                 'pr_gh_type' => trim($sheet->getCell("K$i")->getValue()),
+                  'kh_status' => trim($sheet->getCell("l$i")->getValue()),
+                   'xs_area' => trim($sheet->getCell("M$i")->getValue()),
+                    'kh_contact' => trim($sheet->getCell("N$i")->getValue()),
+                  
+                    'kh_hangye' => trim($sheet->getCell("S$i")->getValue()),
+                'phone' => trim($sheet->getCell("T$i")->getValue()),
+            ];
+    
+            if (Db::name('crm_leads')->where('phone', $row['phone'])->find()) continue;
+    
+            $row['pr_user'] = Session::get('username');
+            $row['pr_user_bef'] = Session::get('username');
+            $row['ut_time'] = date('Y-m-d H:i:s');
+            $row['at_time'] = date('Y-m-d H:i:s');
+            $row['at_user'] = Session::get('username');
+            $row['status'] = 1;
+            $row['ispublic'] = 3;
+    
+            $insertData[] = $row;
+        }
+    
+        if ($insertData) {
+            Db::name('crm_leads')->insertAll($insertData);
+            return json(['code' => 0, 'msg' => '成功导入 ' . count($insertData) . ' 条']);
+        } else {
+            return json(['code' => -1, 'msg' => '无新数据导入']);
+        }
     }
-}
+
 
     //新建客户
     public function add()
