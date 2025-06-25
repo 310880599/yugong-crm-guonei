@@ -64,3 +64,10 @@ CREATE TABLE `crm_contacts` (
 -- ALTER table crm_clues_source modify add_time datetime DEFAULT NULL COMMENT '添加时间';
 -- insert into crm_clues_source (id,source_name) values (1,'阿里'),(2,'c端'),(3,'SEM'),(4,'SEO'),(5,'抖音'),(6,'亚马逊');
 
+
+ALTER TABLE `admin`
+ADD COLUMN `parent_id` INT(11) DEFAULT NULL COMMENT '直属主管admin_id（可选）',
+ADD COLUMN `team_name` VARCHAR(50) DEFAULT NULL COMMENT '所属团队名称（展示用）';
+
+
+

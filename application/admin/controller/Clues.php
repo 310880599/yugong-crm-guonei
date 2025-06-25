@@ -6,7 +6,7 @@ use think\Db;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use think\facade\Session;
-
+require_once '../vendor/PHPExcel/PHPExcel.php';
 class Clues extends Common{
     //线索列表
     public function index(){
@@ -63,126 +63,73 @@ class Clues extends Common{
         return $this->fetch('personclues/index');
     }
 
-    //批量导入，线索上传
-    public function xlsUpload(){
-
-        $xlsFile = Request::file('xlsFile');
-        // 移动到框架应用根目录/public/uploads/ 目录下
-        $info = $xlsFile -> move(Env::get('root_path'). 'public' .DIRECTORY_SEPARATOR.'uploads');
-        if ($info) {
-            $result = importExecl(Env::get('root_path'). 'public' .DIRECTORY_SEPARATOR.'uploads/'.$info -> getSaveName());
-
-
-            $count = count($result); //统计总数据
-            if ($count>1000){
-                $msg = ['code' => -200,'msg'=>'数据量过大，请分批导入！','data'=>[]];
-                return json($msg);
-            }
-            unset($result[1]); //移除标题
-
-
-
-
-
-            //$userExists = []; //已存在的线索
-            foreach ($result as $key =>&$value){
-
-                //看下手机号是否存在。将存在的手机号保存在数组里。
-                $userExist = db('crm_leads')->where('phone', $value['G'])->find();
-                if ($userExist){
-                   // array_push($userExists, $result[$key]['A']);
-                    unset($result[$key]);
-                }else{
-                    //客户名称、地区、行业类别、联系人、联系号码、客户级别、客户状态、用户名、备注
-                    $value['xs_name'] = $value['A'];//A线索名称
-                    unset($value['A']);
-                    $value['xs_status'] = $value['B'];//B线索状态
-                    unset($value['B']);
-                    $value['xs_source'] = $value['C'];//C线索来源
-                    unset($value['C']);
-                    $value['xs_area'] = $value['D'];//B 地区
-                    unset($value['D']);
-                    $value['kh_hangye'] = $value['E'];//C 行业类别
-                    unset($value['E']);
-                    $value['kh_contact'] = $value['F'];//D 联系人
-                    unset($value['F']);
-                    $value['phone'] = $value['G'];//E 联系号码
-                    unset($value['G']);
-             
-                    // $value['kh_rank'] = $value['H'];//E 客户级别
-                    // unset($value['H']);
-                    // $value['kh_status'] = $value['I'];//G 客户状态
-                    // unset($value['I']);
-                    // $value['kh_username'] = $value['J'];//G 用户名
-                    // unset($value['J']);
-                    $value['remark'] = $value['H'];//G 备注
-                    unset($value['H']);
-                    $value['pr_user'] = Session::get('username');//H 负责人
-                  
-                    $value['ut_time'] =  date("Y-m-d H:i:s",time());//Q更新于
-                    $value['at_time'] = date("Y-m-d H:i:s",time());//R创建时间
-                    $value['at_user'] = Session::get('username');//T创建人
-                    $value['status'] = 0; 
-                    //A线索名称，B手机，C线索状态，D线索来源,E最新跟进记录,F实际跟进时间,G下次跟进时间
-                    //H微信号,I未跟进天数,J地区来源,K备注,L负责人,M前所属部门,N所属部门
-                    //O更新于,P创建时间,Q客户需求,R创建人,S前负责人
-
-                    // $value['xs_name'] = $value['A'];//A线索名称
-                    // unset($value['A']);
-                    // $value['phone'] = $value['B'];//B手机
-                    // unset($value['B']);
-                    // $value['xs_status'] = $value['C'];//C线索状态
-                    // unset($value['C']);
-                    // $value['xs_source'] = $value['D'];//D客户来源/线索来源
-                    // unset($value['D']);
-                    // $value['last_up_records'] = $value['E'];//E最新跟进记录
-                    // unset($value['E']);
-                    // $value['last_up_time'] = $value['F'];//F实际跟进时间
-                    // unset($value['F']);
-                    // $value['next_up_time'] = $value['G'];//G下次跟进时间
-                    // unset($value['G']);
-                    // $value['wechat'] = $value['H'];//H微信号
-                    // unset($value['H']);
-                    // //$value['未跟进天数'] = $value['I'];//I未跟进天数(不入库，直接过滤)
-                    // unset($value['I']);
-                    // $value['xs_area'] = $value['J'];//J地区来源
-                    // unset($value['J']);
-                    // $value['remark'] = $value['K'];//K备注
-                    // unset($value['K']);
-                    // $value['pr_user'] = $value['L'] ? $value['L'] : Session::get('username');//L负责人
-                    // unset($value['L']);
-                    // $value['pr_dep_bef'] = $value['M'];//M前所属部门
-                    // unset($value['M']);
-                    // $value['pr_dep'] = $value['N'];//N所属部门
-                    // unset($value['N']);
-                    // $value['ut_time'] = $value['O'] ? $value['O'] : date("Y-m-d H:i:s",time());//O更新于
-                    // unset($value['O']);
-                    // $value['at_time'] = $value['P'] ? $value['P'] : date("Y-m-d H:i:s",time());//P创建时间
-                    // unset($value['P']);
-                    // $value['kh_need'] = $value['Q'];//Q客户需求
-                    // unset($value['Q']);
-                    // $value['at_user'] = $value['R'];//R创建人
-                    // unset($value['R']);
-                    // $value['pr_user_bef'] = $value['S'] ? $value['S'] : Session::get('username');//S前负责人
-                    // unset($value['S']);
-                    //$value['status'] = 0;//导入线索
-                }
-            }
-
-
-            $failcount = count($result); //最终的总数
-            $insertAll = Db::table('crm_leads')->insertAll($result);
-
-            if ($insertAll){
-                $msg = ['code' => 0,'msg'=>'导入'.$failcount.'条数据成功！','data'=>[]];
-                return json($msg);
-            }else{
-                $msg = ['code' => -200,'msg'=>'线索导入失败,不可重复导入！','data'=>[]];
-                return json($msg);
-            }
+    public function xlsUpload()
+    {
+        $file = request()->file('xlsFile');
+        $savePath = Env::get('root_path') . 'public/uploads/';
+        $info = $file->move($savePath);
+        if (!$info) {
+            return json(['code' => -1, 'msg' => '文件上传失败']);
         }
-
+    
+        $filePath = $savePath . $info->getSaveName();
+        $objPHPExcel = \PHPExcel_IOFactory::load($filePath);
+        $sheet = $objPHPExcel->getActiveSheet();
+        $highestRow = $sheet->getHighestRow();
+    
+        $insertData = [];
+        for ($i = 2; $i <= $highestRow; $i++) {
+            $row = [
+                'kh_name'    => trim($sheet->getCell("A$i")->getValue()),
+                'kh_rank'    => trim($sheet->getCell("B$i")->getValue()),
+                
+                 'pr_gh_type' => trim($sheet->getCell("K$i")->getValue()),
+                  'kh_status' => trim($sheet->getCell("l$i")->getValue()),
+                   'xs_area' => trim($sheet->getCell("M$i")->getValue()),
+                    'kh_contact' => trim($sheet->getCell("N$i")->getValue()),
+                  
+                    'kh_hangye' => trim($sheet->getCell("S$i")->getValue()),
+                'phone' => trim($sheet->getCell("T$i")->getValue()),
+          
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+              
+                
+                
+                
+            ];
+    
+            if (Db::name('crm_leads')->where('phone', $row['phone'])->find()) continue;
+    
+            $row['pr_user'] = Session::get('username');
+            $row['pr_user_bef'] = Session::get('username');
+            $row['ut_time'] = date('Y-m-d H:i:s');
+            $row['at_time'] = date('Y-m-d H:i:s');
+            $row['at_user'] = Session::get('username');
+            $row['status'] = 1;
+            $row['ispublic'] = 3;
+    
+            $insertData[] = $row;
+        }
+    
+        if ($insertData) {
+            Db::name('crm_leads')->insertAll($insertData);
+            return json(['code' => 0, 'msg' => '成功导入 ' . count($insertData) . ' 条']);
+        } else {
+            return json(['code' => -1, 'msg' => '无新数据导入']);
+        }
     }
+
+
 
     //新建线索
     public function add(){

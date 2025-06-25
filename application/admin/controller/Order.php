@@ -6,7 +6,7 @@ use think\facade\Request;
 use think\facade\Session;
 use think\facade\Env;
 class Order extends Common{
-    //客户列表
+    //订单列表
     public function index(){
         if(request()->isPost()){
             $key=input('post.key');
@@ -26,7 +26,7 @@ class Order extends Common{
         return $this->fetch();
     }
 
-    //（我的客户）列表
+    //（我的订单）列表
     public function personindex(){
 
         if(request()->isPost()){

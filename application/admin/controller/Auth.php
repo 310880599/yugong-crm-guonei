@@ -61,10 +61,21 @@ class Auth extends Common
                 return ['code'=>0,'msg'=>'管理员添加失败!'];
             }
         }else{
+            // $auth_group = AuthGroup::all();
+            // $this->assign('authGroup',$auth_group);
+            // $this->assign('title',lang('add').lang('admin'));
+            // $this->assign('info','null');
+            // $this->assign('selected', 'null');
+            // return view('adminForm');
+            // 获取所有主管角色的管理员作为上级选项（假设主管角色的 group_id = 11 或角色名称包含“主管”）
+            $leaderList = \app\admin\model\Admin::where('group_id', 11)
+                         ->field('admin_id, username')->select();
+            $this->assign('leaderList', $leaderList);
+        
             $auth_group = AuthGroup::all();
-            $this->assign('authGroup',$auth_group);
-            $this->assign('title',lang('add').lang('admin'));
-            $this->assign('info','null');
+            $this->assign('authGroup', $auth_group);
+            $this->assign('title', lang('add') . lang('admin'));
+            $this->assign('info', 'null');
             $this->assign('selected', 'null');
             return view('adminForm');
         }
@@ -128,13 +139,26 @@ class Auth extends Common
             }
             return $result = ['code'=>1,'msg'=>'管理员修改成功!','url'=>url('adminList')];
         }else{
+            // $auth_group = AuthGroup::all();
+            // $admin = new Admin();
+            // $info = $admin->getInfo(input('admin_id'));
+            // $this->assign('info', json_encode($info,true));
+            // $this->assign('authGroup',$auth_group);
+            // $this->assign('title',lang('edit').lang('admin'));
+            // return view('adminForm');
             $auth_group = AuthGroup::all();
-            $admin = new Admin();
-            $info = $admin->getInfo(input('admin_id'));
-            $this->assign('info', json_encode($info,true));
-            $this->assign('authGroup',$auth_group);
-            $this->assign('title',lang('edit').lang('admin'));
+            $info = Admin::getInfo(input('admin_id'));
+            // 获取主管列表供下拉选择
+            $leaderList = \app\admin\model\Admin::where('group_id', 11)
+                         ->field('admin_id, username')->select();
+            $this->assign('leaderList', $leaderList);
+        
+            $this->assign('info', json_encode($info, true));
+            $this->assign('authGroup', $auth_group);
+            $this->assign('title', lang('edit') . lang('admin'));
             return view('adminForm');
+            
+            
         }
     }
     /*-----------------------用户组管理----------------------*/
