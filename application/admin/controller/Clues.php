@@ -6,7 +6,7 @@ use think\Db;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use think\facade\Session;
-require_once '../vendor/PHPExcel/PHPExcel.php';
+// require_once '../vendor/PHPExcel/PHPExcel.php';
 class Clues extends Common{
     //线索列表
     public function index(){
