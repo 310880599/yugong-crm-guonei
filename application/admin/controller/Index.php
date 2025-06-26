@@ -62,6 +62,16 @@ class Index extends Common
         $liberumCount = Db::table('crm_leads')->where(['status'=> 2])->count();
         // 区别管理员和业务员
         
+        
+        
+     
+        
+        
+        
+        
+        
+        
+        
         $this->assign('cluesCount', $cluesCount);
         $this->assign('clientCount', $clientCount);
         $this->assign('liberumCount', $liberumCount);
@@ -102,7 +112,48 @@ class Index extends Common
             $value['number_month'] = $number_month;
             $userlist[$key] = $value;
         }
-    
+    // 获取所有业务员
+$userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username,mubiao,ticheng')->select();
+
+foreach ($userlist as $key => $value) {
+    $username = $value['username'];
+
+    // ✅ 查询当月客户数量
+    $clientCountMonth = Db::table('crm_leads')
+        ->where(['pr_user' => $username, 'status' => 1])
+        ->whereTime('ut_time', 'month') // 根据你的创建时间字段调整
+        ->count();
+
+    // 添加字段
+    $value['client_count_month'] = $clientCountMonth;
+
+    // 已有逻辑保留
+    $wheretoday = [];
+    $wheretoday['pr_user'] = $username;
+    $wheretoday['status'] = '审核通过';
+
+    $money_month = Db::name('crm_client_order')
+        ->where($wheretoday)
+        ->whereTime('create_time', 'month')
+        ->sum('money');
+
+    $value['money_month'] = $money_month ?: 0;
+    $value['wanchenglv'] = $value['mubiao'] > 0 ? round($money_month / $value['mubiao'] * 100, 2) : 0;
+
+    $number_month = Db::table('crm_client_order')
+        ->where($wheretoday)
+        ->whereTime('create_time', 'month')
+        ->count('id');
+
+    $value['number_month'] = $number_month;
+
+    $userlist[$key] = $value;
+}
+
+// 排序
+array_multisort(array_column($userlist, 'money_month'), SORT_DESC, $userlist);
+
+$this->assign('userlist', $userlist);
         // 数组排序
         array_multisort(array_column($userlist,'money_month'),SORT_DESC,$userlist);
    
@@ -166,6 +217,7 @@ class Index extends Common
         $this->assign('config', $config);
         return $this->fetch();
     }
+    
     public function navbar(){
         return $this->fetch();
     }

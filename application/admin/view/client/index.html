@@ -217,7 +217,7 @@
                 method: 'post',
                 toolbar: '#topBtn',
                 defaultToolbar: ['filter', 'print', 'exports'],
-                cols: [[
+                 cols: [[
                     { checkbox: true, fixed: true },
                     { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
                     {
@@ -225,37 +225,27 @@
                             return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + res.kh_name + "</a>";
                         }
                     },
-                    { field: 'xs_area', title: '地区', width: 180, },
-                    // {field: 'whatsapp', title: 'Whatsapp', width: 200,},
-                    // {field: 'phone', title: '联系号码', width: 200,},
-                    // {field: 'email', title: '联系邮箱', width: 180,},
-                    { field: 'kh_rank', title: '客户级别' },
-                    { field: 'kh_status', title: '客户来源' },
-
                     {
                         field: 'issuccess', title: '成交状态', templet: function (res) {
-                            var issuccess = res.issuccess;
-                            if (issuccess == 1) {
-                                return '已成交';
-                            } else {
-                                return '未成交';
-                            }
+                            return res.issuccess == 1 ? '已成交' : '未成交';
                         }
                     },
-                    { field: 'last_up_records', title: '最新跟进记录', },
-                    { field: 'last_up_time', title: '最近跟进时间', hide: true },
-                    // {field: 'next_up_time', title: '下次跟进时间',hide:true },
-                    { field: 'xs_source', title: '客户来源', hide: true },
-                    { field: 'remark', title: '备注', hide: true },
-                    { field: 'pr_user', title: '负责人', hide: false },
-                    { field: 'pr_gh_type', title: '所属公海', hide: true },
-                    { field: 'to_gh_time', title: '划入公海时间', hide: true },
-                    { field: 'ut_time', title: '更新于', hide: true },
-                    { field: 'at_time', title: '创建时间', },
-                    { field: 'at_user', title: '创建人', hide: true },
-                    { field: 'pr_user_bef', title: '前负责人', hide: true },
+                    {
+                        field: 'contact_type', title: '联系方式类型', width: 150, templet: function (res) {
+                            return res.contact_type || '';
+                        }
+                    },
+                    {
+                        field: 'contact_value', title: '联系方式值', width: 200, templet: function (res) {
+                            return res.contact_value || '';
+                        }
+                    },
+                    { field: 'last_up_records', title: '最新跟进记录' },
+                    { field: 'pr_user', title: '负责人' },
+                    { field: 'at_time', title: '创建时间' },
                     { width: 320, align: 'center', toolbar: '#action' }
                 ]],
+
                 limit: 100, //每页默认显示的数量
 
                 page: { limits: [10, 20, 30, 40, 50, 100, 9999999] },
@@ -284,9 +274,9 @@
                     layer_add("编辑客户", "{:url('Client/edit')}?id=" + data.id);
                 } else if (obj.event === 'alter') {
                     layer_add("转移客户", "{:url('Client/alterPrUser')}?ids=" + data.id)
-                } else if (obj.event === 'chengjiao') {
+                }else if( obj.event === 'chengjiao'){
                     layer.confirm('您确定这个客户成交了吗？', function (index) {
-                        $.post("{:url('Client/chengjiao')}", { ids: data.id }, function (res) {
+                        $.post("{:url('Client/chengjiao')}",{ids:data.id},function (res) {
                             console.log(res);
                             if (res.code === 0) {
                                 layer.msg(res.msg, { time: 1000, icon: 1 });
@@ -393,7 +383,7 @@
                             });
 
                             var currConfirm = layer.confirm('您确定' + data.length + '个客户成交了吗？', function (index) {
-                                $.post("{:url('Client/chengjiao')}", { ids: alterList }, function (res) {
+                                $.post("{:url('Client/chengjiao')}",{ids:alterList},function (res) {
                                     console.log(res);
                                     if (res.code === 0) {
                                         layer.msg(res.msg, { time: 1000, icon: 1 });
