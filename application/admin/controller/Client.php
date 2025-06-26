@@ -56,56 +56,74 @@ class Client extends Common
     }
 
     //客户列表
-    public function index()
-    {
-        if (request()->isPost()) {
-            $key = input('post.key');
-            $page = input('page') ? input('page') : 1;
-            $pageSize = input('limit') ? input('limit') : config('pageSize');
-            $adminId = Session::get('aid');
-            $subordinates = Db::name('admin')->where('parent_id', $adminId)->column('username');
-            if ($adminId == 1) {
-                // 超级管理员：查看所有未成交客户
-                $list = db('crm_leads')
-                    ->where(['status' => 1])
-                    ->order('ut_time desc')
-                    ->paginate(array('list_rows' => $pageSize, 'page' => $page))
-                    ->toArray();
-            } elseif (!empty($subordinates)) {
-                // 主管：查看直属下属的所有客户（不区分成交状态）
-                $usernames = array_merge($subordinates, [Session::get('username')]);
-                $list = db('crm_leads')
-                    ->where('status', 1)
-                    ->whereIn('pr_user', $usernames)
-                    ->order('ut_time desc')
-                    ->paginate(array('list_rows' => $pageSize, 'page' => $page))
-                    ->toArray();
-            } else {
-                // 普通员工：仅查看自己名下未成交的客户
-                $list = db('crm_leads')
-                    ->where(['status' => 1])
-                    ->where(['pr_user' => Session::get('username')])
-                    ->order('ut_time desc')
-                    ->paginate(array('list_rows' => $pageSize, 'page' => $page))
-                    ->toArray();
-            }
-            return ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
+
+//客户列表
+public function index()
+{
+    if (request()->isPost()) {
+        $page = input('page', 1);
+        $pageSize = input('limit', config('pageSize'));
+        $adminId = Session::get('aid');
+        $subordinates = Db::name('admin')->where('parent_id', $adminId)->column('username');
+
+        // 基本客户条件
+        $query = Db::name('crm_leads')->alias('l')->where(['l.status' => 1]);
+
+        if ($adminId == 1) {
+            // 超级管理员无需额外条件
+        } elseif (!empty($subordinates)) {
+            // 主管查看直属下属及自己的客户
+            $usernames = array_merge($subordinates, [Session::get('username')]);
+            $query->whereIn('l.pr_user', $usernames);
+        } else {
+            // 普通员工仅查看自己名下的客户
+            $query->where(['l.pr_user' => Session::get('username')]);
         }
 
-        $khRankList = Db::table('crm_client_rank')->select();
-        $khStatusList = Db::table('crm_client_status')->select();
-        $xsSourceList = Db::table('crm_clues_source')->select();
+        // 查询客户数据，并拼接联系方式
+        $list = $query
+            ->field([
+                'l.*',
+                "GROUP_CONCAT(
+                    DISTINCT CASE c.contact_type
+                        WHEN 1 THEN '手机号'
+                        WHEN 2 THEN '邮箱'
+                        WHEN 3 THEN 'WhatsApp'
+                        ELSE '其他'
+                    END ORDER BY c.id SEPARATOR '<br>'
+                ) AS contact_type",
+                "GROUP_CONCAT(DISTINCT c.contact_value ORDER BY c.id SEPARATOR '<br>') AS contact_value"
+            ])
+            ->leftJoin('crm_contacts c', 'l.id = c.leads_id')
+            ->group('l.id')
+            ->order('l.ut_time desc')
+            ->paginate([
+                'list_rows' => $pageSize,
+                'page' => $page
+            ])
+            ->toArray();
 
-        //查询所有管理员（去除admin）
-        $adminResult = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
-        $this->assign('adminResult', $adminResult);
-
-        $this->assign('khRankList', $khRankList);
-        $this->assign('khStatusList', $khStatusList);
-        $this->assign('xsSourceList', $xsSourceList);  //线索/客户来源
-
-        return $this->fetch();
+        return [
+            'code' => 0,
+            'msg' => '获取成功!',
+            'data' => $list['data'],
+            'count' => $list['total'],
+            'rel' => 1
+        ];
     }
+
+    $khRankList = Db::table('crm_client_rank')->select();
+    $khStatusList = Db::table('crm_client_status')->select();
+    $xsSourceList = Db::table('crm_clues_source')->select();
+
+    $adminResult = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
+    $this->assign('adminResult', $adminResult);
+    $this->assign('khRankList', $khRankList);
+    $this->assign('khStatusList', $khStatusList);
+    $this->assign('xsSourceList', $xsSourceList);
+
+    return $this->fetch();
+}
 
     //（我的客户）列表
     public function perCliList()
