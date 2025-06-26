@@ -28,7 +28,7 @@ CREATE TABLE `crm_leads` (
   `kh_rank` varchar(100) DEFAULT NULL COMMENT '客户级别',
   `kh_status` varchar(100) DEFAULT NULL COMMENT '客户状态',
   `kh_need` varchar(600) DEFAULT NULL COMMENT '客户需求   不使用',
-  `status` varchar(30) DEFAULT '0' COMMENT '0-线索，1-客户，2-公海，3-删除',
+  `status` varchar(30) DEFAULT '0' COMMENT '0-线索，1-客户，2-公海，3-删除',git
   `issuccess` int(3) NOT NULL DEFAULT '-1' COMMENT '是否成交 1成交 -1未成交',
   `kh_username` varchar(100) DEFAULT NULL COMMENT '客户用户名',
   `ispublic` int(2) DEFAULT '1' COMMENT '1 公共 2 个人',
@@ -44,7 +44,7 @@ CREATE TABLE `crm_contacts` (
   `leads_id` int(11) DEFAULT NULL COMMENT '线索ID',
   `contact_type` tinyint(1) DEFAULT '0' COMMENT '联系方式类型（1-手机号/2-邮箱/3-Whatsapp/4-阿里id/5-微信',
   `contact_extra` varchar(100) DEFAULT '' COMMENT 'extra',
-  `contact_value` varchar(255) DEFAULT '' COMMENT '联系方式值',
+  `contact_value` varchar(100) DEFAULT '' COMMENT '联系方式值',
   `is_delete` tinyint(1) DEFAULT '0' COMMENT '0-正常/1-删除',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
    PRIMARY KEY (`id`) USING BTREE,

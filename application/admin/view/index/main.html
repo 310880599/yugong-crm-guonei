@@ -124,7 +124,7 @@
                                             <td>已成交（元）</td>
                                             <td>完成率（%）</td>
                                             <td>已成交（单）</td>
-                                            <td>提成点（%）</td>
+                                            <td>每月客户</td>
                                         </tr>
                                         {volist name='userlist' id='vo' key="k" }
                                         <tr>
@@ -134,7 +134,7 @@
                                             <td>{$vo['money_month']}</td>
                                             <td>{$vo['wanchenglv']}</td>
                                             <td>{$vo['number_month']}</td>
-                                            <td>{$vo['ticheng']}%</td>
+                                             <td>{$vo.client_count_month}</td>
                                         </tr>
                                         {/volist}
                                     </tbody>

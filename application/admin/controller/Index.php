@@ -54,7 +54,7 @@ class Index extends Common
         $this->assign('menus',json_encode($menus,true));
         return $this->fetch();
     }
-    public function main(){
+   public function main(){
 
         //0 线索，1客户，2公海
         $cluesCount = Db::table('crm_leads')->where(['status'=> 0])->count();
