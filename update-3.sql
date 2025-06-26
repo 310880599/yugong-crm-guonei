@@ -70,4 +70,15 @@ ADD COLUMN `parent_id` INT(11) DEFAULT NULL COMMENT '直属主管admin_id（可�
 ADD COLUMN `team_name` VARCHAR(50) DEFAULT NULL COMMENT '所属团队名称（展示用）';
 
 
+-- 客户操作日志表
+-- CREATE TABLE `crm_operation_log` (
+--   `id` int(11) NOT NULL AUTO_INCREMENT,
+--   `leads_id` int(11) NOT NULL COMMENT '客户ID',
+--   `oper_type` varchar(50) NOT NULL COMMENT '操作类型',
+--   `description` varchar(500) DEFAULT NULL COMMENT '操作描述',
+--   `oper_user` varchar(50) NOT NULL COMMENT '操作人',
+--   `created_at` datetime NOT NULL COMMENT '操作时间',
+--   PRIMARY KEY (`id`),
+--   KEY `idx_leads_id` (`leads_id`)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客户操作日志表';
 

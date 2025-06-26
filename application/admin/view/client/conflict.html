@@ -1,0 +1,127 @@
+{include file="common/head"/}
+<style>
+  .filtrate-warp {
+    margin-bottom: 10px;
+  }
+
+  .filtrate-warp .title {
+    padding: 5px 12px 7px 12px;
+    font-size: 14px;
+    font-weight: normal;
+    text-align: left;
+    cursor: pointer;
+    width: 90px;
+    background-color: transparent !important;
+    color: black !important;
+  }
+
+  .filtrate-warp .title:hover {
+    color: black;
+  }
+
+  .filtrate-warp .flag {
+    padding: 6px 12px 6px 12px;
+    cursor: pointer;
+  }
+
+  .filtrate-warp .flag:hover {
+    color: black;
+  }
+
+  .filtrate-warp .layui-badge:hover {
+    color: white !important;
+  }
+
+  .box-search {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .input-box {
+    width: 100% !important;
+  }
+</style>
+</head>
+
+<body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
+  <div class="admin-main layui-anim layui-anim-upbit">
+    <a href="javascript:window.history.back(-1)" class="layui-btn layui-btn-primary">返回上一页</a>
+    <fieldset class="layui-elem-field ">
+      <legend>客户冲突查询</legend>
+      <div class="layui-card" style="box-shadow: none;margin-top: 10px">
+        <div class="layui-form layui-card-header layuiadmin-card-header-auto"
+          style="border-bottom: transparent;height: auto">
+
+          <div class="layui-form-item" style="text-align: left;padding-left: 20px;">
+            <div class="layui-inline  box-search">
+              <label class="layui-form-label"></label>
+              <div class="layui-input-inline input-box">
+                <input type="text" id="keyword" name="keyword" placeholder="输入客户名称/手机号/whatsapp/邮箱" autocomplete="off"
+                  value="{$keyword}" class="layui-input">
+              </div>
+              <div class="layui-inline" style="float: right;">
+                <button class="layui-btn layuiadmin-btn-list" lay-submit="" lay-filter="search">
+                  <i class="layui-icon layui-icon-search layuiadmin-button-btn" style="vertical-align: sub;"></i>查询数据
+                </button>
+              </div>
+            </div>
+
+          </div>
+    </fieldset>
+    <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+  </div>
+
+  {include file="common/foot"/}
+  <script>
+    layui.use(['table', 'form', 'layer'], function () {
+      var table = layui.table;
+      var form = layui.form;
+      var $ = layui.$;
+      var layer = layui.layer;
+
+      var tableIns = table.render({
+        elem: '#table-list',
+        url: '{:url("admin/client/conflict")}',
+        method: 'post',
+        where: {
+          keyword: '{$keyword}'
+        },
+        page: true,
+        limit: 10,
+        limits: [10, 20, 50],
+        cols: [[
+          { checkbox: true, fixed: true },
+          { field: 'kh_name', title: '客户名称' },
+          { field: 'xs_area', title: '国家' },
+          { field: 'kh_rank', title: '客户等级' },
+          { field: 'kh_status', title: '客户来源' },
+          { field: 'at_user', title: '客户归属人' },
+          { field: 'at_time', title: '添加时间' }
+        ]],
+      });
+
+
+      form.on('submit(search)', function (data) {
+        var keyword = data.field.keyword.trim();
+        if (!keyword) {
+          layer.msg('请输入搜索关键词', { icon: 5 });
+          return false;
+        }
+        tableIns.reload({
+          where: { keyword: keyword },
+          page: { curr: 1 }
+        });
+        return false;
+      });
+
+      $('#keyword').on('keypress', function (e) {
+        if (e.keyCode === 13) { // 回车键的 keyCode 是 13
+          $('button[lay-filter="search"]').trigger('click'); // 触发搜索按钮点击事件
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

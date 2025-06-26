@@ -9,6 +9,8 @@ use think\facade\Env;
 
 class Client extends Common
 {
+    protected $middleware = [\app\http\middleware\TrimStrings::class];
+
     const CONTACT_MAP = [
         'phone' => 1,
         'email' => 2,
@@ -88,7 +90,6 @@ class Client extends Common
                     ->toArray();
             }
             return ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
-
         }
 
         $khRankList = Db::table('crm_client_rank')->select();
@@ -168,70 +169,70 @@ class Client extends Common
         return $this->fetch('client/chengjiao');
     }
 
-    
+
 
 
     public function xlsUpload()
-{
-    $file = request()->file('xlsFile');
-    $savePath = Env::get('root_path') . 'public/uploads/';
-    $info = $file->move($savePath);
+    {
+        $file = request()->file('xlsFile');
+        $savePath = Env::get('root_path') . 'public/uploads/';
+        $info = $file->move($savePath);
 
-    if (!$info) {
-        return json(['code' => -1, 'msg' => '文件上传失败']);
-    }
-
-    $filePath = $savePath . $info->getSaveName();
-    $objPHPExcel = \PHPExcel_IOFactory::load($filePath);
-    $sheet = $objPHPExcel->getActiveSheet();
-    $highestRow = $sheet->getHighestRow();
-
-    $insertData = [];
-
-    for ($i = 2; $i <= $highestRow; $i++) {
-        $row = [
-            'kh_name'     => trim($sheet->getCell("A$i")->getValue()),
-            'kh_rank'     => trim($sheet->getCell("B$i")->getValue()),
-            'pr_gh_type'  => trim($sheet->getCell("K$i")->getValue()),
-            'kh_status'   => trim($sheet->getCell("L$i")->getValue()),
-            'xs_area'     => trim($sheet->getCell("M$i")->getValue()),
-            'kh_contact'  => trim($sheet->getCell("N$i")->getValue()),
-            'kh_hangye'   => trim($sheet->getCell("S$i")->getValue()),
-            'phone'       => trim($sheet->getCell("T$i")->getValue()),
-        ];
-
-        // 多字段去重
-        $exists = Db::name('crm_leads')->where([
-            ['kh_name', '=', $row['kh_name']],
-            ['phone', '=', $row['phone']],
-        ])->find();
-
-        if ($exists) continue;
-
-        $row['pr_user'] = Session::get('username');
-        $row['pr_user_bef'] = Session::get('username');
-        $row['ut_time'] = date('Y-m-d H:i:s');
-        $row['at_time'] = date('Y-m-d H:i:s');
-        $row['at_user'] = Session::get('username');
-        $row['status'] = 1;
-        $row['ispublic'] = 3;
-        $row['issuccess'] = -1;
-
-        $insertData[] = $row;
-    }
-
-    Db::startTrans();
-    try {
-        if (!empty($insertData)) {
-            Db::name('crm_leads')->insertAll($insertData);
+        if (!$info) {
+            return json(['code' => -1, 'msg' => '文件上传失败']);
         }
-        Db::commit();
-        return json(['code' => 0, 'msg' => '成功导入 ' . count($insertData) . ' 条']);
-    } catch (\Exception $e) {
-        Db::rollback();
-        return json(['code' => -1, 'msg' => '导入失败: ' . $e->getMessage()]);
+
+        $filePath = $savePath . $info->getSaveName();
+        $objPHPExcel = \PHPExcel_IOFactory::load($filePath);
+        $sheet = $objPHPExcel->getActiveSheet();
+        $highestRow = $sheet->getHighestRow();
+
+        $insertData = [];
+
+        for ($i = 2; $i <= $highestRow; $i++) {
+            $row = [
+                'kh_name'     => trim($sheet->getCell("A$i")->getValue()),
+                'kh_rank'     => trim($sheet->getCell("B$i")->getValue()),
+                'pr_gh_type'  => trim($sheet->getCell("K$i")->getValue()),
+                'kh_status'   => trim($sheet->getCell("L$i")->getValue()),
+                'xs_area'     => trim($sheet->getCell("M$i")->getValue()),
+                'kh_contact'  => trim($sheet->getCell("N$i")->getValue()),
+                'kh_hangye'   => trim($sheet->getCell("S$i")->getValue()),
+                'phone'       => trim($sheet->getCell("T$i")->getValue()),
+            ];
+
+            // 多字段去重
+            $exists = Db::name('crm_leads')->where([
+                ['kh_name', '=', $row['kh_name']],
+                ['phone', '=', $row['phone']],
+            ])->find();
+
+            if ($exists) continue;
+
+            $row['pr_user'] = Session::get('username');
+            $row['pr_user_bef'] = Session::get('username');
+            $row['ut_time'] = date('Y-m-d H:i:s');
+            $row['at_time'] = date('Y-m-d H:i:s');
+            $row['at_user'] = Session::get('username');
+            $row['status'] = 1;
+            $row['ispublic'] = 3;
+            $row['issuccess'] = -1;
+
+            $insertData[] = $row;
+        }
+
+        Db::startTrans();
+        try {
+            if (!empty($insertData)) {
+                Db::name('crm_leads')->insertAll($insertData);
+            }
+            Db::commit();
+            return json(['code' => 0, 'msg' => '成功导入 ' . count($insertData) . ' 条']);
+        } catch (\Exception $e) {
+            Db::rollback();
+            return json(['code' => -1, 'msg' => '导入失败: ' . $e->getMessage()]);
+        }
     }
-}
 
     //新建客户
     public function add()
@@ -1000,9 +1001,10 @@ class Client extends Common
     }
 
     //客户成交
-    public function chengjiao(){
+    public function chengjiao()
+    {
         $ids = Request::param('ids');
-        if(is_string($ids))$ids = explode(',', $ids);
+        if (is_string($ids)) $ids = explode(',', $ids);
         $count = 0;
         foreach ($ids as $key => $value) {
             $data['issuccess'] = 1;
@@ -1021,5 +1023,33 @@ class Client extends Common
         }
     }
 
+    //冲突查询
+    public function conflict()
+    {
+        $keyword = Request::param('keyword');
+        $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
+        if (Request::isAjax()) {
+            if (empty($keyword)) return success();
 
+            $query = Db::name('crm_leads')
+                ->alias('l')
+                ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
+                ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time')
+                ->group('l.id');
+            $query->where(function ($q) use ($keyword) {
+                $q->where('l.kh_name', 'like', "%{$keyword}%")
+                    ->whereOr(function ($q2) use ($keyword) {
+                        $q2->where('c.contact_value', $keyword)
+                            ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) = '{$keyword}'");
+                    });
+            });
+
+            $page = Request::param('page/d', 1);
+            $pageSize = Request::param('limit/d', 10);
+            $list = $query->paginate($pageSize, false, ['page' => $page])->items();
+            return success($list);
+        }
+        $this->assign('keyword', $keyword);
+        return $this->fetch('client/conflict');
+    }
 }

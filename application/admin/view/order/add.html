@@ -90,13 +90,15 @@
         <div class="layui-form-item">
             <label class="layui-form-label">客户负责人</label>
             <div class="layui-input-4">
-                <select name="pr_user" id="pr_user">
+                <input type="text" readonly='true' id="pr_user" name="pr_user" lay-verify="required"  placeholder="请输入客户负责人" class="layui-input">
+
+                <!-- <select name="pr_user" id="pr_user">
                     <option value="">请选择客户负责人</option>
                     {volist name='userlist' id='vo'}
                     <option value="{$vo.username}">{$vo.username}</option>
                     {/volist}
 
-                </select>
+                </select> -->
             </div>
         </div>
         {else /}

@@ -13,8 +13,8 @@
 // | 应用设置
 // +----------------------------------------------------------------------
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
-define("MAX_MENU_LENGTH",'3');
-define("MAX_SUB_MENU_LENGTH","5");
+define("MAX_MENU_LENGTH", '3');
+define("MAX_SUB_MENU_LENGTH", "5");
 return [
     // 应用名称
     'app_name'               => '',
@@ -150,20 +150,23 @@ return [
         'type'      => 'clt\Bootstrap',
         'var_page'  => 'page',
         'list_rows' => 15,
-        'page_size'=>5, //页码数量
-        'page_button'=>[
-            'total_rows'=>true, //是否显示总条数
-            'turn_page'=>true, //上下页按钮
-            'turn_group'=>true, //上下组按钮
-            'first_page'=>true, //首页
-            'last_page'=>true  //尾页
+        'page_size' => 5, //页码数量
+        'page_button' => [
+            'total_rows' => true, //是否显示总条数
+            'turn_page' => true, //上下页按钮
+            'turn_group' => true, //上下组按钮
+            'first_page' => true, //首页
+            'last_page' => true  //尾页
         ]
     ],
-    'pageSize'=>15,
+    'pageSize' => 15,
     //自定义配置
-    'sys_name' =>'CRM系统',
+    'sys_name' => 'CRM系统',
     //文件上传
-    'addwater'=>false,
-    'watertext'=>'Meyoo',
-    'version'=>'6.0'
+    'addwater' => false,
+    'watertext' => 'Meyoo',
+    'version' => '6.0',
+    'middleware' => [
+        \app\http\middleware\TrimStrings::class
+    ],
 ];

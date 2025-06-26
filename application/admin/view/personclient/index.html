@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>{:config('sys_name')}后台管理</title>
@@ -14,99 +15,100 @@
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
 
     <style>
-
-        .filtrate-warp{
+        .filtrate-warp {
             margin-bottom: 10px;
         }
 
-        .filtrate-warp .title{
+        .filtrate-warp .title {
             padding: 5px 12px 7px 12px;
             font-size: 14px;
             font-weight: normal;
             text-align: left;
             cursor: pointer;
             width: 90px;
-            background-color: transparent!important;
-            color: black!important;
+            background-color: transparent !important;
+            color: black !important;
         }
 
-        .filtrate-warp .title:hover{
+        .filtrate-warp .title:hover {
             color: black;
         }
 
-        .filtrate-warp .flag{
+        .filtrate-warp .flag {
             padding: 6px 12px 6px 12px;
             cursor: pointer;
         }
 
-        .filtrate-warp .flag:hover{
+        .filtrate-warp .flag:hover {
             color: black;
         }
 
-        .filtrate-warp .layui-badge:hover{
-            color: white!important;
+        .filtrate-warp .layui-badge:hover {
+            color: white !important;
         }
-
     </style>
 
 </head>
+
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 
-<div class="admin-main layui-anim layui-anim-upbit">
+    <div class="admin-main layui-anim layui-anim-upbit">
 
 
-    <fieldset class="layui-elem-field " >
-        <legend>高级查询</legend>
+        <fieldset class="layui-elem-field ">
+            <legend>高级查询</legend>
 
-        <div class="layui-card" style="box-shadow: none;margin-top: 10px">
-            <div class="layui-form layui-card-header layuiadmin-card-header-auto" style="border-bottom: transparent;height: auto" >
+            <div class="layui-card" style="box-shadow: none;margin-top: 10px">
+                <div class="layui-form layui-card-header layuiadmin-card-header-auto"
+                    style="border-bottom: transparent;height: auto">
 
-                <div class="layui-form-item" style="text-align: left;padding-left: 20px;">
+                    <div class="layui-form-item" style="text-align: left;padding-left: 20px;">
 
-                    <div class="layui-inline">
-                        <label class="layui-form-label">日期查询：</label>
-                        <div class="layui-input-inline">
-                            <input type="text" class="layui-input" autocomplete="off" name="at_time" id="at_time" placeholder="请输入日期查询">
+                        <div class="layui-inline">
+                            <label class="layui-form-label">日期查询：</label>
+                            <div class="layui-input-inline">
+                                <input type="text" class="layui-input" autocomplete="off" name="at_time" id="at_time"
+                                    placeholder="请输入日期查询">
+                            </div>
+
                         </div>
 
-                    </div>
+                        <div class="layui-inline">
+                            <label class="layui-form-label">客户级别：</label>
+                            <div class="layui-input-inline">
+                                <select name="kh_rank" id="kh_rank">
+                                    <option value="">请选择客户级别</option>
 
-                    <div class="layui-inline">
-                        <label class="layui-form-label">客户级别：</label>
-                        <div class="layui-input-inline">
-                            <select name="kh_rank" id="kh_rank">
-                                <option value="">请选择客户级别</option>
+                                    {volist name='khRankList' id='vo'}
+                                    <option value="{$vo.rank_name}">{$vo.rank_name}</option>
+                                    {/volist}
 
-                                {volist name='khRankList' id='vo'}
-                                <option value="{$vo.rank_name}">{$vo.rank_name}</option>
-                                {/volist}
-
-                            </select>
+                                </select>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="layui-inline">
-                        <label class="layui-form-label">客户来源：</label>
-                        <div class="layui-input-inline">
-                            <select name="kh_status" id="kh_status">
-                                <option value="">请选择客户来源</option>
+                        <div class="layui-inline">
+                            <label class="layui-form-label">客户来源：</label>
+                            <div class="layui-input-inline">
+                                <select name="kh_status" id="kh_status">
+                                    <option value="">请选择客户来源</option>
 
-                                {volist name='khStatusList' id='vo'}
-                                <option value="{$vo.status_name}">{$vo.status_name}</option>
-                                {/volist}
+                                    {volist name='khStatusList' id='vo'}
+                                    <option value="{$vo.status_name}">{$vo.status_name}</option>
+                                    {/volist}
 
-                            </select>
+                                </select>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="layui-inline">
-                        <label class="layui-form-label">手机：</label>
-                        <div class="layui-input-inline">
-                            <input type="text" id="phone" name="phone" placeholder="请输入手机号码" class="layui-input">
+                        <div class="layui-inline">
+                            <label class="layui-form-label">手机：</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="phone" name="phone" placeholder="请输入手机号码" class="layui-input">
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- <div class="layui-inline">
+                        <!-- <div class="layui-inline">
                         <label class="layui-form-label">时间查询：</label>
                         <div class="layui-input-inline">
                             <select name="timebucket">
@@ -124,14 +126,15 @@
                         </div>
                     </div> -->
 
-                    <div class="layui-inline">
-                        <label class="layui-form-label" style="">客户名称：</label>
-                        <div class="layui-input-inline">
-                            <input type="text" id="kh_name" name="kh_name" placeholder="请输入客户名称" class="layui-input">
+                        <div class="layui-inline">
+                            <label class="layui-form-label" style="">客户名称：</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="kh_name" name="kh_name" placeholder="请输入客户名称"
+                                    class="layui-input">
+                            </div>
                         </div>
-                    </div>
 
-                   <!--  <div class="layui-inline">
+                        <!--  <div class="layui-inline">
                         <label class="layui-form-label">客户来源：</label>
                         <div class="layui-input-inline">
                             <select name="xs_source" id="xs_source">
@@ -145,296 +148,343 @@
                         </div>
                     </div> -->
 
+                    </div>
+
+
+
+                    <div class="layui-inline" style="float: right;padding-bottom: 15px">
+                        <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-app-contlist-search">
+                            <i class="layui-icon layui-icon-search layuiadmin-button-btn"
+                                style="vertical-align: sub;"></i>查询数据
+                        </button>
+                    </div>
+
                 </div>
-
-
-
-                <div class="layui-inline" style="float: right;padding-bottom: 15px">
-                    <button class="layui-btn layuiadmin-btn-list"  lay-submit lay-filter="LAY-app-contlist-search">
-                        <i class="layui-icon layui-icon-search layuiadmin-button-btn"  style="vertical-align: sub;"></i>查询数据
-                    </button>
-                </div>
-
             </div>
-        </div>
 
 
 
-    </fieldset>
+        </fieldset>
 
 
 
-    <table class="layui-table" id="table-list" lay-filter="table-list"></table>
-</div>
+        <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+    </div>
 
 
 
-<script type="text/html" id="action">
+    <script type="text/html" id="action">
 
     <a class="layui-btn layui-btn-primary layui-btn-xs"  href="{:url('dialogue')}?id={{d.id}}"><i class="layui-icon">&#xe654;</i>写跟进</a>
     <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
     <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
 </script>
 
 
-<script type="text/html" id="topBtn">
+    <script type="text/html" id="topBtn">
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加客户</button>
     <button type="button" class="layui-btn layui-btn-normal layui-btn-radius layui-btn-sm" id="toAll" style="margin-right: 10px"><i class="layui-icon">&#xe681;</i>导入客户</button>
     <button type="button" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" id="moveGh" lay-event="moveGh"><i class="layui-icon">&#xe770;</i>移入公海</button>
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="alterAll" lay-event="alterAll"><i class="layui-icon">&#xe60e;</i>转移客户</button>
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="chengjiaoAll" lay-event="chengjiaoAll"><i class="layui-icon">&#xe63c;</i>客户成交</button>
 
 
 </script>
 
 
-{include file="common/foot"/}
-<script>
-    layui.use(['table','form','upload','util','laydate'], function() {
-        var table = layui.table,form = layui.form,laydate = layui.laydate, $ = layui.jquery,upload = layui.upload,util = layui.util;
-        var tableIn = table.render({
-            elem: '#table-list',
-            url: '{:url("perClilist")}',
-            method: 'post',
-            toolbar: '#topBtn',
-            defaultToolbar:['filter'],
-            page: true,
-            cols: [[
-                {checkbox:true,fixed: true},
-                {field: 'id', title: 'ID', width: 80, fixed: true,hide:true},
-                {field: 'kh_name', title: '客户名称',templet:function (res) {
-                        return "<a href='{:url('dialogue')}?id="+res.id+"'>"+res.kh_name+"</a>";
-                    }},
-                {field: 'xs_area', title: '地区' },
-                // {field: 'kh_contact', title: 'Whatsapp'},
-                // {field: 'phone', title: '联系号码' },
-                {field: 'kh_rank', title: '客户级别'},
-                {field: 'kh_status', title: '客户状态' },
-                {field: 'issuccess', title: '成交状态',templet:function (res) {
-                        var issuccess = res.issuccess;
-                        if (issuccess == 1) {
-                             return '已成交';
-                        }else{
-                            return '未成交';
+    {include file="common/foot"/}
+    <script>
+        layui.use(['table', 'form', 'upload', 'util', 'laydate'], function () {
+            var table = layui.table, form = layui.form, laydate = layui.laydate, $ = layui.jquery, upload = layui.upload, util = layui.util;
+            var tableIn = table.render({
+                elem: '#table-list',
+                url: '{:url("perClilist")}',
+                method: 'post',
+                toolbar: '#topBtn',
+                defaultToolbar: ['filter'],
+                page: true,
+                cols: [[
+                    { checkbox: true, fixed: true },
+                    { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
+                    {
+                        field: 'kh_name', title: '客户名称', templet: function (res) {
+                            return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + res.kh_name + "</a>";
                         }
-                    } },
-                {field: 'last_up_records', title: '最新跟进记录', },
-                {field: 'last_up_time', title: '最近跟进时间',hide:true },
-                // {field: 'next_up_time', title: '下次跟进时间',hide:true },
-                {field: 'xs_source', title: '客户来源',hide:true},
-                {field: 'remark', title: '备注',hide:true},
-                {field: 'pr_user', title: '负责人',hide:false },
-                {field: 'pr_gh_type', title: '所属公海',hide:true },
-                {field: 'to_gh_time', title: '划入公海时间',hide:true },
-                {field: 'ut_time', title: '更新于',hide:true},
-                {field: 'at_time', title: '创建时间', },
-                {field: 'at_user', title: '创建人',hide:true},
-                {field: 'pr_user_bef', title: '前负责人',hide:true },
-                {width: 320, align: 'center', toolbar: '#action'}
-            ]],
-            limit: 10 //每页默认显示的数量
+                    },
+                    { field: 'xs_area', title: '地区' },
+                    // {field: 'kh_contact', title: 'Whatsapp'},
+                    // {field: 'phone', title: '联系号码' },
+                    { field: 'kh_rank', title: '客户级别' },
+                    { field: 'kh_status', title: '客户状态' },
+                    {
+                        field: 'issuccess', title: '成交状态', templet: function (res) {
+                            var issuccess = res.issuccess;
+                            if (issuccess == 1) {
+                                return '已成交';
+                            } else {
+                                return '未成交';
+                            }
+                        }
+                    },
+                    { field: 'last_up_records', title: '最新跟进记录', },
+                    { field: 'last_up_time', title: '最近跟进时间', hide: true },
+                    // {field: 'next_up_time', title: '下次跟进时间',hide:true },
+                    { field: 'xs_source', title: '客户来源', hide: true },
+                    { field: 'remark', title: '备注', hide: true },
+                    { field: 'pr_user', title: '负责人', hide: false },
+                    { field: 'pr_gh_type', title: '所属公海', hide: true },
+                    { field: 'to_gh_time', title: '划入公海时间', hide: true },
+                    { field: 'ut_time', title: '更新于', hide: true },
+                    { field: 'at_time', title: '创建时间', },
+                    { field: 'at_user', title: '创建人', hide: true },
+                    { field: 'pr_user_bef', title: '前负责人', hide: true },
+                    { width: 320, align: 'center', toolbar: '#action' }
+                ]],
+                limit: 10 //每页默认显示的数量
+            });
+
+
+            $('body').on('click', '#add', function () {
+                var indexOpen = layer.open({
+                    type: 2,
+                    title: '添加客户',
+                    closeBtn: 1, //是否显示关闭按钮
+                    area: ['100%', '86%'],
+                    anim: 2,  //动画
+                    shadeClose: false,  //点击空白处是否关闭
+                    maxmin: false, //开启最大化最小化按钮
+                    content: ["{:url('Client/add')}"]
+                });
+            })
+
+            //将上述表格示例导出为 csv 文件
+            //table.exportFile(tableIn.config.id, data); //data 为该实例中的任意数量的数据
+            //table.exportFile(id, data, type); //导出数据
+            //监听事件
+            table.on('toolbar(table-list)', function (obj) {
+
+                var checkStatus = table.checkStatus(obj.config.id)
+                    , data = checkStatus.data; //获取选中的数据
+                switch (obj.event) {
+                    case 'moveGh':
+                        if (data.length === 0) {
+                            layer.msg('请选择一行');
+                            // } else if(data.length > 1){
+                            //     layer.msg('只能同时编辑一个');
+                        } else {
+                            //console.log(data);
+                            alterList = [];  //定义需要转移的数组
+                            data.forEach(function (obj, index) {
+                                alterList.push(obj.id);
+                            });
+                            var currConfirm = layer.confirm('您确定这' + data.length + '个客户转入公海吗？', function (index) {
+
+                                /*layer.alert('编辑 [id]：'+ checkStatus.data[0]['id']);*/
+                                var indexOpen = layer.open({
+                                    type: 2,
+                                    title: '移入公海',
+                                    closeBtn: 1, //是否显示关闭按钮
+                                    area: ['100%', '86%'],
+                                    anim: 2,  //动画
+                                    shadeClose: false,  //点击空白处是否关闭
+                                    maxmin: false, //开启最大化最小化按钮
+                                    content: ["{:url('Client/toMoveGh')}?ids=" + alterList]
+                                });
+                            });
+                        }
+                        break;
+                    case 'alterAll':
+                        var checkStatus = table.checkStatus(obj.config.id)
+                            , data = checkStatus.data;//获取选中的数据
+
+                        if (data.length > 0) {
+                            alterList = [];  //定义需要转移的数组
+                            data.forEach(function (obj, index) {
+                                alterList.push(obj.id);
+                            });
+
+                            var currConfirm = layer.confirm('您确定要转移这' + data.length + '个客户吗？', function (index) {
+
+
+                                layer.close(currConfirm);
+                                var indexOpen = layer.open({
+                                    type: 2,
+                                    title: '转移客户',
+                                    closeBtn: 1, //是否显示关闭按钮
+                                    area: ['100%', '86%'],
+                                    anim: 2,  //动画
+                                    shadeClose: false,  //点击空白处是否关闭
+                                    maxmin: false, //开启最大化最小化按钮
+                                    content: ["{:url('Client/alterPrUserPri')}?ids=" + alterList]
+
+                                });
+
+
+                            });
+
+
+                        } else {
+                            layer.msg("请选择需要转移的客户");
+                        }
+                        break;
+                    case 'chengjiaoAll':
+                        var checkStatus = table.checkStatus(obj.config.id)
+                            , data = checkStatus.data;//获取选中的数据
+
+                        if (data.length > 0) {
+                            alterList = [];  //定义需要转移的数组
+                            data.forEach(function (obj, index) {
+                                alterList.push(obj.id);
+                            });
+
+                            var currConfirm = layer.confirm('您确定' + data.length + '个客户成交了吗？', function (index) {
+                                $.post("{:url('Client/chengjiao')}", { ids: alterList }, function (res) {
+                                    console.log(res);
+                                    if (res.code === 0) {
+                                        layer.msg(res.msg, { time: 1000, icon: 1 });
+                                        tableIn.reload();
+                                    } else {
+                                        layer.msg('操作失败！', { time: 1000, icon: 2 });
+                                    }
+                                })
+                            });
+
+
+                        } else {
+                            layer.msg("请选择成交的客户");
+                        }
+                        break;
+                };
+            });
+
+            /*监听行内操作*/
+            table.on('tool(table-list)', function (obj) {
+                var data = obj.data;
+
+                if (obj.event === 'del') {
+                    layer.confirm('您确定要删除这个客户吗？', function (index) {
+                        var loading = layer.load(1, { shade: [0.1, '#fff'] });
+                        $.post("{:url('del')}", { id: data.id }, function (res) {
+                            layer.close(loading);
+                            if (res.code === 0) {
+                                layer.msg(res.msg, { time: 1000, icon: 1 });
+                                tableIn.reload();
+                            } else {
+                                layer.msg('操作失败！', { time: 1000, icon: 2 });
+                            }
+                        });
+                        layer.close(index);
+                    });
+                }
+                else if (obj.event === 'edit') {
+                    layer_add("编辑客户", "{:url('Client/edit')}?id=" + data.id);
+                } else if (obj.event === 'alter') {
+                    layer_add("转移客户", "{:url('Client/alterPrUserPri')}?ids=" + data.id)
+                }else if (obj.event === 'chengjiao') {
+                    layer.confirm('您确定这个客户成交了吗？', function (index) {
+                        $.post("{:url('Client/chengjiao')}", { ids: data.id }, function (res) {
+                            console.log(res);
+                            if (res.code === 0) {
+                                layer.msg(res.msg, { time: 1000, icon: 1 });
+                                tableIn.reload();
+                            } else {
+                                layer.msg('操作失败！', { time: 1000, icon: 2 });
+                            }
+                        })
+                    });
+                }
+            });
+
+
+            //监听搜索
+            form.on('submit(LAY-app-contlist-search)', function (data) {
+                var field = data.field;
+
+                /* layer.alert(JSON.stringify(data.field), {
+                      title: '最终的提交信息'
+                    })
+                    return false;*/
+
+
+                table.reload('table-list', {
+                    url: "{:url('Client/personClientSearch')}",
+                    where: {
+                        keyword: data.field
+                    },
+                    page: {
+                        curr: 1
+                    }
+                });
+
+
+            });
+
+
+
+            laydate.render({
+                elem: '#at_time'
+            });
+
+            //批量导入
+            var indexMsg;
+            //上传xls文件
+            upload.render({ //允许上传的文件后缀
+                elem: '#toAll'
+                , url: "{:url('Client/xlsUpload')}"
+                , accept: 'file' //普通文件
+                , field: 'xlsFile'
+                , exts: 'xls|xlsx' //只允许上传压缩文件
+
+                , before: function (obj) { //obj参数包含的信息，跟 choose回调完全一致，可参见上文。
+                    indexMsg = layer.msg('正在导入数据，请稍等...', {
+                        icon: 16,
+                        shade: 0.04,
+                        time: false //取消自动关闭
+                    });
+                }
+                , done: function (res) {
+                    layer.close(indexMsg); //关闭信息框
+                    if (res.code == 0) {
+                        layer.msg(res.msg, { time: 1800, icon: 1 }, function () {
+                            location.reload()
+                        });
+                    } else {
+                        layer.msg(res.msg, { time: 1800, icon: 2 });
+                    }
+                }
+                , error: function (index, upload) {
+                    layer.close(indexMsg); //关闭信息框
+                    layer.msg('系统繁忙，请稍后...', { time: 1800, icon: 1 });
+                }
+            });
+
+
+
         });
+    </script>
 
 
-        $('body').on('click','#add',function() {
+    <script>
+
+        /*添加*/
+        function layer_add(title, url) {
             var indexOpen = layer.open({
                 type: 2,
-                title: '添加客户',
+                title: title,
                 closeBtn: 1, //是否显示关闭按钮
-                area: ['100%','86%'],
+                area: ['100%', '80%'],
                 anim: 2,  //动画
                 shadeClose: false,  //点击空白处是否关闭
-                maxmin: false, //开启最大化最小化按钮
-                content: ["{:url('Client/add')}"]
+                maxmin: true, //开启最大化最小化按钮
+                content: [url],
+
+
             });
-        })
+        }
 
-        //将上述表格示例导出为 csv 文件
-        //table.exportFile(tableIn.config.id, data); //data 为该实例中的任意数量的数据
-        //table.exportFile(id, data, type); //导出数据
-        //监听事件
-        table.on('toolbar(table-list)', function(obj){
-
-            var checkStatus = table.checkStatus(obj.config.id)
-                ,data = checkStatus.data; //获取选中的数据
-            switch(obj.event){
-                case 'moveGh':
-                    if(data.length === 0){
-                        layer.msg('请选择一行');
-                    // } else if(data.length > 1){
-                    //     layer.msg('只能同时编辑一个');
-                    } else {
-                        //console.log(data);
-                        alterList = [];  //定义需要转移的数组
-                        data.forEach(function (obj,index) {
-                            alterList.push(obj.id);
-                        });
-                        var currConfirm = layer.confirm('您确定这'+data.length+'个客户转入公海吗？',function (index) {
-
-                            /*layer.alert('编辑 [id]：'+ checkStatus.data[0]['id']);*/
-                            var indexOpen = layer.open({
-                                type: 2,
-                                title: '移入公海',
-                                closeBtn: 1, //是否显示关闭按钮
-                                area: ['100%','86%'],
-                                anim: 2,  //动画
-                                shadeClose: false,  //点击空白处是否关闭
-                                maxmin: false, //开启最大化最小化按钮
-                                content: ["{:url('Client/toMoveGh')}?ids="+alterList]
-                            });
-                        });
-                    }
-                    break;
-                case 'alterAll':
-                    var checkStatus = table.checkStatus(obj.config.id)
-                        ,data=checkStatus.data;//获取选中的数据
-
-                    if(data.length > 0){
-                        alterList = [];  //定义需要转移的数组
-                        data.forEach(function (obj,index) {
-                            alterList.push(obj.id);
-                        });
-
-                        var currConfirm = layer.confirm('您确定要转移这'+data.length+'个客户吗？',function (index) {
-
-
-                            layer.close(currConfirm);
-                            var indexOpen = layer.open({
-                                type: 2,
-                                title: '转移客户',
-                                closeBtn: 1, //是否显示关闭按钮
-                                area: ['100%','86%'],
-                                anim: 2,  //动画
-                                shadeClose: false,  //点击空白处是否关闭
-                                maxmin: false, //开启最大化最小化按钮
-                                content: ["{:url('Client/alterPrUserPri')}?ids="+alterList]
-
-                            });
-
-
-                        });
-
-
-                    }else {
-                        layer.msg("请选择需要转移的客户");
-                    }
-                    break;
-            };
-        });
-
-        /*监听行内操作*/
-        table.on('tool(table-list)', function(obj) {
-            var data = obj.data;
-
-            if (obj.event === 'del') {
-                layer.confirm('您确定要删除这个客户吗？', function(index){
-                    var loading = layer.load(1, {shade: [0.1, '#fff']});
-                    $.post("{:url('del')}",{id:data.id},function(res){
-                        layer.close(loading);
-                        if(res.code===0){
-                            layer.msg(res.msg,{time:1000,icon:1});
-                            tableIn.reload();
-                        }else{
-                            layer.msg('操作失败！',{time:1000,icon:2});
-                        }
-                    });
-                    layer.close(index);
-                });
-            }
-            else if(obj.event === 'edit'){
-                layer_add("编辑客户","{:url('Client/edit')}?id="+data.id);
-            }else if(obj.event === 'alter'){
-                layer_add("转移客户","{:url('Client/alterPrUserPri')}?ids="+data.id)
-            }
-        });
-
-
-//监听搜索
-        form.on('submit(LAY-app-contlist-search)', function(data){
-            var field = data.field;
-
-            /* layer.alert(JSON.stringify(data.field), {
-                  title: '最终的提交信息'
-                })
-                return false;*/
-
-
-            table.reload('table-list', {
-                url:"{:url('Client/personClientSearch')}",
-                where: {
-                    keyword: data.field
-                },
-                page:{
-                    curr:1
-                }
-            });
-
-
-        });
-
-
-
-        laydate.render({
-            elem: '#at_time'
-        });
-
-        //批量导入
-        var indexMsg;
-        //上传xls文件
-        upload.render({ //允许上传的文件后缀
-            elem: '#toAll'
-            ,url: "{:url('Client/xlsUpload')}"
-            ,accept: 'file' //普通文件
-            ,field:'xlsFile'
-            ,exts: 'xls|xlsx' //只允许上传压缩文件
-
-            ,before: function(obj){ //obj参数包含的信息，跟 choose回调完全一致，可参见上文。
-                indexMsg = layer.msg('正在导入数据，请稍等...', {
-                    icon: 16,
-                    shade: 0.04,
-                    time:false //取消自动关闭
-                });
-            }
-            ,done: function(res){
-                layer.close(indexMsg); //关闭信息框
-                if (res.code == 0){
-                    layer.msg(res.msg, {time: 1800, icon: 1}, function () {
-                        location.reload()
-                    });
-                }else {
-                    layer.msg(res.msg, {time: 1800, icon: 2});
-                }
-            }
-            ,error: function(index, upload){
-                layer.close(indexMsg); //关闭信息框
-                layer.msg('系统繁忙，请稍后...', {time: 1800, icon: 1});
-            }
-        });
-
-
-
-    });
-</script>
-
-
-<script>
-
-    /*添加*/
-    function layer_add(title,url){
-        var indexOpen = layer.open({
-            type: 2,
-            title: title,
-            closeBtn: 1, //是否显示关闭按钮
-            area: ['100%','80%'],
-            anim: 2,  //动画
-            shadeClose: false,  //点击空白处是否关闭
-            maxmin: true, //开启最大化最小化按钮
-            content:[url],
-            
-
-        });
-    }
-
-</script>
+    </script>
 </body>
+
 </html>

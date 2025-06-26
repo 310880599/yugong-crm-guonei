@@ -4,7 +4,23 @@
 
 <div class="admin-main layui-anim layui-anim-upbit">
 
-    
+    <div class="layui-row ">
+        <!-- 新增冲突查询 -->
+        <div class="layui-row" style="margin-bottom: 20px;">
+            <div class="layui-col-md12" style="text-align: left;">
+                <form class="layui-form" onsubmit="return searchConflict()" style="display: inline-block;">
+                    <div class="layui-inline" style="margin-right: 10px;">
+                        <input type="text" name="keyword" placeholder="输入客户名称/手机号/whatsapp/邮箱" autocomplete="off"
+                            class="layui-input" style="width: 800px;">
+                    </div>
+                    <button class="layui-btn layui-btn-normal" lay-submit>
+                        <i class="layui-icon layui-icon-search"></i> 冲突查询
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
     <div class="layui-row layui-col-space15">
         <div class="layui-col-md12">
             <div class="layui-row layui-col-space15">
@@ -49,7 +65,7 @@
                         </div>
                         <div class="layui-card-body layuiadmin-card-list">
 
-                            <p class="layuiadmin-big-font">{$liberumCount}</p> 
+                            <p class="layuiadmin-big-font">{$liberumCount}</p>
                             <p>
                                 总数据
                                 <span class="layuiadmin-span-color">{$liberumCount} 条</span>
@@ -59,7 +75,7 @@
                 </div>
 
 
-               <!-- <div class="layui-col-sm6 layui-col-md3">
+                <!-- <div class="layui-col-sm6 layui-col-md3">
                     <div class="layui-card">
                         <div class="layui-card-header">
                             成交
@@ -81,8 +97,8 @@
 
 
     </div>
-    
-    
+
+
     <div class="layui-row layui-col-space15">
 
         <div class="layui-col-md8">
@@ -111,15 +127,15 @@
                                             <td>提成点（%）</td>
                                         </tr>
                                         {volist name='userlist' id='vo' key="k" }
-                                            <tr>
-                                                <td>{$k}</td>
-                                                <td>{$vo['username']}</td>
-                                                <td>{$vo['mubiao']}</td>
-                                                <td>{$vo['money_month']}</td>
-                                                <td>{$vo['wanchenglv']}</td>
-                                                <td>{$vo['number_month']}</td>
-                                                <td>{$vo['ticheng']}%</td>
-                                            </tr>
+                                        <tr>
+                                            <td>{$k}</td>
+                                            <td>{$vo['username']}</td>
+                                            <td>{$vo['mubiao']}</td>
+                                            <td>{$vo['money_month']}</td>
+                                            <td>{$vo['wanchenglv']}</td>
+                                            <td>{$vo['number_month']}</td>
+                                            <td>{$vo['ticheng']}%</td>
+                                        </tr>
                                         {/volist}
                                     </tbody>
                                 </table>
@@ -143,24 +159,24 @@
                         </colgroup>
                         <tbody>
 
-                        <tr>
-                            <td>今日已跟进</td>
-                            <td>
-                                {$today_count}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>未跟进个数</td>
-                            <td>
-                                {$all_count}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>跟进率</td>
-                            <td>
-                                {$genjinlv}%
-                            </td>
-                        </tr>
+                            <tr>
+                                <td>今日已跟进</td>
+                                <td>
+                                    {$today_count}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>未跟进个数</td>
+                                <td>
+                                    {$all_count}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>跟进率</td>
+                                <td>
+                                    {$genjinlv}%
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -175,7 +191,7 @@
                     <i class="layui-icon layui-icon-tips" title="{:config('sys_name')}" lay-offset="5"></i>
                 </div>
                 <div class="layui-card-body layui-text layadmin-text">
-                    
+
                     <!-- <p>{:config('sys_name')}</p>
 
                     <p>—— {:config('sys_name')}（<a href="/" target="_blank">crm6.nnuiclass.com</a>）</p>
@@ -195,16 +211,18 @@
                         <div class="layui-card-header">动态</div>
                         <div class="layui-card-body">
                             <dl class="layuiadmin-card-status">
-                                
-                             
+
+
                                 {volist name='result' id='vo'}
                                 <dd>
                                     <div class="layui-status-img"><a href="javascript:;">
-                                        <img src="{$vo.avatar}"></a>
+                                            <img src="{$vo.avatar}"></a>
                                     </div>
-                                    <div>  
-                                        <p>{$vo.username} <em style="color: red;margin-right: 5px">跟进</em>  <a href="{:url('Client/dialogue')}?id={$vo.id}"> {$vo.kh_name}</a> </p>
-                                        <p><strong style="color: burlywood;margin-right: 5px">跟进记录: </strong>{$vo.reply_msg}</p>
+                                    <div>
+                                        <p>{$vo.username} <em style="color: red;margin-right: 5px">跟进</em> <a
+                                                href="{:url('Client/dialogue')}?id={$vo.id}"> {$vo.kh_name}</a> </p>
+                                        <p><strong style="color: burlywood;margin-right: 5px">跟进记录:
+                                            </strong>{$vo.reply_msg}</p>
                                         <span>跟进时间：{$vo.create_date|date='Y-m-d H:i:s'}</span>
                                     </div>
                                 </dd>
@@ -222,9 +240,19 @@
 </div>
 {include file="common/foot"/}
 <script>
-    layui.use('table', function() {
+    layui.use('table', function () {
         var table = layui.table;
     })
+    function searchConflict() {
+        var keyword = $('input[name="keyword"]').val();
+        if (!keyword) {
+            layer.msg('请输入查询关键词');
+            return false;
+        }
+        window.location.href = "{:url('Client/conflict')}?keyword=" + encodeURIComponent(keyword);
+        return false; // 阻止表单默认提交
+    }
 </script>
 </body>
+
 </html>

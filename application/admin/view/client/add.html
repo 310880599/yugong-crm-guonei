@@ -90,7 +90,7 @@
                 <div class="layui-input-4">
                     <!-- <input type="text" id="xs_area" name="xs_area" lay-verify="required" placeholder="请输入地区"
                         class="layui-input"> -->
-                    <select name="xs_area" lay-filter="xs_area">
+                    <select name="xs_area" lay-filter="xs_area" lay-search>
                         <option value="">请选择地区</option>
                         {foreach $countries as $key=>$vo }
                         <option value="{$key}" data-code="{$vo}">{$key}</option>
