@@ -810,7 +810,7 @@ function dd(...$vars)
             overflow: auto;
         }
     </style>';
-    
+
     foreach ($vars as $var) {
         echo '<pre class="dd">';
         if (function_exists('dump')) {
@@ -823,7 +823,7 @@ function dd(...$vars)
         }
         echo '</pre>';
     }
-    
+
     die;
 }
 
@@ -847,13 +847,14 @@ function fail($msg = '操作失败!', $data = [])
     return json($msg);
 }
 
-function success($data = [],$msg = '操作成功!')
+function success($data = [], $msg = '操作成功!')
 {
     $msg = ['code' => 0, 'msg' => $msg, 'data' => $data];
     return json($msg);
 }
 
- function bulkTransfer(array &$source, array $keysToRemove): array {
+function bulkTransfer(array &$source, array $keysToRemove): array
+{
     $removed = array_intersect_key($source, array_flip($keysToRemove));
     $source = array_diff_key($source, $removed);
     return $removed;

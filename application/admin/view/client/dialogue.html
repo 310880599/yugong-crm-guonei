@@ -19,7 +19,8 @@
             height: 100px;
             margin: 0 10px 0px 0;
         }
-        .input-row{
+
+        .input-row {
             margin-bottom: 10px;
         }
     </style>
@@ -51,6 +52,13 @@
                     </div>
                 </div>
                 <div class="layui-form-item">
+                    <label class="layui-form-label">联系人</label>
+                    <div class="layui-input-4">
+                        <input type="text" disabled value="{$result.kh_contact}" class="layui-input">
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
                     <label class="layui-form-label">地区</label>
                     <div class="layui-input-4">
                         <input type="text" disabled value="{$result.xs_area}" class="layui-input">
@@ -78,6 +86,26 @@
                     </div>
                 </div>
                 <div class="layui-form-item">
+                    <label class="layui-form-label">微信</label>
+                    <div class="layui-input-4">
+                        {foreach $result.contacts['wechat'] as $v}
+                        <div class="input-row">
+                            <input type="text" disabled value="{$v}" class="layui-input">
+                        </div>
+                        {/foreach}
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">阿里id</label>
+                    <div class="layui-input-4">
+                        {foreach $result.contacts['ali_id'] as $v}
+                        <div class="input-row">
+                            <input type="text" disabled value="{$v}" class="layui-input">
+                        </div>
+                        {/foreach}
+                    </div>
+                </div>
+                <div class="layui-form-item">
                     <label class="layui-form-label">联系方式</label>
                     <div class="layui-input-4">
                         {foreach $result.contacts['phone'] as $v}
@@ -87,8 +115,6 @@
                         {/foreach}
                     </div>
                 </div>
-
-
 
                 <div class="layui-form-item">
                     <label class="layui-form-label">客户来源</label>

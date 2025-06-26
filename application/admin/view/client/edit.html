@@ -90,6 +90,13 @@
                 </div>
             </div>
             <div class="layui-form-item">
+                <label class="layui-form-label">联系人</label>
+                <div class="layui-input-4">
+                    <input type="text" id="kh_contact" name="kh_contact" value="{$result.kh_contact}"
+                        placeholder="请输入联系人" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
                 <label class="layui-form-label">地区</label>
                 <div class="layui-input-4">
                     <!-- <input type="text" id="xs_area" name="xs_area" lay-verify="required" placeholder="请输入地区" class="layui-input" value="{$result.xs_area}"> -->
@@ -108,8 +115,8 @@
                 <div class="layui-input-4">
                     {foreach $contact['email'] as $i=>$e}
                     <div class="input-row">
-                        <input type="text" id="email" name="email[]" lay-verify="required|email" placeholder="请输入邮箱"
-                            class="layui-input layui-required" value="{$e}">
+                        <input type="text" id="email" name="email[]" lay-verify="email" placeholder="请输入邮箱"
+                            class="layui-input emails" value="{$e}">
                         {if $i==0}<button class="add-btn">+</button>{else}<button class="remove-btn">-</button>{/if}
                     </div>
                     {/foreach}
@@ -118,27 +125,43 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">Whatsapp</label>
                 <div class="layui-input-4">
-                     {foreach $contact['whatsapp'] as $i=>$e}
-                    <input type="text" id="whatsapp" name="whatsapp" value="{$e}" lay-verify="required"
-                        placeholder="请输入Whatsapp" class="layui-input" >
+                    {foreach $contact['whatsapp'] as $i=>$e}
+                    <input type="text" id="whatsapp" name="whatsapp" value="{$e}" placeholder="请输入Whatsapp"
+                        class="layui-input">
                     {/foreach}
                 </div>
             </div>
             <div class="layui-form-item">
                 <label class="layui-form-label">联系号码</label>
                 <div class="layui-input-4">
-                     {foreach $contact['phone'] as $i=>$e}
-                     {php}$phone_arr = explode('#',$e); {/php}
+                    {foreach $contact['phone'] as $i=>$e}
+                    {php}$phone_arr = explode('#',$e); {/php}
                     <div class="input-row">
                         <div class="phone">
-                            <input type="number" name="phone_code[]" lay-verify="required" min="1" max="99999" step="1"
-                                placeholder="国家号" class="layui-input phone_code" value="{$phone_arr[0]}">
-                            <input type="text" name="phone[]" lay-verify="required|phone" placeholder="号码"
-                                class="layui-input phone" value="{$phone_arr[1]}">
+                            <input type="number" name="phone_code[]" min="1" max="99999" step="1" placeholder="国家号"
+                                class="layui-input phone_code" value="{$phone_arr[0]}">
+                            <input type="text" name="phone[]" lay-verify="phone" placeholder="号码"
+                                class="layui-input phone phones" value="{$phone_arr[1]}">
                         </div>
                         {if $i==0}<button class="add-btn">+</button>{else}<button class="remove-btn">-</button>{/if}
                     </div>
-                     {/foreach}
+                    {/foreach}
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">阿里id</label>
+                <div class="layui-input-4">
+                    {foreach $contact['ali_id'] as $i=>$e}
+                    <input type="text" id="ali_id" name="ali_id" value="{$e}" placeholder="请输入阿里id" class="layui-input">
+                    {/foreach}
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">微信号</label>
+                <div class="layui-input-4">
+                    {foreach $contact['wechat'] as $i=>$e}
+                    <input type="text" id="wechat" name="wechat" value="{$e}" placeholder="请输入微信号" class="layui-input">
+                    {/foreach}
                 </div>
             </div>
             <div class="layui-form-item">
@@ -202,19 +225,23 @@
             var form = layui.form, layer = layui.layer, $ = layui.jquery;
             //验证
             form.verify({
-                // email: function (value) {
-                //     if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,4}$/.test(value)) {
-                //         return '邮箱格式不正确 (例: example@domain.com)';
-                //     }
-                // },
+                email: function (value) {
+                    if (value.trim()) { // 仅当输入值非空时校验格式
+                        if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,4}$/.test(value)) {
+                            return '邮箱格式不正确 (例: example@domain.com)';
+                        }
+                    }
+                },
                 // phone_code: function (value) {
                 //     if (!/^(\+?\d{1,5})$/.test(value)) {
                 //         return '国家码格式错误 (例: +86 或 0086)';
                 //     }
                 // },
                 phone: function (value) {
-                    if (!/^\d{6,15}$/.test(value)) {
-                        return '号码应为6-15位纯数字';
+                    if (value.trim()) {
+                        if (!/^\d{6,15}$/.test(value)) {
+                            return '号码应为6-15位纯数字';
+                        }
                     }
                 }
             });
@@ -223,7 +250,7 @@
             $(document).on('click', '.add-btn', function () {
                 var $newRow = $('<div class="input-row">');
                 var $clone = $(this).prev().clone();
-                $clone.find('.phone').val('');  
+                $clone.find('.phone').val('');
                 $newRow.append($clone);
                 $newRow.append('<button class="remove-btn">-</button>');
                 $(this).parent().parent().append($newRow);
@@ -244,8 +271,32 @@
                 $('.phone_code').val(code || 1);
             })
 
+            function checkContactRequired() {
+                const fields = {
+                    whatsapp: $('input[name="whatsapp"]').val().trim(),
+                    ali_id: $('input[name="ali_id"]').val().trim(),
+                    wechat: $('input[name="wechat"]').val().trim(),
+                    emails: $('.emails').map(function () { console.log($(this).val().trim()); return $(this).val().trim(); }).get(),
+                    phones: $('.phones').map(function () { return $(this).val().trim(); }).get()
+                };
+                console.log(fields);
+                // 检查是否有至少一个联系方式有值
+                return !!(
+                    fields.whatsapp ||
+                    fields.ali_id ||
+                    fields.wechat ||
+                    fields.emails.some(v => v) ||
+                    fields.phones.some(v => v)
+                );
+            }
             //监听提交
             form.on('submit(submit)', function (data) {
+
+                // 新增：检查联系方式是否至少填1个
+                if (!checkContactRequired()) {
+                    layer.msg('请至少填写WhatsApp、阿里id、微信、邮箱或号码中的一个', { icon: 5 });
+                    return false;
+                }
 
                 $.post("{:url('Client/edit')}", data.field, function (res) {
 

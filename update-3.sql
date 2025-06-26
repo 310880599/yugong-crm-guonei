@@ -42,9 +42,9 @@ DROP TABLE IF EXISTS `crm_contacts`;
 CREATE TABLE `crm_contacts` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `leads_id` int(11) DEFAULT NULL COMMENT '线索ID',
-  `contact_type` tinyint(1) DEFAULT NULL COMMENT '联系方式类型（1-手机号/2-邮箱/3-Whatsapp',
-  `contact_extra` varchar(100) DEFAULT NULL COMMENT 'extra',
-  `contact_value` varchar(255) DEFAULT NULL COMMENT '联系方式值',
+  `contact_type` tinyint(1) DEFAULT '0' COMMENT '联系方式类型（1-手机号/2-邮箱/3-Whatsapp/4-阿里id/5-微信',
+  `contact_extra` varchar(100) DEFAULT '' COMMENT 'extra',
+  `contact_value` varchar(255) DEFAULT '' COMMENT '联系方式值',
   `is_delete` tinyint(1) DEFAULT '0' COMMENT '0-正常/1-删除',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
    PRIMARY KEY (`id`) USING BTREE,
