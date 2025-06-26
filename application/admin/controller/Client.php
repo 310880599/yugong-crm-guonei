@@ -9,6 +9,8 @@ use think\facade\Env;
 
 class Client extends Common
 {
+    protected $middleware = [\app\http\middleware\TrimStrings::class];
+
     const CONTACT_MAP = [
         'phone' => 1,
         'email' => 2,
@@ -88,7 +90,6 @@ class Client extends Common
                     ->toArray();
             }
             return ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
-
         }
 
         $khRankList = Db::table('crm_client_rank')->select();
@@ -168,7 +169,7 @@ class Client extends Common
         return $this->fetch('client/chengjiao');
     }
 
-    
+
 
 // public function xlsUpload() {
 //     $xlsFile = request()->file('xlsFile');
@@ -1183,9 +1184,10 @@ public function xlsUpload() {
     }
 
     //客户成交
-    public function chengjiao(){
+    public function chengjiao()
+    {
         $ids = Request::param('ids');
-        if(is_string($ids))$ids = explode(',', $ids);
+        if (is_string($ids)) $ids = explode(',', $ids);
         $count = 0;
         foreach ($ids as $key => $value) {
             $data['issuccess'] = 1;
@@ -1204,5 +1206,5 @@ public function xlsUpload() {
         }
     }
 
-
+    
 }
