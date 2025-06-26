@@ -1280,33 +1280,33 @@ class Client extends Common
 
 
 
-    //冲突查询
+  //冲突查询
     public function conflict()
-    {
-        $keyword = Request::param('keyword');
-        $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
-        if (Request::isAjax()) {
-            if (empty($keyword)) return success();
+{
+    $keyword = Request::param('keyword');
+    $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
+    if (Request::isAjax()) {
+        if (empty($keyword)) return success();
 
-            $query = Db::name('crm_leads')
-                ->alias('l')
-                ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
-                ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time')
-                ->group('l.id');
-            $query->where(function ($q) use ($keyword) {
-                $q->where('l.kh_name', 'like', "%{$keyword}%")
-                    ->whereOr(function ($q2) use ($keyword) {
-                        $q2->where('c.contact_value', $keyword)
-                            ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) = '{$keyword}'");
-                    });
-            });
+        $query = Db::name('crm_leads')
+            ->alias('l')
+            ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
+            ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time')
+            ->group('l.id');
+        $query->where(function ($q) use ($keyword) {
+            $q->where('l.kh_name', 'like', "%{$keyword}%")
+                ->whereOr(function ($q2) use ($keyword) {
+                    $q2->where('c.contact_value', 'like', "%{$keyword}%")
+                        ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
+                });
+        });
 
-            $page = Request::param('page/d', 1);
-            $pageSize = Request::param('limit/d', 10);
-            $list = $query->paginate($pageSize, false, ['page' => $page])->items();
-            return success($list);
-        }
-        $this->assign('keyword', $keyword);
-        return $this->fetch('client/conflict');
+        $page = Request::param('page/d', 1);
+        $pageSize = Request::param('limit/d', 10);
+        $list = $query->paginate($pageSize, false, ['page' => $page])->items();
+        return success($list);
     }
+    $this->assign('keyword', $keyword);
+    return $this->fetch('client/conflict');
+}
 }
