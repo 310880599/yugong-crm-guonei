@@ -33,14 +33,7 @@
                                 </label>
                                 <input type="password" name="password" lay-verify="required" placeholder="这里输入密码" class="layui-input">
                             </div>
-                            {if $system['code'] == 'open'}
-                            <div class="layui-form-item">
-                                <input type="text" name="vercode" id="captcha" lay-verify="required" placeholder="验证码" autocomplete="off" class="layui-input">
-                                <div class="captcha">
-                                    <img src="{:url('verify')}" alt="captcha" onclick="this.src='{:url('verify')}?'+'id='+Math.random()"/>
-                                </div>
-                            </div>
-                            {/if}
+                            <!-- 验证码部分已移除 -->
                             <div class="layui-form-item">
                                 <button type="submit" class="layui-btn btn-submit btn-blog" lay-submit lay-filter="login">登录</button>
                             </div>
@@ -70,9 +63,7 @@
                         location.href = "{:url('admin/index/index')}";
                     });
                 }else{
-                    $('#captcha').val('');
                     layer.msg(res.msg, {icon: 2, anim: 6, time: 1000});
-                    $('.captcha img').attr('src','{:url("verify")}?id='+Math.random());
                 }
             });
             return false;

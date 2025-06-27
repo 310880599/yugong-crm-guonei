@@ -11,75 +11,100 @@ use think\Validate;
 class Auth extends Common
 {
     //管理员列表
-    public function adminList(){
-        if(Request::isAjax()){
-            $val=input('val');
-            $url['val'] = $val;
-            $this->assign('testval',$val);
-            $map='';
-            if($val){
-                $map['username|email|tel']= array('like',"%".$val."%");
-            }
-            if (session('aid')!=1){
-                $map='admin_id='.session('aid');
-                
-            }
-            $list=Db::table(config('database.prefix').'admin')->alias('a')
-                ->join(config('database.prefix').'auth_group ag','a.group_id = ag.group_id','left')
-                ->field('a.*,ag.title')
-                ->where($map)
-                ->select();
-            return $result = ['code'=>0,'msg'=>'获取成功!','data'=>$list,'rel'=>1];
-        }
-        return view();
-    }
-
-    public function adminAdd(){
-        if(Request::isAjax()){
-            $data = input('post.');
-            $check_user = Admin::get(['username'=>$data['username']]);
-            if ($check_user) {
-                return $result = ['code'=>0,'msg'=>'用户已存在，请重新输入用户名!'];
-            }
-            $data['pwd'] = input('post.pwd', '', 'md5');
-            $data['add_time'] = time();
-            $data['ip'] = request()->ip();
-            //验证
-            $msg = $this->validate($data,'app\admin\validate\Admin');
-            if($msg!='true'){
-                return $result = ['code'=>0,'msg'=>$msg];
-            }
-            //单独验证密码
-            $checkPwd = Validate::make([input('post.pwd')=>'require']);
-            if (false === $checkPwd) {
-                return $result = ['code'=>0,'msg'=>'密码不能为空！'];
-            }
-            //添加
-            if (Admin::create($data)) {
-                return ['code'=>1,'msg'=>'管理员添加成功!','url'=>url('adminList')];
-            } else {
-                return ['code'=>0,'msg'=>'管理员添加失败!'];
-            }
-        }else{
-            // $auth_group = AuthGroup::all();
-            // $this->assign('authGroup',$auth_group);
-            // $this->assign('title',lang('add').lang('admin'));
-            // $this->assign('info','null');
-            // $this->assign('selected', 'null');
-            // return view('adminForm');
-            // 获取所有主管角色的管理员作为上级选项（假设主管角色的 group_id = 11 或角色名称包含“主管”）
-            $leaderList = \app\admin\model\Admin::where('group_id', 11)
-                         ->field('admin_id, username')->select();
-            $this->assign('leaderList', $leaderList);
+   public function adminList(){
+    if(Request::isAjax()){
+        $val=input('val');
+        $url['val'] = $val;
+        $this->assign('testval',$val);
         
-            $auth_group = AuthGroup::all();
-            $this->assign('authGroup', $auth_group);
-            $this->assign('title', lang('add') . lang('admin'));
-            $this->assign('info', 'null');
-            $this->assign('selected', 'null');
-            return view('adminForm');
+        // 获取当前用户信息
+        $admin_id = session('aid');
+        $current_admin = Admin::get($admin_id);
+        
+        // 构建查询条件
+        $map = [];
+        if($val){
+            $map['username|email|tel']= ['like',"%".$val."%"];
         }
+        
+        // 权限控制逻辑
+        if ($current_admin && $current_admin->group_id == 11) {
+            // 如果是主管(group_id=11)，显示同team_name的管理员
+            if (!empty($current_admin->team_name)) {
+                $map['team_name'] = $current_admin->team_name;
+            } else {
+                // 如果team_name为空，只显示自己
+                $map['admin_id'] = $admin_id;
+            }
+        } else if (session('aid') != 1) {
+            // 非超级管理员只能查看自己的信息
+            $map['admin_id'] = $admin_id;
+        }
+        
+        // 查询数据
+        $list = Db::table(config('database.prefix').'admin')->alias('a')
+            ->join(config('database.prefix').'auth_group ag','a.group_id = ag.group_id','left')
+            ->field('a.*,ag.title')
+            ->where($map)
+            ->select();
+            
+        return $result = ['code'=>0,'msg'=>'获取成功!','data'=>$list,'rel'=>1];
     }
+    return view();
+}
+
+public function adminAdd(){
+    if(Request::isAjax()){
+        $data = input('post.');
+        $check_user = Admin::get(['username'=>$data['username']]);
+        if ($check_user) {
+            return $result = ['code'=>0,'msg'=>'用户已存在，请重新输入用户名!'];
+        }
+        $data['pwd'] = input('post.pwd', '', 'md5');
+        $data['add_time'] = time();
+        $data['ip'] = request()->ip();
+        //验证
+        $msg = $this->validate($data,'app\admin\validate\Admin');
+        if($msg!='true'){
+            return $result = ['code'=>0,'msg'=>$msg];
+        }
+        //单独验证密码
+        $checkPwd = Validate::make([input('post.pwd')=>'require']);
+        if (false === $checkPwd) {
+            return $result = ['code'=>0,'msg'=>'密码不能为空！'];
+        }
+        //添加
+        if (Admin::create($data)) {
+            return ['code'=>1,'msg'=>'管理员添加成功!','url'=>url('adminList')];
+        } else {
+            return ['code'=>0,'msg'=>'管理员添加失败!'];
+        }
+    }else{
+        // 获取当前用户信息
+        $admin_id = session('aid');
+        $current_admin = Admin::get($admin_id);
+        
+        // 查询用户组
+        if ($current_admin && $current_admin->group_id == 1) {
+            // 超级管理员可以显示所有用户组
+            $auth_group = AuthGroup::all();
+        } else {
+            // 其他用户只能看到普通员工组
+            $auth_group = AuthGroup::where('group_id', '=', 10)->select();
+        }
+        
+        // 获取主管列表
+        $leaderList = \app\admin\model\Admin::where('group_id', 11)
+                     ->field('admin_id, username')->select();
+        
+        $this->assign('leaderList', $leaderList);
+        $this->assign('authGroup', $auth_group);
+        $this->assign('title', lang('add') . lang('admin'));
+        $this->assign('info', 'null');
+        $this->assign('selected', 'null');
+        return view('adminForm');
+    }
+}
     //删除管理员
     public function adminDel(){
         $admin_id=input('post.admin_id');
