@@ -696,20 +696,49 @@ class Client extends Common
         return $this->fetch('client/edit');
     }
     //删除客户
-    public function del()
-    {
-        $id = Request::param('id');
-        $result = Db::table('crm_leads')->where('id', $id)->where('status', 1)->delete();
-        if ($result) {
-            Db::table('crm_contacts')->where('leads_id', $id)->delete();
-            $msg = ['code' => 0, 'msg' => '删除成功！', 'data' => []];
-            return json($msg);
-        } else {
-            $msg = ['code' => 500, 'msg' => '删除失败！', 'data' => []];
-            return json($msg);
-        }
+// 修改del方法支持批量删除
+public function del()
+{
+    $ids = Request::post('ids');
+    
+    if (!$ids || !is_array($ids)) {
+        return json(['code' => 500, 'msg' => '请选择要删除的客户']);
     }
+    
+    $username = Session::get('username');
+    
+    Db::startTrans();
+    try {
+        // 验证并删除客户
+        $clients = Db::name('crm_leads')
+            ->where('id', 'in', $ids)
+            ->where(function ($query) use ($username) {
+                $query->where('pr_user', $username)
+                     ->whereOr('pr_user_bef', $username);
+            })
+            ->select();
+        
+        if (empty($clients)) {
+            throw new \Exception('无权限删除选中客户');
+        }
+        
+        // 删除主表记录和关联数据
+        foreach ($ids as $id) {
+            Db::name('crm_contacts')->where('leads_id', $id)->delete();
+        }
+        
+        Db::name('crm_leads')->where('id', 'in', $ids)->delete();
+        
+        Db::commit();
+        return json(['code' => 0, 'msg' => '删除成功']);
+    } catch (\Exception $e) {
+        Db::rollback();
+        return json(['code' => 500, 'msg' => $e->getMessage()]);
+    }
+}
+  
 
+    
     //客户级别
     public function rankList()
     {
@@ -1280,7 +1309,7 @@ class Client extends Common
 
 
 
-  //冲突查询
+ //冲突查询
     public function conflict()
 {
     $keyword = Request::param('keyword');

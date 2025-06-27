@@ -189,6 +189,7 @@
     <button type="button" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" id="moveGh" lay-event="moveGh"><i class="layui-icon">&#xe770;</i>移入公海</button>
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="alterAll" lay-event="alterAll"><i class="layui-icon">&#xe60e;</i>转移客户</button>
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="chengjiaoAll" lay-event="chengjiaoAll"><i class="layui-icon">&#xe63c;</i>客户成交</button>
+    <button type="button" id="delAlls" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" lay-event="delAlls"><i class="layui-icon">&#xe640;</i>选中删除</button>
 
 
 </script>
@@ -396,7 +397,35 @@
                     });
                 }
             });
-
+            // 添加批量删除事件处理
+table.on('toolbar(table-list)', function(obj) {
+    var checkStatus = table.checkStatus(obj.config.id);
+    var data = checkStatus.data;
+    
+    if (obj.event === 'delAlls') {
+        if (data.length === 0) {
+            layer.msg('请先选择要删除的客户');
+            return;
+        }
+        
+        var ids = data.map(item => item.id);
+        
+        layer.confirm(`确定删除选中的${ids.length}个客户？`, function(index) {
+            var loading = layer.load(1, {shade: [0.1, '#fff']});
+            
+            $.post("{:url('del')}", {ids: ids}, function(res) {
+                layer.close(loading);
+                if (res.code === 0) {
+                    layer.msg(res.msg, {time: 1000, icon: 1});
+                    tableIn.reload();
+                } else {
+                    layer.msg(res.msg || '删除失败', {time: 1500, icon: 2});
+                }
+            });
+            layer.close(index);
+        });
+    }
+});
 
             //监听搜索
             form.on('submit(LAY-app-contlist-search)', function (data) {
