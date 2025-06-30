@@ -26,5 +26,10 @@ class Admin extends Model
         }
     }
 
+    public function getInfo($userId)
+    {
+        return Db::name('admin')->where('admin_id', $userId)->find();
+    }
+
     // 验证码检查方法已移除
 }

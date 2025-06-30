@@ -136,9 +136,8 @@
                                         <tr>
                                             <td>月度排名</td>
                                             <td>业务员</td>
-                                            <td>月目标（元）</td>
                                             <td>已成交（元）</td>
-                                            <td>完成率（%）</td>
+                                            <td>成单率（%）</td>
                                             <td>已成交（单）</td>
                                             <td>每月客户</td>
                                         </tr>
@@ -146,9 +145,12 @@
                                         <tr>
                                             <td>{$k}</td>
                                             <td>{$vo['username']}</td>
-                                            <td>{$vo['mubiao']}</td>
                                             <td>{$vo['money_month']}</td>
-                                            <td>{$vo['wanchenglv']}</td>
+                                            <td>  {if condition="$vo.client_count_month > 0"}
+        {:round($vo['number_month'] / $vo['client_count_month'] * 100, 2)}%
+    {else}
+        0.00%
+    {/if}</td>
                                             <td>{$vo['number_month']}</td>
                                             <td>{$vo.client_count_month}</td>
                                         </tr>
