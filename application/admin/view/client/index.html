@@ -193,9 +193,9 @@
     <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
     <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
     <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
-    <a class="layui-btn layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
+   
 </script>
-
+ <!--// <a class="layui-btn layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>-->
 
     <script type="text/html" id="topBtn">
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加客户</button>
@@ -203,7 +203,7 @@
     <button type="button" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" id="moveGh" lay-event="moveGh"><i class="layui-icon">&#xe770;</i>移入公海</button>
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="alterAll" lay-event="alterAll"><i class="layui-icon">&#xe60e;</i>转移客户</button>
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="chengjiaoAll" lay-event="chengjiaoAll"><i class="layui-icon">&#xe63c;</i>客户成交</button>
-
+     <button type="button" id="delAlls" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" lay-event="delAlls"><i class="layui-icon">&#xe640;</i>选中删除</button>
 
 </script>
     <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户来源、用户名、备注 -->
@@ -400,6 +400,27 @@
                             layer.msg("请选择成交的客户");
                         }
                         break;
+                               // 批量删除
+                case 'delAlls':
+                    if (data.length === 0) {
+                        layer.msg('请先选择要删除的客户');
+                    } else {
+                        var ids = data.map(item => item.id);
+                        layer.confirm(`确定删除选中的${ids.length}个客户？`, function (index) {
+                            var loading = layer.load(1, { shade: [0.1, '#fff'] });
+                            $.post("{:url('del')}", { ids: ids }, function (res) {
+                                layer.close(loading);
+                                if (res.code === 0) {
+                                    layer.msg(res.msg, { time: 1000, icon: 1 });
+                                    tableIn.reload();
+                                } else {
+                                    layer.msg(res.msg || '删除失败', { time: 1500, icon: 2 });
+                                }
+                            });
+                            layer.close(index);
+                        });
+                    }
+                    break;
                 };
             });
 
