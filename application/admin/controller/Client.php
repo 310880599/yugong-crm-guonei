@@ -441,247 +441,247 @@ class Client extends Common
     //         return json(['code' => -1, 'msg' => '导入失败', 'error' => $e->getMessage()]);
     //     }
     // }
-    
-    
-    
-// public function xlsUpload() {
-//     $xlsFile = request()->file('xlsFile');
-
-//     if (!$xlsFile) {
-//         return json(['code' => -1, 'msg' => '请上传Excel文件']);
-//     }
-
-//     $uploadPath = Env::get('root_path') . 'public/uploads/';
-//     $info = $xlsFile->move($uploadPath);
-
-//     if (!$info) {
-//         return json(['code' => -1, 'msg' => '文件上传失败：' . $xlsFile->getError()]);
-//     }
-
-//     $filePath = $uploadPath . $info->getSaveName();
-
-//     try {
-//         $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
-//         $spreadsheet = $reader->load($filePath);
-//         $sheet = $spreadsheet->getActiveSheet();
-//         $data = $sheet->toArray(null, true, true, true);
-//     } catch (\Exception $e) {
-//         return json(['code' => -1, 'msg' => '读取Excel出错：' . $e->getMessage()]);
-//     }
-
-//     // 取表头
-//     $headers = array_shift($data);
-//     $current_time = date("Y-m-d H:i:s");
-//     $pr_user = Session::get('username');
-
-//     Db::startTrans();
-//     try {
-//         $insertedCount = 0;
-//         $rowNum = 1;
-
-//         foreach ($data as $row) {
-//             $rowNum++;
-//             $rowAssoc = [];
-
-//             foreach ($headers as $key => $title) {
-//                 $rowAssoc[$title] = $row[$key] ?? '';
-//             }
-
-//             // 插入主表 crm_leads
-//             $leadsRow = [
-//                 'kh_name'      => $rowAssoc['客户名称'] ?? '',
-//                 'kh_rank'      => $rowAssoc['客户等级'] ?? '',
-//                 'xs_area'      => $rowAssoc['地区'] ?? '',
-//                 'kh_contact'   => $rowAssoc['联系人'] ?? '',
-//                 'remark'       => $rowAssoc['客户备注'] ?? '',
-//                 'kh_status'    => $rowAssoc['客户来源'] ?? '',
-//                 'pr_user'      => $pr_user,
-//                 'ut_time'      => $current_time,
-//                 'at_time'      => $current_time,
-//                 'at_user'      => $pr_user,
-//                 'status'       => 1,
-//                 'ispublic'     => 3,
-//                 'pr_user_bef'  => $pr_user,
-//             ];
-
-//             $leadsId = db('crm_leads')->insertGetId($leadsRow);
-
-//             // 构建联系方式
-//             $contacts = [
-//                 [
-//                     'leads_id'      => $leadsId,
-//                     'contact_type'  => self::CONTACT_MAP['phone'],
-//                     'contact_value' => trim($rowAssoc['联系人电话'] ?? ''),
-//                     'contact_extra' => trim($rowAssoc['国家号'] ?? ''),
-//                     'created_at'    => $current_time
-//                 ],
-//                 [
-//                     'leads_id'      => $leadsId,
-//                     'contact_type'  => self::CONTACT_MAP['email'],
-//                     'contact_value' => trim($rowAssoc['联系人邮箱'] ?? ''),
-//                     'contact_extra' => '',
-//                     'created_at'    => $current_time
-//                 ],
-//                 [
-//                     'leads_id'      => $leadsId,
-//                     'contact_type'  => self::CONTACT_MAP['whatsapp'],
-//                     'contact_value' => trim($rowAssoc['联系人WhatsApp'] ?? ''),
-//                     'contact_extra' => '',
-//                     'created_at'    => $current_time
-//                 ],
-//             ];
-
-//             // 过滤掉 contact_value 为空的记录再插入
-//             $validContacts = [];
-//             foreach ($contacts as $contact) {
-//                 if ($contact['contact_value'] !== '') {
-//                     $validContacts[] = $contact;
-//                 }
-//             }
-
-//             if (!empty($validContacts)) {
-//                 db('crm_contacts')
-//                     ->field(['leads_id', 'contact_type', 'contact_value', 'contact_extra', 'created_at'])
-//                     ->insertAll($validContacts);
-//             }
-
-//             $insertedCount++;
-//         }
-
-//         Db::commit();
-//         return json(['code' => 0, 'msg' => '成功导入客户数据：' . $insertedCount . '条']);
-
-//     } catch (\Exception $e) {
-//         Db::rollback();
-//         return json([
-//             'code' => -1,
-//             'msg' => '导入失败，出错在Excel第 ' . $rowNum . ' 行',
-//             'error' => $e->getMessage()
-//         ]);
-//     }
-// }
 
 
+
+    // public function xlsUpload() {
+    //     $xlsFile = request()->file('xlsFile');
+
+    //     if (!$xlsFile) {
+    //         return json(['code' => -1, 'msg' => '请上传Excel文件']);
+    //     }
+
+    //     $uploadPath = Env::get('root_path') . 'public/uploads/';
+    //     $info = $xlsFile->move($uploadPath);
+
+    //     if (!$info) {
+    //         return json(['code' => -1, 'msg' => '文件上传失败：' . $xlsFile->getError()]);
+    //     }
+
+    //     $filePath = $uploadPath . $info->getSaveName();
+
+    //     try {
+    //         $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+    //         $spreadsheet = $reader->load($filePath);
+    //         $sheet = $spreadsheet->getActiveSheet();
+    //         $data = $sheet->toArray(null, true, true, true);
+    //     } catch (\Exception $e) {
+    //         return json(['code' => -1, 'msg' => '读取Excel出错：' . $e->getMessage()]);
+    //     }
+
+    //     // 取表头
+    //     $headers = array_shift($data);
+    //     $current_time = date("Y-m-d H:i:s");
+    //     $pr_user = Session::get('username');
+
+    //     Db::startTrans();
+    //     try {
+    //         $insertedCount = 0;
+    //         $rowNum = 1;
+
+    //         foreach ($data as $row) {
+    //             $rowNum++;
+    //             $rowAssoc = [];
+
+    //             foreach ($headers as $key => $title) {
+    //                 $rowAssoc[$title] = $row[$key] ?? '';
+    //             }
+
+    //             // 插入主表 crm_leads
+    //             $leadsRow = [
+    //                 'kh_name'      => $rowAssoc['客户名称'] ?? '',
+    //                 'kh_rank'      => $rowAssoc['客户等级'] ?? '',
+    //                 'xs_area'      => $rowAssoc['地区'] ?? '',
+    //                 'kh_contact'   => $rowAssoc['联系人'] ?? '',
+    //                 'remark'       => $rowAssoc['客户备注'] ?? '',
+    //                 'kh_status'    => $rowAssoc['客户来源'] ?? '',
+    //                 'pr_user'      => $pr_user,
+    //                 'ut_time'      => $current_time,
+    //                 'at_time'      => $current_time,
+    //                 'at_user'      => $pr_user,
+    //                 'status'       => 1,
+    //                 'ispublic'     => 3,
+    //                 'pr_user_bef'  => $pr_user,
+    //             ];
+
+    //             $leadsId = db('crm_leads')->insertGetId($leadsRow);
+
+    //             // 构建联系方式
+    //             $contacts = [
+    //                 [
+    //                     'leads_id'      => $leadsId,
+    //                     'contact_type'  => self::CONTACT_MAP['phone'],
+    //                     'contact_value' => trim($rowAssoc['联系人电话'] ?? ''),
+    //                     'contact_extra' => trim($rowAssoc['国家号'] ?? ''),
+    //                     'created_at'    => $current_time
+    //                 ],
+    //                 [
+    //                     'leads_id'      => $leadsId,
+    //                     'contact_type'  => self::CONTACT_MAP['email'],
+    //                     'contact_value' => trim($rowAssoc['联系人邮箱'] ?? ''),
+    //                     'contact_extra' => '',
+    //                     'created_at'    => $current_time
+    //                 ],
+    //                 [
+    //                     'leads_id'      => $leadsId,
+    //                     'contact_type'  => self::CONTACT_MAP['whatsapp'],
+    //                     'contact_value' => trim($rowAssoc['联系人WhatsApp'] ?? ''),
+    //                     'contact_extra' => '',
+    //                     'created_at'    => $current_time
+    //                 ],
+    //             ];
+
+    //             // 过滤掉 contact_value 为空的记录再插入
+    //             $validContacts = [];
+    //             foreach ($contacts as $contact) {
+    //                 if ($contact['contact_value'] !== '') {
+    //                     $validContacts[] = $contact;
+    //                 }
+    //             }
+
+    //             if (!empty($validContacts)) {
+    //                 db('crm_contacts')
+    //                     ->field(['leads_id', 'contact_type', 'contact_value', 'contact_extra', 'created_at'])
+    //                     ->insertAll($validContacts);
+    //             }
+
+    //             $insertedCount++;
+    //         }
+
+    //         Db::commit();
+    //         return json(['code' => 0, 'msg' => '成功导入客户数据：' . $insertedCount . '条']);
+
+    //     } catch (\Exception $e) {
+    //         Db::rollback();
+    //         return json([
+    //             'code' => -1,
+    //             'msg' => '导入失败，出错在Excel第 ' . $rowNum . ' 行',
+    //             'error' => $e->getMessage()
+    //         ]);
+    //     }
+    // }
 
 
 
 
-public function xlsUpload()
-{
-    $xlsFile = request()->file('xlsFile');
 
-    if (!$xlsFile) {
-        return json(['code' => -1, 'msg' => '请上传Excel文件']);
-    }
 
-    $uploadPath = Env::get('root_path') . 'public/uploads/';
-    if (!is_dir($uploadPath)) {
-        mkdir($uploadPath, 0755, true);
-    }
+    public function xlsUpload()
+    {
+        $xlsFile = request()->file('xlsFile');
 
-    $info = $xlsFile->move($uploadPath);
-    if (!$info) {
-        return json(['code' => -1, 'msg' => '文件上传失败：' . $xlsFile->getError()]);
-    }
+        if (!$xlsFile) {
+            return json(['code' => -1, 'msg' => '请上传Excel文件']);
+        }
 
-    $filePath = $uploadPath . $info->getSaveName();
+        $uploadPath = Env::get('root_path') . 'public/uploads/';
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
 
-    try {
-        $reader = IOFactory::createReaderForFile($filePath);
-        $spreadsheet = $reader->load($filePath);
-        $sheet = $spreadsheet->getActiveSheet();
-        $data = $sheet->toArray(null, true, true, true);
-    } catch (\Exception $e) {
-        return json(['code' => -1, 'msg' => '读取Excel出错：' . $e->getMessage()]);
-    }
+        $info = $xlsFile->move($uploadPath);
+        if (!$info) {
+            return json(['code' => -1, 'msg' => '文件上传失败：' . $xlsFile->getError()]);
+        }
 
-    $headers = array_shift($data); // 表头
-    $current_time = date("Y-m-d H:i:s");
-    $pr_user = Session::get('username');
+        $filePath = $uploadPath . $info->getSaveName();
 
-    Db::startTrans();
-    try {
-        $insertedCount = 0;
-        $contactsData = [];
+        try {
+            $reader = IOFactory::createReaderForFile($filePath);
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            $data = $sheet->toArray(null, true, true, true);
+        } catch (\Exception $e) {
+            return json(['code' => -1, 'msg' => '读取Excel出错：' . $e->getMessage()]);
+        }
 
-        foreach ($data as $row) {
-            $rowAssoc = [];
-            foreach ($headers as $key => $title) {
-                $rowAssoc[$title] = $row[$key] ?? '';
-            }
+        $headers = array_shift($data); // 表头
+        $current_time = date("Y-m-d H:i:s");
+        $pr_user = Session::get('username');
 
-            // 插入客户主表（crm_leads）
-            $leadsRow = [
-                'kh_name'      => $rowAssoc['客户名称'] ?? '',
-                'kh_rank'      => $rowAssoc['客户等级'] ?? '',
-                'xs_area'      => $rowAssoc['地区'] ?? '',
-                'kh_contact'   => $rowAssoc['联系人'] ?? '',
-                'remark'       => $rowAssoc['客户备注'] ?? '',
-                'kh_status'    => $rowAssoc['客户来源'] ?? '',
-                'pr_user'      => $pr_user,
-                'ut_time'      => $current_time,
-                'at_time'      => $current_time,
-                'at_user'      => $pr_user,
-                'status'       => 1,
-                'ispublic'     => 3,
-                'pr_user_bef'  => $pr_user,
-            ];
+        Db::startTrans();
+        try {
+            $insertedCount = 0;
+            $contactsData = [];
 
-            $leadsId = Db::name('crm_leads')->insertGetId($leadsRow);
-
-            // 构建联系人数据
-            $contacts = [
-                [
-                    'leads_id'      => $leadsId,
-                    'contact_type'  => self::CONTACT_MAP['phone'],
-                    'contact_value' => trim($rowAssoc['联系人电话'] ?? ''),
-                    'contact_extra' => trim($rowAssoc['国家号'] ?? ''),
-                    'created_at'    => $current_time
-                ],
-                [
-                    'leads_id'      => $leadsId,
-                    'contact_type'  => self::CONTACT_MAP['email'],
-                    'contact_value' => trim($rowAssoc['联系人邮箱'] ?? ''),
-                    'contact_extra' => '',
-                    'created_at'    => $current_time
-                ],
-                [
-                    'leads_id'      => $leadsId,
-                    'contact_type'  => self::CONTACT_MAP['whatsapp'],
-                    'contact_value' => trim($rowAssoc['联系人WhatsApp'] ?? ''),
-                    'contact_extra' => '',
-                    'created_at'    => $current_time
-                ],
-            ];
-
-            foreach ($contacts as $contact) {
-                if (!empty($contact['contact_value'])) {
-                    $contactsData[] = $contact;
+            foreach ($data as $row) {
+                $rowAssoc = [];
+                foreach ($headers as $key => $title) {
+                    $rowAssoc[$title] = $row[$key] ?? '';
                 }
+
+                // 插入客户主表（crm_leads）
+                $leadsRow = [
+                    'kh_name'      => $rowAssoc['客户名称'] ?? '',
+                    'kh_rank'      => $rowAssoc['客户等级'] ?? '',
+                    'xs_area'      => $rowAssoc['地区'] ?? '',
+                    'kh_contact'   => $rowAssoc['联系人'] ?? '',
+                    'remark'       => $rowAssoc['客户备注'] ?? '',
+                    'kh_status'    => $rowAssoc['客户来源'] ?? '',
+                    'pr_user'      => $pr_user,
+                    'ut_time'      => $current_time,
+                    'at_time'      => $current_time,
+                    'at_user'      => $pr_user,
+                    'status'       => 1,
+                    'ispublic'     => 3,
+                    'pr_user_bef'  => $pr_user,
+                ];
+
+                $leadsId = Db::name('crm_leads')->insertGetId($leadsRow);
+
+                // 构建联系人数据
+                $contacts = [
+                    [
+                        'leads_id'      => $leadsId,
+                        'contact_type'  => self::CONTACT_MAP['phone'],
+                        'contact_value' => trim($rowAssoc['联系人电话'] ?? ''),
+                        'contact_extra' => trim($rowAssoc['国家号'] ?? ''),
+                        'created_at'    => $current_time
+                    ],
+                    [
+                        'leads_id'      => $leadsId,
+                        'contact_type'  => self::CONTACT_MAP['email'],
+                        'contact_value' => trim($rowAssoc['联系人邮箱'] ?? ''),
+                        'contact_extra' => '',
+                        'created_at'    => $current_time
+                    ],
+                    [
+                        'leads_id'      => $leadsId,
+                        'contact_type'  => self::CONTACT_MAP['whatsapp'],
+                        'contact_value' => trim($rowAssoc['联系人WhatsApp'] ?? ''),
+                        'contact_extra' => '',
+                        'created_at'    => $current_time
+                    ],
+                ];
+
+                foreach ($contacts as $contact) {
+                    if (!empty($contact['contact_value'])) {
+                        $contactsData[] = $contact;
+                    }
+                }
+
+                $insertedCount++;
             }
 
-            $insertedCount++;
-        }
+            // 批量插入联系方式表（crm_contacts）
+            if (!empty($contactsData)) {
+                Db::name('crm_contacts')
+                    ->strict(false)
+                    ->field(['leads_id', 'contact_type', 'contact_value', 'contact_extra', 'created_at'])
+                    ->insertAll($contactsData);
+            }
 
-        // 批量插入联系方式表（crm_contacts）
-        if (!empty($contactsData)) {
-            Db::name('crm_contacts')
-                ->strict(false)
-                ->field(['leads_id', 'contact_type', 'contact_value', 'contact_extra', 'created_at'])
-                ->insertAll($contactsData);
+            Db::commit();
+            return json(['code' => 0, 'msg' => '成功导入客户数据：' . $insertedCount . ' 条']);
+        } catch (\Exception $e) {
+            Db::rollback();
+            return json([
+                'code' => -1,
+                'msg'  => '导入失败，第 ' . ($insertedCount + 1) . ' 行出错',
+                'error' => $e->getMessage()
+            ]);
         }
-
-        Db::commit();
-        return json(['code' => 0, 'msg' => '成功导入客户数据：' . $insertedCount . ' 条']);
-    } catch (\Exception $e) {
-        Db::rollback();
-        return json([
-            'code' => -1,
-            'msg'  => '导入失败，第 ' . ($insertedCount + 1) . ' 行出错',
-            'error' => $e->getMessage()
-        ]);
     }
-}
 
 
 
@@ -952,49 +952,49 @@ public function xlsUpload()
         return $this->fetch('client/edit');
     }
     //删除客户
-// 修改del方法支持批量删除
-public function del()
-{
-    $ids = Request::post('ids');
-    
-    if (!$ids || !is_array($ids)) {
-        return json(['code' => 500, 'msg' => '请选择要删除的客户']);
-    }
-    
-    $username = Session::get('username');
-    
-    Db::startTrans();
-    try {
-        // 验证并删除客户
-        $clients = Db::name('crm_leads')
-            ->where('id', 'in', $ids)
-            ->where(function ($query) use ($username) {
-                $query->where('pr_user', $username)
-                     ->whereOr('pr_user_bef', $username);
-            })
-            ->select();
-        
-        if (empty($clients)) {
-            throw new \Exception('无权限删除选中客户');
-        }
-        
-        // 删除主表记录和关联数据
-        foreach ($ids as $id) {
-            Db::name('crm_contacts')->where('leads_id', $id)->delete();
-        }
-        
-        Db::name('crm_leads')->where('id', 'in', $ids)->delete();
-        
-        Db::commit();
-        return json(['code' => 0, 'msg' => '删除成功']);
-    } catch (\Exception $e) {
-        Db::rollback();
-        return json(['code' => 500, 'msg' => $e->getMessage()]);
-    }
-}
-  
+    // 修改del方法支持批量删除
+    public function del()
+    {
+        $ids = Request::post('ids');
 
-    
+        if (!$ids || !is_array($ids)) {
+            return json(['code' => 500, 'msg' => '请选择要删除的客户']);
+        }
+
+        $username = Session::get('username');
+
+        Db::startTrans();
+        try {
+            // 验证并删除客户
+            $clients = Db::name('crm_leads')
+                ->where('id', 'in', $ids)
+                ->where(function ($query) use ($username) {
+                    $query->where('pr_user', $username)
+                        ->whereOr('pr_user_bef', $username);
+                })
+                ->select();
+
+            if (empty($clients)) {
+                throw new \Exception('无权限删除选中客户');
+            }
+
+            // 删除主表记录和关联数据
+            foreach ($ids as $id) {
+                Db::name('crm_contacts')->where('leads_id', $id)->delete();
+            }
+
+            Db::name('crm_leads')->where('id', 'in', $ids)->delete();
+
+            Db::commit();
+            return json(['code' => 0, 'msg' => '删除成功']);
+        } catch (\Exception $e) {
+            Db::rollback();
+            return json(['code' => 500, 'msg' => $e->getMessage()]);
+        }
+    }
+
+
+
     //客户级别
     public function rankList()
     {
@@ -1565,33 +1565,79 @@ public function del()
 
 
 
- //冲突查询
-    public function conflict()
-{
-    $keyword = Request::param('keyword');
-    $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
-    if (Request::isAjax()) {
-        if (empty($keyword)) return success();
+    //冲突查询
+    public function conflictOld()
+    {
+        $keyword = Request::param('keyword');
+        $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
+        if (Request::isAjax()) {
+            if (empty($keyword)) return success();
 
-        $query = Db::name('crm_leads')
-            ->alias('l')
-            ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
-            ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time')
-            ->group('l.id');
-        $query->where(function ($q) use ($keyword) {
-            $q->where('l.kh_name', 'like', "%{$keyword}%")
-                ->whereOr(function ($q2) use ($keyword) {
-                    $q2->where('c.contact_value', 'like', "%{$keyword}%")
-                        ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
-                });
-        });
+            $query = Db::name('crm_leads')
+                ->alias('l')
+                ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
+                ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time')
+                ->group('l.id');
+            $query->where(function ($q) use ($keyword) {
+                $q->where('l.kh_name', 'like', "%{$keyword}%")
+                    ->whereOr(function ($q2) use ($keyword) {
+                        $q2->where('c.contact_value', $keyword)
+                            ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) = '{$keyword}'");
+                    });
+            });
 
-        $page = Request::param('page/d', 1);
-        $pageSize = Request::param('limit/d', 10);
-        $list = $query->paginate($pageSize, false, ['page' => $page])->items();
-        return success($list);
+            $page = Request::param('page/d', 1);
+            $pageSize = Request::param('limit/d', 10);
+            $list = $query->paginate($pageSize, false, ['page' => $page])->items();
+            return success($list);
+        }
+        $this->assign('keyword', $keyword);
+        return $this->fetch('client/conflict');
     }
-    $this->assign('keyword', $keyword);
-    return $this->fetch('client/conflict');
-}
+
+    //冲突查询
+    public function conflict()
+    {
+        $keyword = Request::param('keyword');
+        $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
+        if (Request::isAjax()) {
+            if (empty($keyword)) return success();
+            $leadsQuery = Db::name('crm_leads')
+                ->alias('l')
+                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time')
+                ->where('l.kh_name', 'like', "%{$keyword}%");
+
+            $contactsQuery = Db::name('crm_contacts')
+                ->alias('c')
+                ->leftJoin('crm_leads l', 'l.id = c.leads_id')
+                ->where('c.is_delete', 0)
+                ->where(function ($q) use ($keyword) {
+                    $q->where('c.contact_value', $keyword)
+                        ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) = '{$keyword}'");
+                })
+                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time');
+
+            $query = Db::query("({$leadsQuery->buildSql()}) UNION ({$contactsQuery->buildSql()})");
+
+            // 去除重复记录
+            $uniqueIds = [];
+            $list = [];
+            foreach ($query as $item) {
+                if (!in_array($item['id'], $uniqueIds)) {
+                    $uniqueIds[] = $item['id'];
+                    $list[] = $item;
+                }
+            }
+
+            // 分页处理
+            $page = Request::param('page/d', 1);
+            $pageSize = Request::param('limit/d', 10);
+            $offset = ($page - 1) * $pageSize;
+            $paginatedList = array_slice($list, $offset, $pageSize);
+
+            return success($paginatedList);
+        }
+        $this->assign('keyword', $keyword);
+        return $this->fetch('client/conflict');
+    }
 }
