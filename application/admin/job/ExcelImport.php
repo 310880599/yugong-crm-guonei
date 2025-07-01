@@ -10,13 +10,140 @@ use think\facade\Log;
 
 class ExcelImport
 {
+
+
+    public function fire(Job $job, $data)
+    {
+        try {
+            // 提取数据
+            $filePath = $data['filePath'] ?? '';
+            $pr_user = $data['pr_user'] ?? '';
+            $chunkData = $data['chunkData'] ?? [];
+            $headers = $data['headers'] ?? [];
+            $current_time = date("Y-m-d H:i:s");
+            $success_row = 0;
+            $error_row = 0;
+            foreach ($chunkData as $index => $row) {
+                // 检查当前行是否为空白行
+                if ($this->isRowEmpty($row)) {
+                    continue;
+                }
+
+                try {
+                    // 准备单条数据
+                    $rowAssoc = $this->buildAssocRow($row, $headers);
+                    $leadsData = $this->buildLeadsRow($rowAssoc, $pr_user, $current_time);
+                    $contactsData = [];
+
+                    // 开启单条记录事务
+                    Db::startTrans();
+                    // 插入客户主表数据
+                    $leadsId = $this->insertSingleLeadsData($leadsData);
+                    if (!$leadsId) {
+                        $error_row++;
+                        continue;
+                    }
+                    // 构建并插入联系人数据
+                    $contacts = $this->buildContacts($leadsId, $rowAssoc, $current_time);
+                    foreach ($contacts as $contact) {
+                        if (!empty($contact['contact_value'])) {
+                            $contactsData[] = $contact;
+                        }
+                    }
+                    $this->insertSingleContactsData($contactsData);
+                    $success_row++;
+                    // 提交单条记录事务
+                    Db::commit();
+                } catch (\Exception $e) {
+                    // 回滚单条记录事务
+                    Db::rollback();
+                    $error_row++;
+                    // 记录详细错误日志
+                    $logData = [
+                        'message' => "第 {$index} 条 Excel 数据导入失败",
+                        'error_message' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'task_data' => $row,
+                        // 'trace' => $e->getTraceAsString()
+                    ];
+                    Client::addOperLog(null, '数据导入', $logData);
+                    Log::error(json_encode($logData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+                    continue;
+                }
+            }
+
+
+            // 记录成功和失败的条数
+            $logData = [
+                'message' => 'Excel 导入任务完成',
+                'success_count' => $success_row,
+                'fail_count' => $error_row,
+                'task_data' => $filePath
+            ];
+            Client::addOperLog(null, '数据导入', $logData);
+            Log::info(json_encode($logData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            // 删除任务
+            $job->delete();
+        } catch (\Exception $e) {
+            // 记录详细错误日志
+            $logData = [
+                'message' => 'Excel 导入任务整体失败',
+                'error_message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'task_data' => $filePath,
+                // 'trace' => $e->getTraceAsString()
+            ];
+            Client::addOperLog(null, '数据导入', $logData);
+            Log::error(json_encode($logData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+            // 重试任务
+            if ($job->attempts() < 3) {
+                $job->release(10);
+            } else {
+                $job->delete();
+            }
+        }
+    }
+
+
+    /**
+     * 插入单条联系人数据
+     *
+     * @param array $contactsData 联系人数据
+     */
+    private function insertSingleContactsData($contactsData)
+    {
+        if (!empty($contactsData)) {
+            Db::name('crm_contacts')
+                ->strict(false)
+                ->field(['leads_id', 'contact_type', 'contact_value', 'contact_extra', 'created_at'])
+                ->insertAll($contactsData);
+        }
+    }
+
+
+    /**
+     * 插入单条客户主表数据
+     *
+     * @param array $leadsData 单条客户主表数据
+     * @return int 插入后的客户主表 ID
+     * @throws \Exception 插入失败时抛出异常
+     */
+    private function insertSingleLeadsData($leadsData)
+    {
+        $id = Db::name('crm_leads')->insertGetId($leadsData);
+        return $id;
+    }
+
     /**
      * 处理 Excel 导入任务
      *
      * @param Job $job 队列任务实例
      * @param array $data 任务数据
      */
-    public function fire(Job $job, $data)
+    public function fireOld(Job $job, $data)
     {
         try {
             // 提取数据
@@ -70,6 +197,23 @@ class ExcelImport
         }
     }
 
+
+
+    /**
+     * 检查行数据是否为空
+     *
+     * @param array $row 行数据
+     * @return bool 如果行为空返回 true，否则返回 false
+     */
+    private function isRowEmpty($row)
+    {
+        foreach ($row as $value) {
+            if (!empty(trim($value))) {
+                return false;
+            }
+        }
+        return true;
+    }
     /**
      * 准备客户主表和联系人表的数据
      *
@@ -196,7 +340,6 @@ class ExcelImport
         }
 
         // 批量插入联系方式表（crm_contacts）
-        // dd($contactsData);
         if (!empty($contactsData)) {
             Db::name('crm_contacts')
                 ->strict(false)
@@ -233,7 +376,7 @@ class ExcelImport
                     $contact_value = $contact_value;
                     if ($con_key == 'contacts') {
                         $c = explode(':', $contact_value);
-                        if(count($c)==2){
+                        if (count($c) == 2) {
                             $c[0] = strtolower($c[0]);
                             $contact_type =  isset(Client::CONTACT_MAP[$c[0]]) ? Client::CONTACT_MAP[$c[0]] : $c[0];
                             $contact_value = $c[1];

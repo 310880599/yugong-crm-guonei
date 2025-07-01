@@ -737,13 +737,13 @@ class Client extends Common
 
         $filePath = $uploadPath . $info->getSaveName();
 
-        // $fileHash = hash_file('sha256', $filePath);
+        $fileHash = hash_file('sha256', $filePath);
 
-        // if (Cache::has('excel_import_hash:' . $fileHash)) {
-        //     return json(['code' => -1, 'msg' => '该文件已上传过，请不要重复上传']);
-        // }
+        if (Cache::has('excel_import_hash:' . $fileHash)) {
+            return json(['code' => -1, 'msg' => '该文件已上传过，请不要重复上传']);
+        }
 
-        // Cache::set('excel_import_hash:' . $fileHash, true, 172800);
+        Cache::set('excel_import_hash:' . $fileHash, true, 172800);
 
         try {
             $reader = IOFactory::createReaderForFile($filePath);
@@ -1703,8 +1703,8 @@ class Client extends Common
                 ->leftJoin('crm_leads l', 'l.id = c.leads_id')
                 ->where('c.is_delete', 0)
                 ->where(function ($q) use ($keyword) {
-                    $q->where('c.contact_value', $keyword)
-                        ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) = '{$keyword}'");
+                    $q->where('c.contact_value','like', $keyword)
+                        ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
                 })
                 ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time');
 
