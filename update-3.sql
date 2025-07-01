@@ -8,7 +8,7 @@ CREATE TABLE `crm_leads` (
   `last_up_records` varchar(200) DEFAULT NULL COMMENT '最新跟进记录',
   `last_up_time` datetime DEFAULT NULL COMMENT '实际跟进时间',
   `next_up_time` datetime DEFAULT NULL COMMENT '下次跟进时间  ',
-  `remark` varchar(600) DEFAULT NULL COMMENT '备注',
+  `remark` text DEFAULT NULL COMMENT '备注',
   `wechat` varchar(30) DEFAULT NULL COMMENT '微信号',
   `xs_source` varchar(200) DEFAULT NULL COMMENT '线索_来源',
   `xs_area` varchar(100) DEFAULT NULL COMMENT '地区来源',
@@ -74,15 +74,19 @@ ADD COLUMN `parent_id` INT(11) DEFAULT NULL COMMENT '直属主管admin_id（可�
 ADD COLUMN `team_name` VARCHAR(50) DEFAULT NULL COMMENT '所属团队名称（展示用）';
 
 
--- 客户操作日志表
--- CREATE TABLE `crm_operation_log` (
---   `id` int(11) NOT NULL AUTO_INCREMENT,
---   `leads_id` int(11) NOT NULL COMMENT '客户ID',
---   `oper_type` varchar(50) NOT NULL COMMENT '操作类型',
---   `description` varchar(500) DEFAULT NULL COMMENT '操作描述',
---   `oper_user` varchar(50) NOT NULL COMMENT '操作人',
---   `created_at` datetime NOT NULL COMMENT '操作时间',
---   PRIMARY KEY (`id`),
---   KEY `idx_leads_id` (`leads_id`)
--- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客户操作日志表';
+-- 操作日志表
+DROP TABLE IF EXISTS `crm_operation_log`;
+CREATE TABLE `crm_operation_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `leads_id` int(11) DEFAULT NULL COMMENT '客户ID',
+  `oper_type` varchar(50) NOT NULL COMMENT '操作类型',
+  `description` text COMMENT '操作描述',
+  `user_id` int(11) NOT NULL COMMENT '操作人id',
+  `oper_user` varchar(50) NOT NULL COMMENT '操作人',
+  `created_at` datetime NOT NULL COMMENT '操作时间',
+  PRIMARY KEY (`id`),
+  INDEX `idx_leads_id` (`leads_id`),
+  INDEX `idx_oper_type` (`oper_type`),
+  INDEX `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';
 

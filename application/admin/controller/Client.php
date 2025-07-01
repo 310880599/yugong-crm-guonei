@@ -7,29 +7,51 @@ use think\facade\Request;
 use think\facade\Session;
 use think\facade\Env;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use think\facade\Cache;
 
 class Client extends Common
 {
     protected $middleware = [\app\http\middleware\TrimStrings::class];
 
+
     const CONTACT_MAP = [
-        'phone' => 1,
-        'email' => 2,
-        'whatsapp' => 3,
-        'ali_id' => 4,
-        'wechat' => 5,
+        'phone'         => 1,
+        'email'         => 2,
+        'whatsapp'      => 3,
+        'ali_id'        => 4,
+        'wechat'        => 5,
+        'facebook'      => 6,
+        'twitter'       => 7,
+        'linkedin'      => 8,
+        'youtube'       => 9,
+        'instagram'     => 10,
+        'weibo'         => 11,
+        'qq'            => 12,
+        'trademanager'  => 13,
+        'skype'         => 14,
+        '传真'           => 15,
+        'msn'           => 16,
+        'viber'         => 17,
+        'pinterest'     => 18,
+        'vk'            => 19,
+        'line'          => 20,
+        'zalo'          => 21,
+        'telegram'      => 22,
     ];
 
 
+
     // 添加公共日志
-    private function addOperLog($leads_id, $type, $description)
+    static function addOperLog($leads_id, $type, $description)
     {
+        $description = is_string($description) ? $description : json_encode($description, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         Db::table('crm_operation_log')->insert([
+            'user_id' => Session::get('aid'),
             'leads_id' => $leads_id,
             'oper_type' => $type,
             'description' => $description,
             'oper_user' => Session::get('username'),
-            'created_at' => date('Y-m-d H:i:s')
+            'created_at' => date("Y-m-d H:i:s")
         ]);
     }
 
@@ -566,7 +588,7 @@ class Client extends Common
 
 
 
-    public function xlsUpload()
+    public function xlsUploadOld()
     {
         $xlsFile = request()->file('xlsFile');
 
@@ -688,13 +710,82 @@ class Client extends Common
 
 
 
+    public function xlsUpload()
+    {
+        $xlsFile = request()->file('xlsFile');
+
+        if (!$xlsFile) {
+            return json(['code' => -1, 'msg' => '请上传Excel文件']);
+        }
+
+        // 配置文件上传规则
+        $uploadConfig = [
+            'size' => 1024 * 1024 * 20, // 20MB 文件大小限制
+            'ext' => 'xlsx,xls', // 只允许上传 Excel 文件
+        ];
+
+        $uploadPath = Env::get('root_path') . 'public/uploads/';
+        if (!is_dir($uploadPath)) {
+            if (!mkdir($uploadPath, 0755, true)) {
+                return json(['code' => -1, 'msg' => '上传目录创建失败，请检查权限']);
+            }
+        }
+        $info = $xlsFile->validate($uploadConfig)->move($uploadPath, $this->generateUniqueFileName($xlsFile));
+        if (!$info) {
+            return json(['code' => -1, 'msg' => '文件上传失败：' . $xlsFile->getError()]);
+        }
+
+        $filePath = $uploadPath . $info->getSaveName();
+
+        // $fileHash = hash_file('sha256', $filePath);
+
+        // if (Cache::has('excel_import_hash:' . $fileHash)) {
+        //     return json(['code' => -1, 'msg' => '该文件已上传过，请不要重复上传']);
+        // }
+
+        // Cache::set('excel_import_hash:' . $fileHash, true, 172800);
+
+        try {
+            $reader = IOFactory::createReaderForFile($filePath);
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            $data = $sheet->toArray(null, true, true, true);
+        } catch (\Exception $e) {
+            return json(['code' => -1, 'msg' => '读取Excel出错：' . $e->getMessage()]);
+        }
+
+        $headers = array_shift($data); // 表头
+        $pr_user = Session::get('username');
+
+        // 将数据拆分成小块，每块 100 条记录
+        $chunkSize = 100;
+        $chunks = array_chunk($data, $chunkSize);
+
+        foreach ($chunks as $chunk) {
+            $jobData = [
+                'filePath' => $filePath,
+                'pr_user' => $pr_user,
+                'headers' => $headers,
+                'chunkData' => $chunk
+            ];
+
+            // 将任务推送到队列
+            queue(\app\admin\job\ExcelImport::class, $jobData, 0, 'excel_import');
+        }
+
+        return json(['code' => 0, 'msg' => '导入任务已提交，请稍后查看结果']);
+    }
 
 
-
-
-
-
-
+    // 生成唯一文件名
+    private function generateUniqueFileName($file)
+    {
+        $fileInfo = $file->getInfo();
+        $originalName = $fileInfo['name'] ?? '';
+        // 利用 pathinfo 函数提取扩展名
+        $ext = pathinfo($originalName, PATHINFO_EXTENSION);
+        return uniqid() . '.' . $ext;
+    }
 
 
     //数据校验

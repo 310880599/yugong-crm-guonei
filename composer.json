@@ -1,0 +1,12 @@
+{
+    "require": {
+        "topthink/framework": "5.1.*",
+        "phpoffice/phpspreadsheet": "^1.29",
+        "topthink/think-queue": "^2.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "topthink/think-installer": true
+        }
+    }
+}
