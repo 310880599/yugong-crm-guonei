@@ -7,6 +7,7 @@ use think\Db;
 use think\queue\Job;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use think\facade\Log;
+use think\facade\Session;
 
 class ExcelImport
 {
@@ -21,6 +22,8 @@ class ExcelImport
             $chunkData = $data['chunkData'] ?? [];
             $headers = $data['headers'] ?? [];
             $current_time = date("Y-m-d H:i:s");
+            Session::set('aid', $data['user_id']);
+            Session::set('username', $pr_user);
             $success_row = 0;
             $error_row = 0;
             foreach ($chunkData as $index => $row) {

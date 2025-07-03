@@ -712,6 +712,7 @@ class Client extends Common
 
     public function xlsUpload()
     {
+
         $xlsFile = request()->file('xlsFile');
 
         if (!$xlsFile) {
@@ -763,6 +764,7 @@ class Client extends Common
 
         foreach ($chunks as $chunk) {
             $jobData = [
+                'user_id'=> Session::get('aid'),
                 'filePath' => $filePath,
                 'pr_user' => $pr_user,
                 'headers' => $headers,
@@ -892,7 +894,7 @@ class Client extends Common
                 $contactData[] = $temp;
                 if ($update) {
                     //插入或更新条数
-                    $find = db('crm_contacts')->where(['is_delete' => 1, 'leads_id' => $leads_id, 'contact_type' => $contact_type, 'contact_value' => $contact_value])->find();
+                    $find = db('crm_contacts')->where(['is_delete' => 1, 'contact_value' => $contact_value])->find();
                     if ($find) {
                         db('crm_contacts')->where('id', $find['id'])->update($temp);
                     } else {
