@@ -231,4 +231,8 @@ INSERT INTO countries (english_name, chinese_name, iso2_code, iso3_code, phone_c
 ('Western Sahara', '西撒哈拉', 'EH', 'ESH', '212'),
 ('Yugoslavia', '南斯拉夫', 'YU', 'YUG', '381'),
 ('Zambia', '赞比亚', 'ZM', 'ZMB', '260'),
-('Zimbabwe', '津巴布韦', 'ZW', 'ZWE', '263');
+('Zimbabwe', '津巴布韦', 'ZW', 'ZWE', '263'),
+('Egypt', '埃及', 'EG', 'EGY', '20'),
+('Peru', '秘鲁', 'PER', 'PER', '51'),
+('England', '英国', 'UK', 'GB', '44')
+('Mexico', '墨西哥', 'MX', 'MEX', '52');
