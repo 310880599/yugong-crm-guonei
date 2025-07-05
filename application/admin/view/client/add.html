@@ -207,7 +207,7 @@
             form.verify({
                 email: function (value) {
                     if (value.trim()) { // 仅当输入值非空时校验格式
-                        if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,4}$/.test(value)) {
+                        if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,6}$/.test(value)) {
                             return '邮箱格式不正确 (例: example@domain.com)';
                         }
                     }
