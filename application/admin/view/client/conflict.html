@@ -96,7 +96,19 @@
           { field: 'xs_area', title: '国家' },
           { field: 'kh_rank', title: '客户等级' },
           { field: 'kh_status', title: '客户来源' },
-          { field: 'at_user', title: '客户归属人' },
+         {
+  field: 'pr_user', 
+  title: '客户归属人',
+  templet: function(res) {
+    // 优先显示公海类型（非空时）
+    if(res.pr_gh_type && res.pr_gh_type.trim() !== '') {
+      return res.pr_gh_type;
+    }
+    
+    // 无公海类型时直接返回pr_user原始值（包含空字符串）
+    return res.pr_user;
+  }
+},
           { field: 'at_time', title: '添加时间' }
         ]],
       });

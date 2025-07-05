@@ -1669,7 +1669,7 @@ class Client extends Common
             $query = Db::name('crm_leads')
                 ->alias('l')
                 ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
-                ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time')
+                ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time,l.pr_gh_type,l.pr_user')
                 ->group('l.id');
             $query->where(function ($q) use ($keyword) {
                 $q->where('l.kh_name', 'like', "%{$keyword}%")
@@ -1697,7 +1697,7 @@ class Client extends Common
             if (empty($keyword)) return success();
             $leadsQuery = Db::name('crm_leads')
                 ->alias('l')
-                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time')
+                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user')
                 ->where('l.kh_name', 'like', "%{$keyword}%");
 
             $contactsQuery = Db::name('crm_contacts')
@@ -1708,7 +1708,7 @@ class Client extends Common
                     $q->where('c.contact_value','like', $keyword)
                         ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
                 })
-                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time');
+                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user');
 
             $query = Db::query("({$leadsQuery->buildSql()}) UNION ({$contactsQuery->buildSql()})");
 

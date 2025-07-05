@@ -90,7 +90,7 @@
                 <div class="layui-input-4">
                     <!-- <input type="text" id="xs_area" name="xs_area" lay-verify="required" placeholder="请输入地区"
                         class="layui-input"> -->
-                    <select name="xs_area" lay-filter="xs_area" lay-search>
+                    <select name="xs_area" lay-filter="xs_area" lay-search lay-verify="required">
                         <option value="">请选择地区</option>
                         {foreach $countries as $key=>$vo }
                         <option value="{$key}" data-code="{$vo}">{$key}</option>
@@ -150,7 +150,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">客户级别</label>
                 <div class="layui-input-4">
-                    <select name="kh_rank" id="kh_rank">
+                    <select name="kh_rank" id="kh_rank" lay-verify="required">
                         <option value="">请选择客户级别</option>
 
                         {volist name='khRankList' id='vo'}
@@ -164,7 +164,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">客户来源</label>
                 <div class="layui-input-4">
-                    <select name="kh_status" id="kh_status">
+                    <select name="kh_status" id="kh_status" lay-verify="required">
                         <option value="">请选择客户来源</option>
 
                         {volist name='khStatusList' id='vo'}
