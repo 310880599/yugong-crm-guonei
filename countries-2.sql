@@ -206,7 +206,6 @@ INSERT INTO countries (english_name, chinese_name, iso2_code, iso3_code, phone_c
 ('Tajikistan', '塔吉克斯坦', 'TJ', 'TJK', '992'),
 ('Thailand', '泰国', 'TH', 'THA', '66'),
 ('The Bahamas', '巴哈马', 'BS', 'BHS', '1242'),
--- ('The Dominican Republic', '多米尼加共和国', 'DO', 'DOM', '1809'),
 ('Tokelau', '托克劳', 'TK', 'TKL', '690'),
 ('Tonga', '汤加', 'TO', 'TON', '676'),
 ('Trinidad and Tobago', '特立尼达和多巴哥', 'TT', 'TTO', '1868'),

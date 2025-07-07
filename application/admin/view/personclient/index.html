@@ -205,45 +205,72 @@
             upload = layui.upload, 
             util = layui.util;
 
-        // 初始化表格
-        var tableIn = table.render({
-            elem: '#table-list',
-            url: '{:url("perClilist")}',
-            method: 'post',
-            toolbar: '#topBtn',
-            defaultToolbar: ['filter'],
-            page: true,
-            cols: [[
-                { checkbox: true, fixed: true },
-                { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
-                {
-                    field: 'kh_name', title: '客户名称', templet: function (res) {
-                        return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + res.kh_name + "</a>";
-                    }
-                },
-                { field: 'xs_area', title: '地区' },
-                { field: 'kh_rank', title: '客户级别' },
-                { field: 'kh_status', title: '客户来源' },
-                {
-                    field: 'issuccess', title: '成交状态', templet: function (res) {
-                        return res.issuccess == 1 ? '已成交' : '未成交';
-                    }
-                },
-                { field: 'last_up_records', title: '最新跟进记录' },
-                { field: 'last_up_time', title: '最近跟进时间', hide: true },
-                { field: 'xs_source', title: '客户来源', hide: true },
-                { field: 'remark', title: '备注', hide: true },
-                { field: 'pr_user', title: '负责人', hide: false },
-                { field: 'pr_gh_type', title: '所属公海', hide: true },
-                { field: 'to_gh_time', title: '划入公海时间', hide: true },
-                { field: 'ut_time', title: '更新于', hide: true },
-                { field: 'at_time', title: '创建时间' },
-                { field: 'at_user', title: '创建人', hide: true },
-                { field: 'pr_user_bef', title: '前负责人', hide: true },
-                { width: 320, align: 'center', toolbar: '#action' }
-            ]],
-            limit: 10
+        /* ===== 1. localStorage KEY ===== */
+        var currentUsername = "{$Think.session.username}" || "default";
+        var columnWidthKey  = "crm_table_column_widths_" + currentUsername;
+        var tableId         = "table-list";
+
+        /* ===== 2. 列配置，先喂宽度 ===== */
+        var cols = [[
+            {type:'checkbox', fixed:true},
+            {field:'id',       title:'ID', width:80, fixed:true, hide:true},
+            {field:'kh_name',  title:'客户名称', sort:true, templet:function(res){
+                return "<a href='{:url('dialogue')}?id="+res.id+"'>"+res.kh_name+"</a>";
+            }},
+            {field:'xs_area',    title:'地区'},
+            {field:'kh_rank',    title:'客户级别', sort:true},
+            {field:'kh_status',  title:'客户来源'},
+            {field:'issuccess',  title:'成交状态', templet:function(res){return res.issuccess==1?'已成交':'未成交';}},
+            {field:'last_up_records', title:'最新跟进记录'},
+            {field:'pr_user',    title:'负责人'},
+            {field:'at_time',    title:'创建时间', sort:true},
+            {field:'ut_time',    title:'更新于',   sort:true},
+            {width:320, align:'center', toolbar:'#action'}
+        ]];
+
+        restoreColWidth(cols[0]);   // ← 从本地恢复
+
+        /* ===== 3. 渲染表格 ===== */
+        var tableIns = table.render({
+            elem:'#'+tableId,
+            id:tableId,
+            url:'{:url("perClilist")}',
+            method:'post',
+            toolbar:'#topBtn',
+            defaultToolbar:['filter'],
+            page:true,
+            limit:10,
+            cols:cols,
+            done:bindResizeSave     // 表格完成后绑定监听
         });
+
+        /* ===== 4. 监听拖拽结束并保存 ===== */
+        function bindResizeSave(){
+            // 把之前的事件解绑，避免重复
+            $(document).off('mouseup.saveWidth').on('mouseup.saveWidth',function(){
+                // 延迟一个 tick，等待 Layui 把宽度写回 th
+                setTimeout(saveWidths,10);
+            });
+        }
+
+        function saveWidths(){
+            var widths = {};
+            // Layui 会在表格外包一层 .layui-table-view
+            $('#'+tableId).next('.layui-table-view').find('th').each(function(){
+                var field = $(this).data('field');
+                if(field){ widths[field] = $(this).outerWidth(); }
+            });
+            localStorage.setItem(columnWidthKey, JSON.stringify(widths));
+            // console.log('列宽已保存：', widths);
+        }
+
+        /* ===== 5. 恢复 ===== */
+        function restoreColWidth(colArr){
+            var saved = JSON.parse(localStorage.getItem(columnWidthKey) || '{}');
+            colArr.forEach(function(c){
+                if(saved[c.field]){ c.width = saved[c.field]; }
+            });
+        }
 
         // 添加按钮
         $('#add').on('click', function () {
@@ -424,6 +451,8 @@
             content: url
         });
     }
+
+
 </script>
     
 </body>

@@ -157,6 +157,8 @@ class Client extends Common
     public function perCliList()
     {
 
+
+
         if (request()->isPost()) {
             $key = input('post.key');
             $page = input('page') ? input('page') : 1;
@@ -170,6 +172,8 @@ class Client extends Common
             return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
         }
 
+
+
         $khRankList = Db::table('crm_client_rank')->select();
         $khStatusList = Db::table('crm_client_status')->select();
         $xsSourceList = Db::table('crm_clues_source')->select();
@@ -179,6 +183,7 @@ class Client extends Common
         $this->assign('xsSourceList', $xsSourceList);  //线索/客户来源
 
         return $this->fetch('personclient/index');
+        
     }
 
     //成交客户列表
