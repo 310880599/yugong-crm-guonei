@@ -117,7 +117,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">Whatsapp</label>
                 <div class="layui-input-4">
-                    <input type="text" id="whatsapp" name="whatsapp" placeholder="请输入Whatsapp" class="layui-input">
+                    <input type="text" id="whatsapp" name="whatsapp" placeholder="请输入Whatsapp" class="layui-input" >
                 </div>
             </div>
             <div class="layui-form-item">
@@ -197,7 +197,41 @@
         </form>
     </div>
     {include file="common/foot"/}
+    <script>
+document.getElementById('whatsapp').addEventListener('keypress', function(event) {
+    // 阻止空格键输入 (keyCode 32)
+    if (event.keyCode === 32) {
+        event.preventDefault();
+    }
+});
 
+document.getElementById('whatsapp').addEventListener('paste', function(event) {
+    // 获取剪贴板内容
+    const clipboardData = event.clipboardData || window.clipboardData;
+    const pastedText = clipboardData.getData('text');
+    
+    if (!pastedText) return;
+    
+    // 清除所有空格
+    const cleanedText = pastedText.replace(/\s/g, '');
+    
+    // 阻止默认粘贴行为
+    event.preventDefault();
+    
+    // 获取当前光标位置
+    const startPos = this.selectionStart;
+    const endPos = this.selectionEnd;
+    
+    // 插入处理后的文本
+    this.value = this.value.substring(0, startPos) 
+                + cleanedText 
+                + this.value.substring(endPos);
+    
+    // 恢复光标位置
+    const newPos = startPos + cleanedText.length;
+    this.setSelectionRange(newPos, newPos);
+});
+</script>
     <script>
 
 
@@ -207,8 +241,8 @@
             form.verify({
                 email: function (value) {
                     if (value.trim()) { // 仅当输入值非空时校验格式
-                        if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,6}$/.test(value)) {
-                            return '邮箱格式不正确 (例: example@domain.com)';
+                       if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,6}$/.test(value)) {
+            return '邮箱格式不正确 (例: example@domain.com)';
                         }
                     }
                 },

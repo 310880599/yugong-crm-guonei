@@ -143,8 +143,11 @@ class Liberum extends Common{
 
         $gh_client = Db::table('crm_leads')->where(['id' => $data['id']])->where(['status'=> 2])->find();
         if ($gh_client){
-            $data['to_kh_time'] = date("Y-m-d H:i:s",time());
+             $data['to_kh_time'] = date("Y-m-d H:i:s",time());
             $data['ut_time'] = date("Y-m-d H:i:s",time());
+            
+            // 清空公海类型字段
+            $data['pr_gh_type'] = NULL; // 将pr_gh_type设为NULL
             
             $data['status'] = 1;//0-线索，1客户，2公海
             $data['pr_user_bef'] = $gh_client['pr_user'];

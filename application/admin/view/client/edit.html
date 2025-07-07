@@ -217,7 +217,41 @@
         </form>
     </div>
     {include file="common/foot"/}
+    <script>
+document.getElementById('whatsapp').addEventListener('keypress', function(event) {
+    // 阻止空格键输入 (keyCode 32)
+    if (event.keyCode === 32) {
+        event.preventDefault();
+    }
+});
 
+document.getElementById('whatsapp').addEventListener('paste', function(event) {
+    // 获取剪贴板内容
+    const clipboardData = event.clipboardData || window.clipboardData;
+    const pastedText = clipboardData.getData('text');
+    
+    if (!pastedText) return;
+    
+    // 清除所有空格
+    const cleanedText = pastedText.replace(/\s/g, '');
+    
+    // 阻止默认粘贴行为
+    event.preventDefault();
+    
+    // 获取当前光标位置
+    const startPos = this.selectionStart;
+    const endPos = this.selectionEnd;
+    
+    // 插入处理后的文本
+    this.value = this.value.substring(0, startPos) 
+                + cleanedText 
+                + this.value.substring(endPos);
+    
+    // 恢复光标位置
+    const newPos = startPos + cleanedText.length;
+    this.setSelectionRange(newPos, newPos);
+});
+</script>
     <script>
 
 
