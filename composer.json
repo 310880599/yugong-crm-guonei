@@ -8,5 +8,10 @@
         "allow-plugins": {
             "topthink/think-installer": true
         }
+    },
+    "autoload": {
+        "psr-4": {
+            "app\\": "app/"
+        }
     }
 }

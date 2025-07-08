@@ -51,4 +51,21 @@ class Common extends Controller
     {
         return $this->error('空操作，返回上次访问页面中...');
     }
+
+
+    //使用缓存记录团队数据
+
+    public function getTeamList($flush=false)
+    {
+
+        //清除缓存
+        if($flush) cache('teamList',null);
+        $teamList = cache('teamList');
+        if ($teamList) {
+            return $teamList;
+        }
+        $teamList = Db::name('admin')->group('team_name')->column('team_name');
+        cache('teamList', $teamList);
+        return $teamList;
+    }
 }

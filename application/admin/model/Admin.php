@@ -17,6 +17,8 @@ class Admin extends Model
                 session('aid', $user['admin_id']);
                 $avatar = $user['avatar'] == '' ? '/static/admin/images/0.jpg' : $user['avatar'];
                 session('avatar', $avatar);
+                //记录团队名称
+                session('team_name', $user['team_name']);
                 return ['code' => 1, 'msg' => '登录成功!']; //信息正确
             } else {
                 return ['code' => 0, 'msg' => '用户名或者密码错误，重新输入!']; //密码错误

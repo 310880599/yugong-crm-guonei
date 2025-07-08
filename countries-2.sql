@@ -1,11 +1,12 @@
 
+DROP TABLE IF EXISTS `countries`;
 -- 创建国家表
 CREATE TABLE IF NOT EXISTS countries (
     id INT AUTO_INCREMENT PRIMARY KEY,
     english_name VARCHAR(100) NOT NULL,
     chinese_name VARCHAR(100) NOT NULL,
-    iso2_code CHAR(2),
-    iso3_code CHAR(3),
+    iso2_code CHAR(5),
+    iso3_code CHAR(5),
     phone_code VARCHAR(10)
 );
 
@@ -235,4 +236,5 @@ INSERT INTO countries (english_name, chinese_name, iso2_code, iso3_code, phone_c
 ('Peru', '秘鲁', 'PER', 'PER', '51'),
 ('England', '英国', 'UK', 'GB', '44'),
 ('Mexico', '墨西哥', 'MX', 'MEX', '52'),
+('Philippines', '菲律宾', 'PH', 'PHL', '63'),
 ('The Republic of Yemen', '也门', 'YM', 'YEM', '967');

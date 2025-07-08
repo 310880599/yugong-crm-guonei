@@ -19,6 +19,10 @@ class ComposerStaticInit0f88258c536915e43237a5820cbfa9c9
             'think\\composer\\' => 15,
             'think\\' => 6,
         ),
+        'a' => 
+        array (
+            'app\\' => 4,
+        ),
         'Z' => 
         array (
             'ZipStream\\' => 10,
@@ -55,6 +59,10 @@ class ComposerStaticInit0f88258c536915e43237a5820cbfa9c9
         array (
             0 => __DIR__ . '/..' . '/topthink/think-helper/src',
             1 => __DIR__ . '/..' . '/topthink/think-queue/src',
+        ),
+        'app\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app',
         ),
         'ZipStream\\' => 
         array (

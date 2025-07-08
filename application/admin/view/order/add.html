@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>{:config('sys_name')}后台管理</title>
@@ -14,7 +15,6 @@
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
     <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
     <style>
-
         .layui-form-pane .layui-form-label {
             width: 110px;
             padding: 8px 15px;
@@ -23,142 +23,245 @@
             border-width: 0px;
             border-style: none;
             border-radius: 2px 0 0 2px;
-            text-align: center;
+            text-align: left;
             background-color: #FBFBFB;
             overflow: hidden;
             box-sizing: border-box;
         }
-
     </style>
 </head>
+
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 
-<script type="text/javascript">
-    function changeyewu(){
-        //重新查找业务员的客户信息
-        var custphone = $("#cphone").val();
-        $('#cname').val('');
-        var url = "{:url('Order/changeyewu')}" + "?cphone="+custphone;
-        $.ajax({
-        //几个参数需要注意一下
-            type: "GET",//方法类型
-            dataType: "json",//预期服务器返回的数据类型
-            url: url ,//url
-            success: function (result) {
-                //console.log(result);//打印服务端返回的数据(调试用)
-                //alert("修改成功");
-                if (result['msg']['code'] == 0) {
-                    $('#checklabel').css('color','red');
-                }else{
-                    $('#checklabel').css('color','green');
-                    $('#cname').val(result['msg']['custname']);
-                    $('#pr_user').val(result['msg']['pr_user']);
-                    $('#kh_username').val(result['msg']['kh_username']);
+    <script type="text/javascript">
+        function changeyewu() {
+            //重新查找业务员的客户信息
+            var contact = $("#contact").val();
+            $('#cname').val('');
+            var url = "{:url('Order/changeyewu')}" + "?contact=" + contact;
+            $.ajax({
+                //几个参数需要注意一下
+                type: "GET",//方法类型
+                dataType: "json",//预期服务器返回的数据类型
+                url: url,//url
+                success: function (result) {
+                    //console.log(result);//打印服务端返回的数据(调试用)
+                    //alert("修改成功");
+                    if (result['msg']['code'] == 0) {
+                        $('#checklabel').css('color', 'red');
+                    } else {
+                        $('#checklabel').css('color', 'green');
+                        $('#cname').val(result['msg']['custname']);
+                        $('#pr_user').val(result['msg']['pr_user']);
+                        $('#kh_username').val(result['msg']['kh_username']);
+                        // $('#source').val(result['msg']['source']);
+                        var sourceValue = result['msg']['source'];
+                        var lowerSourceValue = sourceValue.toLowerCase();
+                        var $sourceSelect = $('#source');
+                        var matched = false;
+
+                        $sourceSelect.find('option').each(function () {
+                            var optionValue = $(this).val();
+                            if (optionValue != '') {
+                                var lowerOptionValue = optionValue.toLowerCase();
+                                if (lowerSourceValue.includes(lowerOptionValue)) {
+                                    $sourceSelect.val(optionValue);
+                                    matched = true;
+                                    return false; // 终止循环
+                                }
+                            }
+
+                        });
+
+                        if (!matched) {
+                            $sourceSelect.val(''); // 未匹配到则清空选择
+                        }
+
+                        // 重新渲染 layui 的 select 组件
+                        layui.form.render('select');
+                    }
+                    $('#checklabel').html(result['msg']['msg']);
+
+
+                },
+                error: function () {
+                    alert("异常！");
                 }
-                $('#checklabel').html(result['msg']['msg']);
-                
+            });
+        }
+    </script>
+    <div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
+        <form class="layui-form layui-form-pane">
+            <div class="layui-form-item">
+                <label class="layui-form-label">联系方式</label>
+                <div class="layui-input-4">
+                    <input type="text" id="contact" onchange="changeyewu()" name="contact" lay-verify="required"
+                        placeholder="请输入客户联系方式" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-4">
+                    <label class="" id="checklabel"></label>
+                </div>
+            </div>
+            <!-- <div class="layui-form-item">
+                <label class="layui-form-label">客户手机号</label>
+                <div class="layui-input-4">
+                    <input type="text" id="cphone" readonly='true' name="cphone" lay-verify="required"
+                        placeholder="请输入手机号码" class="layui-input">
+                </div>
+            </div> -->
+            <!-- <input type="text" id="cphone"  name="cphone" lay-verify="required" placeholder="请输入手机号码" class="layui-input"> -->
 
-            },
-            error : function() {
-                alert("异常！");
-            }
-        });
-    }
-</script>
-<div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
+            <div class="layui-form-item">
+                <label class="layui-form-label">国家</label>
+                <div class="layui-input-4">
+                    <input type="text" id="country" name="country" value="{$country}" placeholder="请输入国家"
+                        class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户名称</label>
+                <div class="layui-input-4">
+                    <input type="text" id="cname" name="cname" lay-verify="required" value="{$kh_name}"
+                        placeholder="请输入客户名称" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户负责人</label>
+                <div class="layui-input-4">
+                    <input type="text" id="pr_user" name="pr_user" lay-verify="required" value="{$username}"
+                        class="layui-input">
+                </div>
+            </div>
 
-    <form class="layui-form layui-form-pane">
+            <div class="layui-form-item">
+                <label class="layui-form-label">询盘来源</label>
+                <div class="layui-input-4">
+                    <select name="source" id="source" lay-verify="required" lay-search="">
+                        <option value="">请选择询盘来源</option>
+                        {volist name='sourceList' id='vo'}
+                        <option value="{$vo}">{$vo}</option>
+                        {/volist}
+                    </select>
 
-        <div class="layui-form-item">
-            <label class="layui-form-label">客户手机号</label>
-            <div class="layui-input-4">
-                <input type="text" id="cphone" onchange="changeyewu()" name="cphone" lay-verify="required" placeholder="请输入手机号码" class="layui-input">
+                </div>
             </div>
-        </div>
-        <div class="layui-form-item">
-            <div class="layui-input-4">
-                <label class="" id="checklabel"></label>
-            </div>
-        </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">客户名称</label>
-            <div class="layui-input-4">
-                <input type="text" readonly='true' id="cname" name="cname" lay-verify="required"  placeholder="请输入客户名称" class="layui-input">
-            </div>
-        </div>
-        {if $Think.session.aid == 1}
-        <div class="layui-form-item">
-            <label class="layui-form-label">客户负责人</label>
-            <div class="layui-input-4">
-                <input type="text" readonly='true' id="pr_user" name="pr_user" lay-verify="required"  placeholder="请输入客户负责人" class="layui-input">
 
-                <!-- <select name="pr_user" id="pr_user">
-                    <option value="">请选择客户负责人</option>
-                    {volist name='userlist' id='vo'}
-                    <option value="{$vo.username}">{$vo.username}</option>
-                    {/volist}
+            <div class="layui-form-item">
+                <label class="layui-form-label">团队名称</label>
+                <div class="layui-input-4">
+                    <select name="team_name" id="team_name" lay-verify="required" lay-search="">
+                        <option value="">请选择团队名称</option>
+                        {volist name='teamList' id='vo'}
+                        <option value="{$vo}" {if $vo==$team_name} selected="selected" {/if}>{$vo}</option>
+                        {/volist}
+                    </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户性质</label>
+                <div class="layui-input-4">
+                    <input type="text" id="customer_type" name="customer_type" placeholder="请输入客户性质"
+                        class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">产品名称</label>
+                <div class="layui-input-4">
+                    <input type="text" id="product_name" name="product_name" placeholder="请输入产品名称" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">成交时间</label>
+                <div class="layui-input-4">
+                    <input type="text" id="orderTime" name="order_time" placeholder="请输入成交时间" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">订单金额(￥)</label>
+                <div class="layui-input-4">
+                    <input type="text" id="money" name="money" lay-verify="number|required" placeholder="请输入金额"
+                        class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">利润(￥)</label>
+                <div class="layui-input-4">
+                    <input type="text" id="profit" lay-verify="number|required" name="profit" placeholder="请输入利润"
+                        class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">利润率(%)</label>
+                <div class="layui-input-4" style="position: relative;">
+                    <input type="text" id="margin_rate" lay-verify="number|required" name="margin_rate"
+                        placeholder="请输入利润率" class="layui-input"><span
+                        style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%)">%</span>
+                </div>
+            </div>
 
-                </select> -->
-            </div>
-        </div>
-        {else /}
-        <div class="layui-form-item">
-            <label class="layui-form-label">客户负责人</label>
-            <div class="layui-input-4">
-                <input type="text" readonly='true' id="pr_user" name="pr_user" lay-verify="required" value="{$username}" class="layui-input">
-            </div>
-        </div>
-        {/if}
-        <div class="layui-form-item">
-            <label class="layui-form-label">金额</label>
-            <div class="layui-input-4">
-                <input type="text" id="money" name="money"  placeholder="请输入金额" class="layui-input">
-            </div>
-        </div>
-        <!-- <div class="layui-form-item">
+            <!-- <div class="layui-form-item">
             <label class="layui-form-label">用户名</label>
             <div class="layui-input-4">
                 <input type="text" id="kh_username" name="kh_username" value=""  placeholder="请输入用户名" class="layui-input">
             </div>
         </div> -->
-        <div class="layui-form-item">
-            <label class="layui-form-label">备注</label>
-            <div class="layui-input-4">
-                <textarea placeholder="请输入备注信息" class="layui-textarea" name="remark"></textarea>
+            <div class="layui-form-item">
+                <label class="layui-form-label">备注</label>
+                <div class="layui-input-4">
+                    <textarea placeholder="请输入备注信息" class="layui-textarea" name="remark"></textarea>
+                </div>
             </div>
-        </div>
 
-        <div class="layui-form-item">
-            <div class="layui-input-block">
-                <button type="button" class="layui-btn"  lay-submit="" lay-filter="submit">提交保存</button>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn" lay-submit="" lay-filter="submit">提交保存</button>
 
+                </div>
             </div>
-        </div>
 
-    </form>
-</div>
-{include file="common/foot"/}
+        </form>
+    </div>
+    {include file="common/foot"/}
 
-<script>
-        layui.use(['form', 'layer'], function () {
-            var form = layui.form, layer = layui.layer,$= layui.jquery;
+    <script>
+        layui.use(['form', 'layer', 'laydate'], function () {
+            var form = layui.form, layer = layui.layer, $ = layui.jquery; laydate = layui.laydate;
+            laydate.render({
+                elem: '#orderTime',
+                type: 'datetime',
+                format: 'yyyy-MM-dd HH:mm:ss',
+                value: new Date() // 默认当前时间
+            });
+
+            // 自定义验证规则
+            form.verify({
+                number: function (value) {
+                    if (!/^\d+(\.\d+)?$/.test(value)) {
+                        return '请输入有效的数字';
+                    }
+                }
+            });
+
             //监听提交
-            form.on('submit(submit)', function(data){
+            form.on('submit(submit)', function (data) {
 
-                $.post("{:url('Order/add')}",data.field,function (res) {
-                    if (res.code == 0){
-                        layer.msg(res.msg,{time:2000});
+                $.post("{:url('Order/add')}", data.field, function (res) {
+                    if (res.code == 0) {
+                        layer.msg(res.msg, { time: 2000 });
                         layer.close(layer.index);
                         window.parent.location.reload();
-                    }else {
-                        layer.msg(res.msg,{time:2000});
+                    } else {
+                        layer.msg(res.msg, { time: 2000 });
                     }
 
-                },'json')
+                }, 'json')
 
                 return false;
             });
         });
-</script>
+    </script>
 </body>
+
 </html>

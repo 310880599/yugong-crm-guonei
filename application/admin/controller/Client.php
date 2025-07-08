@@ -1696,8 +1696,8 @@ class Client extends Common
     //冲突查询
     public function conflict()
     {
-        $keyword = Request::param('keyword');
-        $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
+        $_keyword = Request::param('keyword');
+        $keyword = trim(preg_replace('/[+\-\s]/', '', $_keyword));
         if (Request::isAjax()) {
             if (empty($keyword)) return success();
             $leadsQuery = Db::name('crm_leads')
@@ -1709,9 +1709,10 @@ class Client extends Common
                 ->alias('c')
                 ->leftJoin('crm_leads l', 'l.id = c.leads_id')
                 ->where('c.is_delete', 0)
-                ->where(function ($q) use ($keyword) {
+                ->where(function ($q) use ($keyword,$_keyword) {
                     $q->where('c.contact_value','like', $keyword)
                         ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
+                    if($_keyword != $keyword)$q->whereOr('c.contact_value','like', "%{$_keyword}%");
                 })
                 ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user');
 
@@ -1735,7 +1736,7 @@ class Client extends Common
 
             return success($paginatedList);
         }
-        $this->assign('keyword', $keyword);
+        $this->assign('keyword', $_keyword);
         return $this->fetch('client/conflict');
     }
 }

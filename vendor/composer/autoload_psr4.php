@@ -8,6 +8,7 @@ $baseDir = dirname($vendorDir);
 return array(
     'think\\composer\\' => array($vendorDir . '/topthink/think-installer/src'),
     'think\\' => array($vendorDir . '/topthink/think-helper/src', $vendorDir . '/topthink/think-queue/src'),
+    'app\\' => array($baseDir . '/app'),
     'ZipStream\\' => array($vendorDir . '/maennchen/zipstream-php/src'),
     'Symfony\\Polyfill\\Mbstring\\' => array($vendorDir . '/symfony/polyfill-mbstring'),
     'Psr\\SimpleCache\\' => array($vendorDir . '/psr/simple-cache/src'),
