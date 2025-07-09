@@ -9,6 +9,15 @@ use think\Container;
 
 class Order extends Common
 {
+
+    const CUSTOMER_TYPE = [
+        '终端用户',
+        '经销商/批发商',
+        '采购商',
+        '零售商',
+        '采购代理商',
+    ];
+
     //订单列表
     public function index()
     {
@@ -48,7 +57,7 @@ class Order extends Common
         //查询所有客户来源
         $sourceList = Db::name('crm_clues_source')->distinct(true)->column('source_name');
         $this->assign('sourceList', $sourceList);
-
+        $this->assign('customer_type', self::CUSTOMER_TYPE);
         return $this->fetch();
     }
 
@@ -74,18 +83,20 @@ class Order extends Common
             //     ->toArray();
             // return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
         }
+        $this->assign('customer_type', self::CUSTOMER_TYPE);
+        $this->assign('sourceList', Db::name('crm_clues_source')->distinct(true)->column('source_name'));
         return $this->fetch();
     }
 
 
 
-    //新建客户
+    //新建订单
     public function add()
     {
         if (request()->isPost()) {
             // $data['cphone'] = Request::param('cphone');
             $data['cname'] = Request::param('cname');
-
+            $data['at_user'] = Session::get('username');
             if (Request::param('pr_user')) {
                 $data['pr_user'] = Request::param('pr_user');
             } else {
@@ -129,7 +140,8 @@ class Order extends Common
         //查询所有客户来源
         $sourceList = Db::name('crm_clues_source')->distinct(true)->column('source_name');
         $this->assign('sourceList', $sourceList);
-
+        //客户性质
+        $this->assign('customer_type', self::CUSTOMER_TYPE);
 
         $userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
         $this->assign('userlist', $userlist);
@@ -149,10 +161,10 @@ class Order extends Common
         $coninfo = Db::name('crm_contacts')->where('is_delete', 0)->where(function ($query) use ($custphone) {
             $_custphone = trim(preg_replace('/[+\-\s]/', '', $custphone));
             $query->whereRaw("CONCAT(contact_extra, contact_value) = '{$custphone}'")
-                ->whereOrRaw("CONCAT(contact_extra, contact_value) = '{$_custphone}'");
+                ->whereOr('contact_value', $custphone);
             if ($custphone != $_custphone) {
-                $query->whereOr('contact_value', $custphone)
-                    ->whereOr('contact_value', $_custphone);
+                $query->whereOr('contact_value', $_custphone)
+                    ->whereOrRaw("CONCAT(contact_extra, contact_value) = '{$_custphone}'");
             }
         })->find();
         if (!$coninfo) {
@@ -208,11 +220,20 @@ class Order extends Common
 
         $result = Db::table('crm_client_order')->where(['id' => Request::param('id')])->find();
 
-        $this->assign('result', $result);
+        $this->assign('orderInfo', $result);
 
         $userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
         $this->assign('userlist', $userlist);
+        //查询所有团队
+        $teamList = $this->getTeamList();
+        $this->assign('teamList', $teamList);
+        //查询所有客户来源
+        $sourceList = Db::name('crm_clues_source')->distinct(true)->column('source_name');
+        $this->assign('sourceList', $sourceList);
+        $this->assign('customer_type', self::CUSTOMER_TYPE);
 
+        $this->assign('username', Session::get('username'));
+        $this->assign('team_name', Session::get('team_name'));
         return $this->fetch('order/edit');
     }
     //删除客户
@@ -220,11 +241,11 @@ class Order extends Common
     {
         $id = Request::param('id');
         // 对应的客户修改状态
-        $orderinfo = Db::table('crm_client_order')->where('id', $id)->find();
-        $custphone = $orderinfo['cphone'];
-        $updatearr = [];
-        $updatearr['issuccess'] = -1;
-        Db::table('crm_leads')->where('phone', $custphone)->update($updatearr);
+        // $orderinfo = Db::table('crm_client_order')->where('id', $id)->find();
+        // $custphone = $orderinfo['cphone'];
+        // $updatearr = [];
+        // $updatearr['issuccess'] = -1;
+        // Db::table('crm_leads')->where('phone', $custphone)->update($updatearr);
         $result = Db::table('crm_client_order')->where('id', $id)->delete();
         if ($result) {
             $msg = ['code' => 0, 'msg' => '删除成功！', 'data' => []];
@@ -285,7 +306,8 @@ class Order extends Common
         $keyword = Request::param('keyword');
         // 过滤掉 null 元素
         if ($keyword) $keyword = array_filter($keyword);
-        if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
+        // if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
+        if (isset($keyword['order_no'])) $where[] = ['order_no', 'like', "%{$keyword['order_no']}%"];
         if (isset($keyword['timebucket'])) {
             $where[] = $this->buildTimeWhere($keyword['timebucket'], 'order_time');
             $timeWhere['at_time'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
@@ -305,8 +327,14 @@ class Order extends Common
             $where[] = ['cname', 'like', "%{$keyword['cname']}%"];
             // $client_where[] = ['kh_name', 'like', "%{$keyword['cname']}%"];
         }
-        if(isset($keyword['contact'])){
+        if (isset($keyword['contact'])) {
             $where[] = ['contact', 'like', "%{$keyword['contact']}%"];
+        }
+        if (isset($keyword['customer_type'])) {
+            $where[] = ['customer_type', '=', $keyword['customer_type']];
+        }
+        if (isset($keyword['product_name'])) {
+            $where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
         }
         if ($team_name) {
             $usernames = Db::table('admin')->where('team_name', $team_name)->column('username');
@@ -448,24 +476,26 @@ class Order extends Common
     {
         $where = [];
         $client_where = [];
-
         $pr_user = Session::get('username') ?? '';
-        $where[] = ['pr_user', '=', $pr_user];
+        //展示自己创建的订单
+        $where[] = ['at_user', '=', $pr_user];
+        // $where[] = ['pr_user', '=', $pr_user];
         $client_where[] = ['pr_user', '=', $pr_user];
         //判断权限
-        $team_name = session('team_name') ?? '';
-        if ($team_name) {
-            $where[] = ['team_name', '=', $team_name];
-            $usernames = Db::table('admin')->where('team_name', $team_name)->column('username');
-            $client_where[] = ['pr_user', 'in', $usernames];
-        }
+        // $team_name = session('team_name') ?? '';
+        // if ($team_name) {
+        //     $where[] = ['team_name', '=', $team_name];
+        //     $usernames = Db::table('admin')->where('team_name', $team_name)->column('username');
+        //     $client_where[] = ['pr_user', 'in', $usernames];
+        // }
         $page = input('page') ?? 1;
         $limit = input('limit') ?? config('pageSize');
         $keyword = Request::param('keyword');
         // 过滤掉 null 元素
         if ($keyword) $keyword = array_filter($keyword);
 
-        if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
+        // if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
+        if (isset($keyword['order_no'])) $where[] = ['order_no', 'like', "%{$keyword['order_no']}%"];
         if (isset($keyword['timebucket'])) {
             $where[] = $this->buildTimeWhere($keyword['timebucket'], 'order_time');
 
@@ -486,8 +516,14 @@ class Order extends Common
             $where[] = ['cname', 'like', "%{$keyword['cname']}%"];
             // $client_where[] = ['kh_name', 'like', "%{$keyword['cname']}%"];
         }
-        if(isset($keyword['contact'])){
+        if (isset($keyword['contact'])) {
             $where[] = ['contact', 'like', "%{$keyword['contact']}%"];
+        }
+        if (isset($keyword['customer_type'])) {
+            $where[] = ['customer_type', '=', $keyword['customer_type']];
+        }
+        if (isset($keyword['product_name'])) {
+            $where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
         }
         if (isset($keyword['source'])) {
             $where[] = ['source', '=', $keyword['source']];

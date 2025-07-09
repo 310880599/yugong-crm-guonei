@@ -61,7 +61,7 @@
                         style="border-bottom: transparent; height: auto">
                         <div class="layui-form-item" style="text-align: left; padding-left: 20px;">
                             <!-- 通用筛选条件 -->
-                            <div class="layui-inline">
+                            <!-- <div class="layui-inline">
                                 <label class="layui-form-label">审核状态：</label>
                                 <div class="layui-input-inline">
                                     <select name="status" id="status">
@@ -69,6 +69,12 @@
                                         <option value="审核中">审核中</option>
                                         <option value="审核通过">审核通过</option>
                                     </select>
+                                </div>
+                            </div> -->
+                            <div class="layui-inline">
+                                <label class="layui-form-label">订单编号：</label>
+                                <div class="layui-input-inline">
+                                    <input type="text" name="order_no" placeholder="请输入订单编号" class="layui-input">
                                 </div>
                             </div>
                             <div class="layui-inline">
@@ -104,6 +110,26 @@
                                             <label class="layui-form-label">客户名称：</label>
                                             <div class="layui-input-inline">
                                                 <input type="text" id="cname" name="cname" placeholder="请输入客户名称"
+                                                    class="layui-input">
+                                            </div>
+                                        </div>
+                                        <div class="layui-inline">
+                                            <label class="layui-form-label">客户性质：</label>
+                                            <div class="layui-input-inline">
+                                                <select name="customer_type" lay-search="">
+                                                    <option value="">请选择客户性质</option>
+                                                    {volist name='customer_type' id='vo'}
+                                                    <option value="{$vo}" {if $vo==$orderInfo.customer_type}
+                                                        selected="selected" {/if}>{$vo}
+                                                    </option>
+                                                    {/volist}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="layui-inline">
+                                            <label class="layui-form-label">产品名称：</label>
+                                            <div class="layui-input-inline">
+                                                <input type="text" name="product_name" placeholder="请输入产品名称"
                                                     class="layui-input">
                                             </div>
                                         </div>
@@ -190,12 +216,11 @@
 
     <script type="text/html" id="action">
     <!-- 是否审核通过 -->
-    {if $Think.session.aid == 1}
-    <a class="layui-btn  layui-btn-xs" lay-event="shenhe"><i class="layui-icon">&#xe642;</i>审核通过</a>
-    <!-- <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
-     -->
+    <!-- {//if $Think.session.aid == 1} -->
+    <!-- <a class="layui-btn  layui-btn-xs" lay-event="shenhe"><i class="layui-icon">&#xe642;</i>审核通过</a> -->
+    <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
-    {/if}
+    <!-- {/if} -->
 
     </script>
 
@@ -227,6 +252,7 @@
                     { field: 'order_time', title: '成交时间' },
                     { field: 'source', title: '询盘来源' },
                     { field: 'pr_user', title: '负责人', hide: false },
+                    { field: 'team_name', title: '团队', hide: false },
                     { width: 200, title: '操作', toolbar: '#action' }
                 ]],
                 limit: 100, //每页默认显示的数量
@@ -259,7 +285,16 @@
                     });
                 }
                 else if (obj.event === 'edit') {
-                    layer_add("编辑客户", "{:url('Order/edit')}?id=" + data.id);
+                    layer.open({
+                        type: 2,
+                        title: '编辑客户',
+                        closeBtn: 1, //是否显示关闭按钮
+                        area: ['100%', '86%'],
+                        anim: 2,  //动画
+                        shadeClose: false,  //点击空白处是否关闭
+                        maxmin: false, //开启最大化最小化按钮
+                        content: ["{:url('Order/edit')}?id=" + data.id]
+                    });
                 }
                 else if (obj.event === 'shenhe') {
                     layer.confirm('确认金额和客户信息,确认审核业绩吗？', function (index) {

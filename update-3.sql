@@ -107,6 +107,8 @@ CREATE TABLE `crm_client_order` (
   `margin_rate` DECIMAL(10, 2) DEFAULT 0 COMMENT '利润率',
   `status` varchar(20) NOT NULL DEFAULT '1' COMMENT '业绩状态 1 待审核 2 审核不通过 3 审核通过',
   `remark` varchar(255) DEFAULT '' COMMENT '备注',
+  `at_user` varchar(100) NOT NULL COMMENT '创建人',
   `create_time` datetime NOT NULL COMMENT '添加时间',
+  `ut_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '客户订单表';
