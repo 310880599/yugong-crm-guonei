@@ -1727,14 +1727,22 @@ class Client extends Common
                     $list[] = $item;
                 }
             }
-
+            
+            // 保存总记录数
+            $total = count($list);
+            
             // 分页处理
             $page = Request::param('page/d', 1);
             $pageSize = Request::param('limit/d', 10);
             $offset = ($page - 1) * $pageSize;
             $paginatedList = array_slice($list, $offset, $pageSize);
 
-            return success($paginatedList);
+            return json([
+                'code' => 0,
+                'msg' => '',
+                'count' => $total,  // 添加总记录数
+                'data' => $paginatedList
+            ]);
         }
         $this->assign('keyword', $_keyword);
         return $this->fetch('client/conflict');
