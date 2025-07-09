@@ -92,6 +92,7 @@
         limits: [10, 20, 50],
         cols: [[
           { checkbox: true, fixed: true },
+             { field: 'id', title: '客户id' },
           { field: 'kh_name', title: '客户名称' },
           { field: 'xs_area', title: '国家' },
           { field: 'kh_rank', title: '客户等级' },
@@ -109,7 +110,21 @@
     return res.pr_user;
   }
 },
-          { field: 'at_time', title: '添加时间' }
+          { field: 'at_time', title: '添加时间' },
+          {
+            field: 'id',
+            title: '操作',
+            templet: function(res) {
+              // 获取当前用户名（通过前端已存在的session信息）
+              var currentUsername = "<?php echo session('username'); ?>";
+              
+              // 仅当归属人匹配且非空时显示编辑按钮
+              if (res.pr_user && res.pr_user === currentUsername) {
+                return '<a href="<?php echo url("admin/client/edit"); ?>?id=' + res.id + '" class="layui-btn layui-btn-xs">编辑</a>';
+              }
+              return '';
+            }
+          }
         ]],
       });
 
