@@ -1703,6 +1703,7 @@ class Client extends Common
             $leadsQuery = Db::name('crm_leads')
                 ->alias('l')
                 ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user')
+                ->field('NULL as contact_type, NULL as contact_value')
                 ->where('l.kh_name', 'like', "%{$keyword}%");
 
             $contactsQuery = Db::name('crm_contacts')
@@ -1714,11 +1715,11 @@ class Client extends Common
                         ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
                     if($_keyword != $keyword)$q->whereOr('c.contact_value','like', "%{$_keyword}%");
                 })
-                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user');
+                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user,c.contact_type,c.contact_value');
 
             $query = Db::query("({$leadsQuery->buildSql()}) UNION ({$contactsQuery->buildSql()})");
 
-            // 去除重复记录
+             // 去除重复记录
             $uniqueIds = [];
             $list = [];
             foreach ($query as $item) {
@@ -1737,10 +1738,39 @@ class Client extends Common
             $offset = ($page - 1) * $pageSize;
             $paginatedList = array_slice($list, $offset, $pageSize);
 
+            // 添加重复类型信息
+            foreach ($paginatedList as &$item) {
+                if (isset($item['contact_type'])) {
+                    // 修改contact_type判断逻辑，使用数字类型匹配
+                    switch ((int)$item['contact_type']) {
+                        case 3:
+                            $item['repeat_info'] = 'WhatsApp：' . $item['contact_value'];
+                            break;
+                        case 1:
+                            $item['repeat_info'] = '电话：' . $item['contact_value'];
+                            break;
+                        case 2:
+                            $item['repeat_info'] = '邮箱：' . $item['contact_value'];
+                            break;
+                        case 4:
+                            $item['repeat_info'] = '阿里ID：' . $item['contact_value'];
+                            break;
+                        case 5:
+                            $item['repeat_info'] = '微信：' . $item['contact_value'];
+                            break;
+                        default:
+                            $item['repeat_info'] = '未知类型(' . $item['contact_type'] . ')：' . $item['contact_value'];
+                    }
+                } else {
+                    $item['repeat_info'] = '客户名称重复';
+                }
+            }
+            unset($item);
+
             return json([
                 'code' => 0,
                 'msg' => '',
-                'count' => $total,  // 添加总记录数
+                'count' => $total,
                 'data' => $paginatedList
             ]);
         }

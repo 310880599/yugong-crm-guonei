@@ -111,6 +111,14 @@
   }
 },
           { field: 'at_time', title: '添加时间' },
+              // 新增重复类型列
+          {
+            field: 'repeat_info',
+            title: '重复类型',
+            templet: function(res) {
+              return res.repeat_info || '';
+            }
+          },
           {
             field: 'id',
             title: '操作',
