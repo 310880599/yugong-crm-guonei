@@ -35,14 +35,24 @@ class Liberum extends Model
         }
 
 
-        $result  = Db::table('crm_leads')
+         // 添加关联查询并分组聚合联系方式
+        $result = Db::table('crm_leads')
+            ->alias('l')
+            ->join('crm_contacts c', 'l.id = c.leads_id', 'left')
             ->where($mapPhone)
             ->where($mapKhName)
             ->where($mapXsSource)
             ->where($mapAtTime)
-            ->where(['status'=>2]) //0-线索，1-客户，2-公海
+            ->where(['l.status'=>2])
             ->whereTime('to_gh_time',$keyword['timebucket'] ? $keyword['timebucket'] : null)
-            ->order('to_gh_time desc')
+            ->field([
+                'l.*',
+                "SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN c.contact_type = 3 THEN c.contact_value END), ',', 1) AS whatsapp",
+                "SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN c.contact_type = 2 THEN c.contact_value END), ',', 1) AS email",
+                "SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN c.contact_type = 1 THEN c.contact_value END), ',', 1) AS phone"
+            ])
+            ->group('l.id')
+            ->order('l.to_gh_time desc')
             ->paginate(array('list_rows'=>$limit,'page'=>$page))
             ->toArray();
 
