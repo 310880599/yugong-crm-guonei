@@ -80,75 +80,103 @@
       var $ = layui.$;
       var layer = layui.layer;
 
+      /* ===== ① 首次渲染：本地数据模式，data 为空数组 ===== */
       var tableIns = table.render({
-        elem: '#table-list',
-        url: '{:url("admin/client/conflict")}',
-        method: 'post',
-        where: {
-          keyword: '{$keyword}'
-        },
-        page: true,
-        limit: 10,
+        elem  : '#table-list',
+        data  : [],          // 先不给 url，保持本地模式
+        page  : true,
+        limit : 10,
         limits: [10, 20, 50],
-        cols: [[
+        cols  : [[
           { checkbox: true, fixed: true },
-             { field: 'id', title: '客户id' },
-          { field: 'kh_name', title: '客户名称' },
-          { field: 'xs_area', title: '国家' },
-          { field: 'kh_rank', title: '客户等级' },
-          { field: 'kh_status', title: '客户来源' },
-         {
-  field: 'pr_user', 
-  title: '客户归属人',
-  templet: function(res) {
-    // 优先显示公海类型（非空时）
-    if(res.pr_gh_type && res.pr_gh_type.trim() !== '') {
-      return res.pr_gh_type;
-    }
-    
-    // 无公海类型时直接返回pr_user原始值（包含空字符串）
-    return res.pr_user;
-  }
-},
-          { field: 'at_time', title: '添加时间' },
-              // 新增重复类型列
-          {
-            field: 'repeat_info',
-            title: '重复类型',
-            templet: function(res) {
-              return res.repeat_info || '';
+          { field: 'id',        title: '客户id'    },
+          { field: 'kh_name',   title: '客户名称'  },
+          { field: 'xs_area',   title: '国家'      },
+          { field: 'kh_rank',   title: '客户等级'  },
+          { field: 'kh_status', title: '客户来源'  },
+          { field: 'pr_user',   title: '客户归属人',
+            templet: function (res) {
+              return res.pr_gh_type && res.pr_gh_type.trim() !== ''
+                     ? res.pr_gh_type
+                     : res.pr_user;
             }
           },
-          {
-            field: 'id',
-            title: '操作',
-            templet: function(res) {
-              // 获取当前用户名（通过前端已存在的session信息）
-              var currentUsername = "<?php echo session('username'); ?>";
-              
-              // 仅当归属人匹配且非空时显示编辑按钮
-              if (res.pr_user && res.pr_user === currentUsername) {
-                return '<a href="<?php echo url("admin/client/edit"); ?>?id=' + res.id + '" class="layui-btn layui-btn-xs">编辑</a>';
-              }
-              return '';
+          { field: 'at_time', title: '添加时间' },
+          { field: 'repeat_info', title: '重复类型',
+            templet: function (res) { return res.repeat_info || '' }
+          },
+          { field: 'id', title: '操作',
+            templet: function (res) {
+              var current = "<?php echo session('username'); ?>";
+              return (res.pr_user && res.pr_user === current)
+                     ? '<a href="<?php echo url("admin/client/edit"); ?>?id=' + res.id +
+                       '" class="layui-btn layui-btn-xs">编辑</a>'
+                     : '';
             }
           }
-        ]],
+        ]]
       });
 
 
+    //   form.on('submit(search)', function (data) {
+    //     var keyword = data.field.keyword.trim();
+    //     if (!keyword) {
+    //       layer.msg('请输入搜索关键词', { icon: 5 });
+    //       return false;
+    //     }
+    //     tableIns.reload({
+    //       where: { keyword: keyword },
+    //       page: { curr: 1 }
+    //     });
+    //     return false;
+    //   });
+    
+    /* ===== ② 表单提交：发起查重任务 ===== */
       form.on('submit(search)', function (data) {
         var keyword = data.field.keyword.trim();
         if (!keyword) {
           layer.msg('请输入搜索关键词', { icon: 5 });
           return false;
         }
-        tableIns.reload({
-          where: { keyword: keyword },
-          page: { curr: 1 }
+    
+        // 创建查重任务
+        $.post("{:url('admin/client/conflict')}", { keyword: keyword }, function (res) {
+          if (res.code !== 0) {
+            layer.msg(res.msg || '提交查重任务失败', { icon: 5 });
+            return;
+          }
+    
+          var taskId      = res.task_id;
+          var loadingIdx  = layer.msg('正在查重，请稍候…', {
+                            icon: 16, shade: 0.3, time: false });
+    
+          var timer = setInterval(function () {
+            $.post("{:url('admin/client/getConflictResult')}", { task_id: taskId }, function (res2) {
+    
+              if (res2.code === 202) return;               // 仍在处理 → 继续轮询
+    
+              clearInterval(timer);                        // 不管成功失败都停轮询
+              layer.close(loadingIdx);
+    
+              if (res2.code !== 0) {                       // 失败
+                layer.msg(res2.msg || '查重失败', { icon: 5 });
+                return;
+              }
+    
+              /* ===== ③ 结果到手：切换到本地数据模式并刷新 ===== */
+              tableIns.reload({
+                url  : '',           // ***关键：清空 url，保持本地模式***
+                data : res2.data,    // 直接塞入返回数组
+                page : { curr: 1 }   // 回第一页
+              });
+            });
+          }, 1000);
         });
-        return false;
-      });
+    
+        return false; // 禁止表单默认提交
+      });      
+            
+            
 
       $('#keyword').on('keypress', function (e) {
         if (e.keyCode === 13) { // 回车键的 keyCode 是 13

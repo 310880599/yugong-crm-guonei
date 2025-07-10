@@ -1693,88 +1693,155 @@ class Client extends Common
         return $this->fetch('client/conflict');
     }
 
-    //冲突查询
+    // //冲突查询
+    // public function conflict()
+    // {
+    //     $_keyword = Request::param('keyword');
+    //     $keyword = trim(preg_replace('/[+\-\s]/', '', $_keyword));
+    //     if (Request::isAjax()) {
+    //         if (empty($keyword)) return success();
+    //         $leadsQuery = Db::name('crm_leads')
+    //             ->alias('l')
+    //             ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user')
+    //             ->field('NULL as contact_type, NULL as contact_value')
+    //             ->where('l.kh_name', 'like', "%{$keyword}%");
+
+    //         $contactsQuery = Db::name('crm_contacts')
+    //             ->alias('c')
+    //             ->leftJoin('crm_leads l', 'l.id = c.leads_id')
+    //             ->where('c.is_delete', 0)
+    //             ->where(function ($q) use ($keyword,$_keyword) {
+    //                 $q->where('c.contact_value','like', $keyword)
+    //                     ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
+    //                 if($_keyword != $keyword)$q->whereOr('c.contact_value','like', "%{$_keyword}%");
+    //             })
+    //             ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user,c.contact_type,c.contact_value');
+
+    //         $query = Db::query("({$leadsQuery->buildSql()}) UNION ({$contactsQuery->buildSql()})");
+
+    //          // 去除重复记录
+    //         $uniqueIds = [];
+    //         $list = [];
+    //         foreach ($query as $item) {
+    //             if (!in_array($item['id'], $uniqueIds)) {
+    //                 $uniqueIds[] = $item['id'];
+    //                 $list[] = $item;
+    //             }
+    //         }
+            
+    //         // 保存总记录数
+    //         $total = count($list);
+            
+    //         // 分页处理
+    //         $page = Request::param('page/d', 1);
+    //         $pageSize = Request::param('limit/d', 10);
+    //         $offset = ($page - 1) * $pageSize;
+    //         $paginatedList = array_slice($list, $offset, $pageSize);
+
+    //         // 添加重复类型信息
+    //         foreach ($paginatedList as &$item) {
+    //             if (isset($item['contact_type'])) {
+    //                 // 修改contact_type判断逻辑，使用数字类型匹配
+    //                 switch ((int)$item['contact_type']) {
+    //                     case 3:
+    //                         $item['repeat_info'] = 'WhatsApp：' . $item['contact_value'];
+    //                         break;
+    //                     case 1:
+    //                         $item['repeat_info'] = '电话：' . $item['contact_value'];
+    //                         break;
+    //                     case 2:
+    //                         $item['repeat_info'] = '邮箱：' . $item['contact_value'];
+    //                         break;
+    //                     case 4:
+    //                         $item['repeat_info'] = '阿里ID：' . $item['contact_value'];
+    //                         break;
+    //                     case 5:
+    //                         $item['repeat_info'] = '微信：' . $item['contact_value'];
+    //                         break;
+    //                     default:
+    //                         $item['repeat_info'] = '未知类型(' . $item['contact_type'] . ')：' . $item['contact_value'];
+    //                 }
+    //             } else {
+    //                 $item['repeat_info'] = '客户名称重复';
+    //             }
+    //         }
+    //         unset($item);
+
+    //         return json([
+    //             'code' => 0,
+    //             'msg' => '',
+    //             'count' => $total,
+    //             'data' => $paginatedList
+    //         ]);
+    //     }
+    //     $this->assign('keyword', $_keyword);
+    //     return $this->fetch('client/conflict');
+    // }
+    
+    
     public function conflict()
     {
+        // 获取并清理关键词（去除空格和特殊字符）
         $_keyword = Request::param('keyword');
         $keyword = trim(preg_replace('/[+\-\s]/', '', $_keyword));
         if (Request::isAjax()) {
-            if (empty($keyword)) return success();
-            $leadsQuery = Db::name('crm_leads')
-                ->alias('l')
-                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user')
-                ->field('NULL as contact_type, NULL as contact_value')
-                ->where('l.kh_name', 'like', "%{$keyword}%");
-
-            $contactsQuery = Db::name('crm_contacts')
-                ->alias('c')
-                ->leftJoin('crm_leads l', 'l.id = c.leads_id')
-                ->where('c.is_delete', 0)
-                ->where(function ($q) use ($keyword,$_keyword) {
-                    $q->where('c.contact_value','like', $keyword)
-                        ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) like '%{$keyword}%'");
-                    if($_keyword != $keyword)$q->whereOr('c.contact_value','like', "%{$_keyword}%");
-                })
-                ->field('l.id, l.kh_name, l.xs_area, l.kh_rank, l.kh_status, l.at_user, l.at_time,l.pr_gh_type,l.pr_user,c.contact_type,c.contact_value');
-
-            $query = Db::query("({$leadsQuery->buildSql()}) UNION ({$contactsQuery->buildSql()})");
-
-             // 去除重复记录
-            $uniqueIds = [];
-            $list = [];
-            foreach ($query as $item) {
-                if (!in_array($item['id'], $uniqueIds)) {
-                    $uniqueIds[] = $item['id'];
-                    $list[] = $item;
-                }
+            if (empty($keyword)) {
+                // 关键词为空，直接返回空结果
+                return json(['code' => 0, 'msg' => '', 'data' => []]);
             }
-            
-            // 保存总记录数
-            $total = count($list);
-            
-            // 分页处理
-            $page = Request::param('page/d', 1);
-            $pageSize = Request::param('limit/d', 10);
-            $offset = ($page - 1) * $pageSize;
-            $paginatedList = array_slice($list, $offset, $pageSize);
-
-            // 添加重复类型信息
-            foreach ($paginatedList as &$item) {
-                if (isset($item['contact_type'])) {
-                    // 修改contact_type判断逻辑，使用数字类型匹配
-                    switch ((int)$item['contact_type']) {
-                        case 3:
-                            $item['repeat_info'] = 'WhatsApp：' . $item['contact_value'];
-                            break;
-                        case 1:
-                            $item['repeat_info'] = '电话：' . $item['contact_value'];
-                            break;
-                        case 2:
-                            $item['repeat_info'] = '邮箱：' . $item['contact_value'];
-                            break;
-                        case 4:
-                            $item['repeat_info'] = '阿里ID：' . $item['contact_value'];
-                            break;
-                        case 5:
-                            $item['repeat_info'] = '微信：' . $item['contact_value'];
-                            break;
-                        default:
-                            $item['repeat_info'] = '未知类型(' . $item['contact_type'] . ')：' . $item['contact_value'];
-                    }
-                } else {
-                    $item['repeat_info'] = '客户名称重复';
-                }
-            }
-            unset($item);
-
+            // 生成唯一任务ID，用于关联查重结果
+            $taskId = uniqid('', true);  // 例如：生成类似 5f2e5c7fbd98e 的唯一ID
+            // 准备任务数据，包含任务ID和原始关键词
+            $jobData = [
+                'id'      => $taskId,
+                'keyword' => $_keyword  // 保留原始关键词，后端队列处理时再做trim处理
+            ];
+            // 将任务数据推送到Redis队列
+            $redis = new \Redis();
+            $redis->connect('127.0.0.1', 6379);
+            // 若Redis设置了密码，可使用 $redis->auth('密码');
+            $redis->rPush('conflict_queue', json_encode($jobData));
+            // 返回任务已创建的响应，携带任务ID
             return json([
-                'code' => 0,
-                'msg' => '',
-                'count' => $total,
-                'data' => $paginatedList
+                'code'    => 0,
+                'msg'     => '查重任务已提交',
+                'task_id' => $taskId   // 前端据此轮询结果
             ]);
         }
+        // 非Ajax请求，渲染页面（保留原有逻辑）
         $this->assign('keyword', $_keyword);
         return $this->fetch('client/conflict');
     }
+    
+    
+    public function getConflictResult()
+    {
+        $taskId = Request::param('task_id');
+        if (empty($taskId)) {
+            return json(['code' => 500, 'msg' => '缺少任务ID', 'data' => []]);
+        }
+        // 查询Redis是否存在该任务的结果
+        $redis = new \Redis();
+        $redis->connect('127.0.0.1', 6379);
+        // 若有密码，同样需要 $redis->auth('密码');
+        $resultKey = 'conflict_result:' . $taskId;
+        $resultData = $redis->get($resultKey);
+        if (!$resultData) {
+            // 结果尚未生成，返回状态码表示处理中（前端据此继续轮询）
+            return json(['code' => 202, 'msg' => '查重处理中，请稍后...', 'data' => []]);
+        }
+        // Redis中存在结果，解析结果数据
+        $resultList = json_decode($resultData, true);
+        // 获取结果后，可以选择删除该结果键，防止占用内存（也可设置过期时间自动删除）
+        $redis->del($resultKey);
+        // 返回查重结果，结构与原接口一致（code=0，包含数据和条目数）
+        return json([
+            'code'  => 0,
+            'msg'   => '获取成功',
+            'data'  => $resultList,
+            'count' => count($resultList)
+        ]);
+    }
+    
+    
 }
