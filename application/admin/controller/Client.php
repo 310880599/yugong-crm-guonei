@@ -183,7 +183,6 @@ class Client extends Common
         $this->assign('xsSourceList', $xsSourceList);  //线索/客户来源
 
         return $this->fetch('personclient/index');
-        
     }
 
     //成交客户列表
@@ -769,7 +768,7 @@ class Client extends Common
 
         foreach ($chunks as $chunk) {
             $jobData = [
-                'user_id'=> Session::get('aid'),
+                'user_id' => Session::get('aid'),
                 'filePath' => $filePath,
                 'pr_user' => $pr_user,
                 'headers' => $headers,
@@ -857,12 +856,12 @@ class Client extends Common
             $update = true;
             $where = [['id', '<>', $data['id']]];
         }
-        $find = db('crm_leads')->where($where)->where(function ($query) use ($data) {
-            // $query->where('kh_name','like','%'.$data['kh_name'].'%')
-            $query->where('kh_name', $data['kh_name']);
-            if ($data['kh_contact']) $query->whereOr('kh_contact', $data['kh_contact']);
-        })->find();
-        if ($find)  return [false, $find['kh_name'] . '客户信息已存在,当前所属人' . $find['pr_user']];
+        // $find = db('crm_leads')->where($where)->where(function ($query) use ($data) {
+        //     // $query->where('kh_name','like','%'.$data['kh_name'].'%')
+        //     $query->where('kh_name', $data['kh_name']);
+        //     if ($data['kh_contact']) $query->whereOr('kh_contact', $data['kh_contact']);
+        // })->find();
+        // if ($find)  return [false, $find['kh_name'] . '客户信息已存在,当前所属人' . $find['pr_user']];
         //查询关联表crm_contacts数据表重复
         if ($update) $where = [['leads_id', '<>', $data['id']]];
         $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->whereIn('contact_value', $require_checke)->find();
@@ -1728,10 +1727,10 @@ class Client extends Common
     //                 $list[] = $item;
     //             }
     //         }
-            
+
     //         // 保存总记录数
     //         $total = count($list);
-            
+
     //         // 分页处理
     //         $page = Request::param('page/d', 1);
     //         $pageSize = Request::param('limit/d', 10);
@@ -1777,8 +1776,8 @@ class Client extends Common
     //     $this->assign('keyword', $_keyword);
     //     return $this->fetch('client/conflict');
     // }
-    
-    
+
+
     public function conflict()
     {
         // 获取并清理关键词（去除空格和特殊字符）
@@ -1812,8 +1811,8 @@ class Client extends Common
         $this->assign('keyword', $_keyword);
         return $this->fetch('client/conflict');
     }
-    
-    
+
+
     public function getConflictResult()
     {
         $taskId = Request::param('task_id');
@@ -1842,6 +1841,4 @@ class Client extends Common
             'count' => count($resultList)
         ]);
     }
-    
-    
 }
