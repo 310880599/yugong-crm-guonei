@@ -174,7 +174,18 @@
         });
     
         return false; // 禁止表单默认提交
-      });      
+      });
+      
+      
+      setTimeout(function () {
+            var params = new URLSearchParams(window.location.search);
+            var keyword = params.get('keyword');
+            if (keyword) {
+                $('input[name="keyword"]').val(keyword); // 自动填充
+                $('button[lay-filter="search"]').trigger('click'); // 模拟点击触发查重
+            }
+        }, 100);
+
             
             
 

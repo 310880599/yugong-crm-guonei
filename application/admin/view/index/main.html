@@ -19,7 +19,7 @@
         <!-- 新增冲突查询 -->
         <div class="layui-row" style="margin-bottom: 20px;">
             <div class="layui-col-md12" style="text-align: left;">
-                <form class="layui-form" onsubmit="return searchConflict()" style="display: inline-block;width:100%">
+                <form class="layui-form" action="{:url('client/conflict')}" method="get" style="display: inline-block;width:100%">
                     <div class="layui-inline layui-input-group" style="margin-right: 10px;width:92%">
                         <input type="text" name="keyword" placeholder="输入客户名称/手机号/whatsapp/邮箱" autocomplete="off"
                             class="layui-input" style="width: 100%;">
@@ -27,7 +27,7 @@
                     
                     
                     
-                    <button class="layui-btn layui-btn-normal" lay-submit style="width:7%">
+                    <button class="layui-btn layui-btn-normal" lay-submit style="width:7%" type="submit">
                         <i class="layui-icon layui-icon-search"></i> 冲突查询
                     </button>
                     
