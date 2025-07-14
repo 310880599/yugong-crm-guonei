@@ -55,7 +55,7 @@ class Order extends Common
         $this->assign('teamList', $teamList);
 
         //查询所有客户来源
-        $sourceList = Db::name('crm_clues_source')->distinct(true)->column('source_name');
+        $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
         $this->assign('sourceList', $sourceList);
         $this->assign('customer_type', self::CUSTOMER_TYPE);
         return $this->fetch();
@@ -84,7 +84,7 @@ class Order extends Common
             // return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
         }
         $this->assign('customer_type', self::CUSTOMER_TYPE);
-        $this->assign('sourceList', Db::name('crm_clues_source')->distinct(true)->column('source_name'));
+        $this->assign('sourceList', Db::name('crm_client_status')->distinct(true)->column('status_name'));
         return $this->fetch();
     }
 
@@ -138,7 +138,7 @@ class Order extends Common
         $teamList = $this->getTeamList();
         $this->assign('teamList', $teamList);
         //查询所有客户来源
-        $sourceList = Db::name('crm_clues_source')->distinct(true)->column('source_name');
+        $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
         $this->assign('sourceList', $sourceList);
         //客户性质
         $this->assign('customer_type', self::CUSTOMER_TYPE);
@@ -228,7 +228,7 @@ class Order extends Common
         $teamList = $this->getTeamList();
         $this->assign('teamList', $teamList);
         //查询所有客户来源
-        $sourceList = Db::name('crm_clues_source')->distinct(true)->column('source_name');
+        $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
         $this->assign('sourceList', $sourceList);
         $this->assign('customer_type', self::CUSTOMER_TYPE);
 
