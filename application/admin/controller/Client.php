@@ -873,7 +873,7 @@ class Client extends Common
     }
 
     //数据组装
-    private function assemblyData($contact, $leads_id, $update = false)
+    private function assemblyData($contact, $leads_id)
     {
         $contactData = [];
         foreach ($contact as $k => $v) {
@@ -895,15 +895,13 @@ class Client extends Common
                     'is_delete' => 0,
                     'created_at' => date("Y-m-d H:i:s", time()),
                 ];
-                $contactData[] = $temp;
-                if ($update) {
-                    //插入或更新条数
-                    $find = db('crm_contacts')->where(['is_delete' => 1, 'contact_value' => $contact_value])->find();
-                    if ($find) {
-                        db('crm_contacts')->where('id', $find['id'])->update($temp);
-                    } else {
-                        db('crm_contacts')->insert($temp);
-                    }
+
+
+                $find = db('crm_contacts')->where(['is_delete' => 1, 'contact_value' => $contact_value])->find();
+                if ($find) {
+                    db('crm_contacts')->where('id', $find['id'])->update($temp);
+                } else {
+                    $contactData[] = $temp;
                 }
             }
         }
@@ -994,7 +992,8 @@ class Client extends Common
                 //删除客户关联联系方式
                 db('crm_contacts')->where(['leads_id' => $data['id']])->update(['is_delete' => 1]);
 
-                $this->assemblyData($contact, $data['id'], true);
+                $contactData = $this->assemblyData($contact, $data['id']);
+                db('crm_contacts')->insertAll($contactData);
                 //客户信息保存
                 Db::table('crm_leads')->where(['id' => $data['id']])->where('status', 1)->update($data);
                 // 提交事务
