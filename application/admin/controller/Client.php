@@ -1776,7 +1776,7 @@ class Client extends Common
     //     return $this->fetch('client/conflict');
     // }
 
-
+      
     public function conflict()
     {
         // 获取并清理关键词（去除空格和特殊字符）
@@ -1810,34 +1810,43 @@ class Client extends Common
         $this->assign('keyword', $_keyword);
         return $this->fetch('client/conflict');
     }
-
-
+    
+    
     public function getConflictResult()
     {
         $taskId = Request::param('task_id');
         if (empty($taskId)) {
             return json(['code' => 500, 'msg' => '缺少任务ID', 'data' => []]);
         }
-        // 查询Redis是否存在该任务的结果
+    
         $redis = new \Redis();
         $redis->connect('127.0.0.1', 6379);
-        // 若有密码，同样需要 $redis->auth('密码');
+        // $redis->auth('your_redis_password'); // 如有密码请取消注释
+    
+        $statusKey = 'conflict_status:' . $taskId;
         $resultKey = 'conflict_result:' . $taskId;
-        $resultData = $redis->get($resultKey);
-        if (!$resultData) {
-            // 结果尚未生成，返回状态码表示处理中（前端据此继续轮询）
+    
+        $status = $redis->get($statusKey);
+        
+        if ($status === 'done') {
+            $resultData = $redis->get($resultKey);
+            $resultList = json_decode($resultData, true);
+            return json([
+                'code'  => 0,
+                'msg'   => '获取成功',
+                'data'  => $resultList,
+                'count' => count($resultList)
+            ]);
+        } elseif ($status === 'processing') {
             return json(['code' => 202, 'msg' => '查重处理中，请稍后...', 'data' => []]);
+        } else {
+            return json(['code' => 404, 'msg' => '查重任务不存在或已过期', 'data' => []]);
         }
-        // Redis中存在结果，解析结果数据
-        $resultList = json_decode($resultData, true);
-        // 获取结果后，可以选择删除该结果键，防止占用内存（也可设置过期时间自动删除）
+        // 自动清除已完成的 Redis 记录
+        $redis->del($statusKey);
         $redis->del($resultKey);
-        // 返回查重结果，结构与原接口一致（code=0，包含数据和条目数）
-        return json([
-            'code'  => 0,
-            'msg'   => '获取成功',
-            'data'  => $resultList,
-            'count' => count($resultList)
-        ]);
+
     }
+    
+
 }

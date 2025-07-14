@@ -16,11 +16,11 @@ return [
     'hostname'        => '127.0.0.1',
     // 数据库名
     // 'database'        => 'crm',
-    'database'        => 'yugongthreecrm',
+    'database'        => 'yugong3new',
     // 用户名
-    'username'        => 'yugongthreenew',
+    'username'        => 'yugong3new',
     // 密码
-    'password'        => '5RWvrFlxp6CrD732',
+    'password'        => 'SbjLcmjwwf66tbCr',
     // 端口
     'hostport'        => '3306',
     // 连接dsn
