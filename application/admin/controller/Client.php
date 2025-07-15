@@ -1840,7 +1840,7 @@ class Client extends Common
         } elseif ($status === 'processing') {
             return json(['code' => 202, 'msg' => '查重处理中，请稍后...', 'data' => []]);
         } else {
-            return json(['code' => 404, 'msg' => '查重任务不存在或已过期', 'data' => []]);
+            return json(['code' => 404, 'msg' => '查重失败，请再次尝试搜索', 'data' => []]);
         }
         // 自动清除已完成的 Redis 记录
         $redis->del($statusKey);

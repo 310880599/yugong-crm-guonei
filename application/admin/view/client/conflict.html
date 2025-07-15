@@ -170,7 +170,7 @@
             layer.close(loadingIdx);       // 关闭加载提示
         
             if (res2.code === 404) {
-              layer.msg(res2.msg || '查重任务不存在或已过期', { icon: 5 });
+              layer.msg(res2.msg || '查重失败，请再次尝试搜索', { icon: 5 });
               tableIns.reload({
                 url  : '',
                 data : [],
