@@ -157,7 +157,10 @@ class Auth extends Common
             $pwd = input('post.pwd');
             $map[] = ['admin_id', '<>', $data['admin_id']];
             $where['admin_id'] = $data['admin_id'];
-
+            $info = Admin::getInfo(input('admin_id'));
+            if(!$info){
+                return $result = ['code'=>0,'msg'=>'用户不存在!'];
+            }
             if ($data['username']) {
                 $map[] = ['username', '=', $data['username']];
                 $check_user = Admin::where($map)->find();
@@ -165,7 +168,7 @@ class Auth extends Common
                     return $result = ['code' => 0, 'msg' => '用户已存在，请重新输入用户名!'];
                 }
             }
-            if ($pwd) {
+            if ($pwd && $pwd != $info['pwd']) {
                 $data['pwd'] = input('post.pwd', '', 'md5');
             } else {
                 unset($data['pwd']);
