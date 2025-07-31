@@ -95,21 +95,33 @@ class Client extends Common
             $subordinates = Db::name('admin')->where('parent_id', $adminId)->column('username');
 
             // 基本客户条件
-            $query = Db::name('crm_leads')->alias('l')->where(['l.status' => 1]);
+            $query = Db::name('crm_leads')->alias('l')->where(['l.status' => 1, 'l.issuccess' => -1]);
 
+            // if ($adminId == 1) {
+            //     // 超级管理员无需额外条件
+            // } elseif (!empty($subordinates)) {
+            //     // 主管查看直属下属及自己的客户
+            //     $usernames = array_merge($subordinates, [Session::get('username')]);
+            //     $query->whereIn('l.pr_user', $usernames);
+            // } else {
+            //     // 普通员工仅查看自己名下的客户
+            //     $query->where(['l.pr_user' => Session::get('username')]);
+            // }
+            $usernames  = [session('username')];
+            $team_name = session('team_name') ?? '';
             if ($adminId == 1) {
-                // 超级管理员无需额外条件
-            } elseif (!empty($subordinates)) {
+                $usernames = [];
+            } else if ($team_name) {
                 // 主管查看直属下属及自己的客户
-                $usernames = array_merge($subordinates, [Session::get('username')]);
-                $query->whereIn('l.pr_user', $usernames);
-            } else {
-                // 普通员工仅查看自己名下的客户
-                $query->where(['l.pr_user' => Session::get('username')]);
+                $usernames = Db::name('admin')->where('team_name', $team_name)->column('username');
             }
 
             // 查询客户数据，并拼接联系方式
-            $list = $query
+            $list = $query->where(function ($query) use ($usernames) {
+                if ($usernames) {
+                    $query->whereIn('l.pr_user', $usernames);
+                }
+            })
                 ->field([
                     'l.*',
                     "GROUP_CONCAT(
@@ -144,7 +156,12 @@ class Client extends Common
         $khStatusList = Db::table('crm_client_status')->select();
         $xsSourceList = Db::table('crm_clues_source')->select();
 
-        $adminResult = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
+        $team_name = session('team_name') ?? '';
+        $adminResult = Db::name('admin')->where('group_id', '<>', 1)->where(function ($query) use ($team_name) {
+            if ($team_name) {
+                $query->where('team_name', $team_name);
+            }
+        })->field('admin_id,username')->select();
         $this->assign('adminResult', $adminResult);
         $this->assign('khRankList', $khRankList);
         $this->assign('khStatusList', $khStatusList);
@@ -1776,7 +1793,7 @@ class Client extends Common
     //     return $this->fetch('client/conflict');
     // }
 
-      
+
     public function conflict()
     {
         // 获取并清理关键词（去除空格和特殊字符）
@@ -1810,24 +1827,24 @@ class Client extends Common
         $this->assign('keyword', $_keyword);
         return $this->fetch('client/conflict');
     }
-    
-    
+
+
     public function getConflictResult()
     {
         $taskId = Request::param('task_id');
         if (empty($taskId)) {
             return json(['code' => 500, 'msg' => '缺少任务ID', 'data' => []]);
         }
-    
+
         $redis = new \Redis();
         $redis->connect('127.0.0.1', 6379);
         // $redis->auth('your_redis_password'); // 如有密码请取消注释
-    
+
         $statusKey = 'conflict_status:' . $taskId;
         $resultKey = 'conflict_result:' . $taskId;
-    
+
         $status = $redis->get($statusKey);
-        
+
         if ($status === 'done') {
             $resultData = $redis->get($resultKey);
             $resultList = json_decode($resultData, true);
@@ -1845,8 +1862,5 @@ class Client extends Common
         // 自动清除已完成的 Redis 记录
         $redis->del($statusKey);
         $redis->del($resultKey);
-
     }
-    
-
 }

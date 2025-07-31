@@ -55,8 +55,22 @@ class Client extends Model
             $mapPrUser = [['pr_user', 'like', '%' . $keyword['pr_user'] . '%']];
         }
 
+        $adminId = session('aid');
+        $team_name = session('team_name') ?? '';
 
+        $usernames  = [session('username')];
+        if ($adminId == 1) {
+            $usernames = [];
+        } else if ($team_name) {
+            // 主管查看直属下属及自己的客户
+            $usernames = Db::name('admin')->where('team_name', $team_name)->column('username');
+        }
         $result  = Db::table('crm_leads')
+            ->where(function ($query) use ($usernames) {
+                if ($usernames) {
+                    $query->whereIn('pr_user', $usernames);
+                }
+            })
             ->where($mapPhone)
             ->where($mapKhName)
             ->where($mapKhStatus)
