@@ -35,8 +35,6 @@
         }
 
 
-
-
         .add-btn {
             background-color: #009688;
             color: #fff;
@@ -46,6 +44,10 @@
             cursor: pointer;
             font-size: 14px;
             margin-left: 10px;
+        }
+
+        .layui-layer-btn .layui-layer-btn0 {
+            background-color: #009688 !important;
         }
 
         .remove-btn {
@@ -108,7 +110,7 @@
                 <label class="layui-form-label">邮箱</label>
                 <div class="layui-input-4">
                     <div class="input-row">
-                        <input type="text"  name="email[]" lay-verify="email" placeholder="请输入邮箱"
+                        <input type="text" name="email[]" lay-verify="email" placeholder="请输入邮箱"
                             class="layui-input emails">
                         <button class="add-btn">+</button>
                     </div>
@@ -117,7 +119,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">Whatsapp</label>
                 <div class="layui-input-4">
-                    <input type="text" id="whatsapp" name="whatsapp" placeholder="请输入Whatsapp" class="layui-input" >
+                    <input type="text" id="whatsapp" name="whatsapp" placeholder="请输入Whatsapp" class="layui-input">
                 </div>
             </div>
             <div class="layui-form-item">
@@ -198,40 +200,40 @@
     </div>
     {include file="common/foot"/}
     <script>
-document.getElementById('whatsapp').addEventListener('keypress', function(event) {
-    // 阻止空格键输入 (keyCode 32)
-    if (event.keyCode === 32) {
-        event.preventDefault();
-    }
-});
+        document.getElementById('whatsapp').addEventListener('keypress', function (event) {
+            // 阻止空格键输入 (keyCode 32)
+            if (event.keyCode === 32) {
+                event.preventDefault();
+            }
+        });
 
-document.getElementById('whatsapp').addEventListener('paste', function(event) {
-    // 获取剪贴板内容
-    const clipboardData = event.clipboardData || window.clipboardData;
-    const pastedText = clipboardData.getData('text');
-    
-    if (!pastedText) return;
-    
-    // 清除所有空格
-    const cleanedText = pastedText.replace(/\s/g, '');
-    
-    // 阻止默认粘贴行为
-    event.preventDefault();
-    
-    // 获取当前光标位置
-    const startPos = this.selectionStart;
-    const endPos = this.selectionEnd;
-    
-    // 插入处理后的文本
-    this.value = this.value.substring(0, startPos) 
-                + cleanedText 
+        document.getElementById('whatsapp').addEventListener('paste', function (event) {
+            // 获取剪贴板内容
+            const clipboardData = event.clipboardData || window.clipboardData;
+            const pastedText = clipboardData.getData('text');
+
+            if (!pastedText) return;
+
+            // 清除所有空格
+            const cleanedText = pastedText.replace(/\s/g, '');
+
+            // 阻止默认粘贴行为
+            event.preventDefault();
+
+            // 获取当前光标位置
+            const startPos = this.selectionStart;
+            const endPos = this.selectionEnd;
+
+            // 插入处理后的文本
+            this.value = this.value.substring(0, startPos)
+                + cleanedText
                 + this.value.substring(endPos);
-    
-    // 恢复光标位置
-    const newPos = startPos + cleanedText.length;
-    this.setSelectionRange(newPos, newPos);
-});
-</script>
+
+            // 恢复光标位置
+            const newPos = startPos + cleanedText.length;
+            this.setSelectionRange(newPos, newPos);
+        });
+    </script>
     <script>
 
 
@@ -241,8 +243,8 @@ document.getElementById('whatsapp').addEventListener('paste', function(event) {
             form.verify({
                 email: function (value) {
                     if (value.trim()) { // 仅当输入值非空时校验格式
-                       if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,6}$/.test(value)) {
-            return '邮箱格式不正确 (例: example@domain.com)';
+                        if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,6}$/.test(value)) {
+                            return '邮箱格式不正确 (例: example@domain.com)';
                         }
                     }
                 },
@@ -283,12 +285,58 @@ document.getElementById('whatsapp').addEventListener('paste', function(event) {
                 var code = $(data.elem).find('option:selected').data('code');
                 $('.phone_code').val(code || 1);
             })
+            // 新增：国家号输入联动地区选择
+            $(document).on('input', '.phone_code', function () {
+                var inputCode = $(this).val().trim();
+                if (!inputCode) return; // 输入为空时不处理
+
+                var $regionSelect = $('select[name="xs_area"]');
+                // 查找所有data-code与输入国家号匹配的地区选项（支持多匹配）
+                var $matchedOptions = $regionSelect.find('option[data-code="' + inputCode + '"]');
+
+                if ($matchedOptions.length === 0) {
+                    $regionSelect.val('');
+                    form.render('select');
+                    return; // 无匹配地区
+                } else if ($matchedOptions.length === 1) {
+                    // 唯一匹配，自动选中
+                    $regionSelect.val($matchedOptions.val());
+                    form.render('select');
+                } else {
+                    // 多个匹配，弹窗让用户选择
+                    var optionsHtml = '';
+                    $matchedOptions.each(function (index, option) {
+                        var regionName = $(option).text(); // 地区名称（如"美国"）
+                        var regionValue = $(option).val(); // 地区值（option的value）
+                        optionsHtml += '<div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" data-value="' + regionValue + '">' + regionName + '</div>';
+                    });
+
+                    // 显示选择弹窗
+                    layer.open({
+                        title: '检测到多个地区，请选择',
+                        content: optionsHtml,
+                        area: ['300px', 'auto'], // 弹窗宽度和自适应高度
+                        shadeClose: true, // 点击外部关闭弹窗
+                        success: function (layero) {
+                            // 绑定选项点击事件
+                            layero.find('div[data-value]').on('click', function () {
+                                var selectedValue = $(this).data('value');
+                                $regionSelect.val(selectedValue); // 设置选中值
+                                form.render('select'); // 刷新下拉框UI
+                                layer.closeAll(); // 关闭弹窗
+                            });
+                        }
+                    });
+                }
+            });
+
+
             function checkContactRequired() {
                 const fields = {
                     whatsapp: $('input[name="whatsapp"]').val().trim(),
                     ali_id: $('input[name="ali_id"]').val().trim(),
                     wechat: $('input[name="wechat"]').val().trim(),
-                    emails: $('.emails').map(function () { console.log($(this).val().trim());return $(this).val().trim(); }).get(),
+                    emails: $('.emails').map(function () { console.log($(this).val().trim()); return $(this).val().trim(); }).get(),
                     phones: $('.phones').map(function () { return $(this).val().trim(); }).get()
                 };
                 console.log(fields);
