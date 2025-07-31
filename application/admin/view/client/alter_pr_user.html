@@ -15,7 +15,7 @@
         <div class="layui-form-item">
             <label class="layui-form-label">负责人</label>
             <div class="layui-input-4" >
-                <select id="username" name="username" lay-verify="required">
+                <select id="username" name="username" lay-verify="required" lay-search="">
                     <option value="">请选择负责人</option>
                     {volist name='adminResult' id='vo'}
                     <option value="{$vo.username}">{$vo.username}</option>
