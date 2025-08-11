@@ -112,3 +112,8 @@ CREATE TABLE `crm_client_order` (
   `ut_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '客户订单表';
+
+
+ALTER TABLE `crm_contacts`
+ADD COLUMN `vdigits` varchar(255) DEFAULT '' COMMENT '纯数字' AFTER `contact_value`,
+ADD INDEX `inx_vdigits` (`vdigits`) USING BTREE;

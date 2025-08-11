@@ -173,9 +173,6 @@ class Client extends Common
     //（我的客户）列表
     public function perCliList()
     {
-
-
-
         if (request()->isPost()) {
             $key = input('post.key');
             $page = input('page') ? input('page') : 1;
@@ -865,7 +862,6 @@ class Client extends Common
     //当前录入查重
     private function checkDuplicate($data, $require_checke)
     {
-
         //更新
         $update = false;
         $where = [];
@@ -881,6 +877,20 @@ class Client extends Common
         // if ($find)  return [false, $find['kh_name'] . '客户信息已存在,当前所属人' . $find['pr_user']];
         //查询关联表crm_contacts数据表重复
         if ($update) $where = [['leads_id', '<>', $data['id']]];
+        //模糊查询
+        foreach ($require_checke as $i => $v) {
+            //判断是否是手机号或者whatsapp号码
+            if (self::validatePhoneNumber($v)) {
+                $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->where('vdigits', 'like', '%' . $v)->find();
+                if ($contactExist) {
+                    $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
+                    return [false, $contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']];
+                }
+                unset($require_checke[$i]);
+            }
+        }
+
+        //邮箱和其他
         $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->whereIn('contact_value', $require_checke)->find();
         if ($contactExist) {
             $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
@@ -888,6 +898,21 @@ class Client extends Common
         }
         return [true, ''];
     }
+
+    /**
+     * 验证国际手机号格式
+     * @param string $phone 原始手机号
+     * @return bool 是否有效
+     */
+    static public function validatePhoneNumber(&$phone)
+    {
+        // 清理特殊字符
+        $cleaned = preg_replace('/[^\w@._#]/', '', $phone);
+        $phone = substr($cleaned, -6);
+        // 国际手机号正则: 可选+,首位非0,6-14位数字
+        return preg_match('/^\+?[1-9]\d{6,14}$/', $cleaned) === 1;
+    }
+
 
     //数据组装
     private function assemblyData($contact, $leads_id)
@@ -909,6 +934,7 @@ class Client extends Common
                     'contact_type' => $contact_type,
                     'contact_value' => $contact_value,
                     'contact_extra' => $contact_extra,
+                    'vdigits' =>  preg_replace('/[^0-9]/', '', $contact_value),
                     'is_delete' => 0,
                     'created_at' => date("Y-m-d H:i:s", time()),
                 ];
