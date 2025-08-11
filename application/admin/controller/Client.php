@@ -891,11 +891,14 @@ class Client extends Common
         }
 
         //邮箱和其他
-        $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->whereIn('contact_value', $require_checke)->find();
-        if ($contactExist) {
-            $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
-            return [false, $contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']];
+        if ($require_checke) {
+            $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->whereIn('contact_value', $require_checke)->find();
+            if ($contactExist) {
+                $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
+                return [false, $contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']];
+            }
         }
+
         return [true, ''];
     }
 
