@@ -911,7 +911,7 @@ class Client extends Common
     {
         // 清理特殊字符
         $cleaned = preg_replace('/[^\w@._#]/', '', $phone);
-        $phone = substr($cleaned, -6);
+        $phone = substr($cleaned, -7);
         // 国际手机号正则: 可选+,首位非0,6-14位数字
         return preg_match('/^\+?[1-9]\d{6,14}$/', $cleaned) === 1;
     }
