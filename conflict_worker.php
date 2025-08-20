@@ -52,7 +52,8 @@ while (true) {
                   ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) LIKE '%{$keyword}%'");
                 if ($keywordOrigin !== $keyword) {
                     // 原串（含空格 / + -）再查一次，避免漏匹配
-                    $q->whereOrLike('c.contact_value', "%{$keywordOrigin}%");
+                    $q->whereOr('c.contact_value', 'like',"%{$keywordOrigin}%");
+
                 }
             })
             ->field([
