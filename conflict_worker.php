@@ -49,6 +49,7 @@ while (true) {
             ->where('c.is_delete', 0)
             ->where(function ($q) use ($keyword, $keywordOrigin) {
                 $q->whereLike('c.contact_value', "%{$keyword}%")
+                ->whereOr('c.vdigits', 'like',"%{$keyword}%")
                   ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) LIKE '%{$keyword}%'");
                 if ($keywordOrigin !== $keyword) {
                     // 原串（含空格 / + -）再查一次，避免漏匹配
