@@ -2,6 +2,7 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\Admin;
 use think\Db;
 use think\facade\Env;
 use think\facade\Request;
@@ -70,32 +71,56 @@ class Index extends Common
     }
     public function main()
     {
+        //当前时间
+        $time = time();
+        $end_time = date('Y-m-d', $time);
+        $start_time = date('Y-m-01', $time);
+        $user_info = Admin::getMyInfo();
+        $where = [['pr_user' ,'=', Session::get('username')],['at_time','between',[$start_time.' 00:00:00',$end_time.' 23:59:59']]];
+        $whereOrder = [['create_time','between',[$start_time.' 00:00:00',$end_time.' 23:59:59']]];
+        $whereAdmin =[['group_id', 'in',[$this->ywzgid,$this->ywgid]],['org','=',$user_info['org']]];
+
+
+        //订单
+        $orderCount = Db::table('crm_client_order')->where($whereOrder)->count();
+        $myOrderCount = Db::table('crm_client_order')->where($whereOrder)->where('pr_user' ,'=', Session::get('username'))->count();
+
+        $this->assign('orderCount', $orderCount);
+        $this->assign('myOrderCount', $myOrderCount);
+
 
         //0 线索，1客户，2公海
-        $cluesCount = Db::table('crm_leads')->where(['status' => 0])->count();
-        $clientCount = Db::table('crm_leads')->where(['status' => 1])->count();
-        $liberumCount = Db::table('crm_leads')->where(['status' => 2])->count();
+        // $cluesCount = Db::table('crm_leads')->where(['status' => 0])->count();
+        $clientCount = Db::table('crm_leads')->where($where)->where(['status' => 1])->count();
+        $liberumCount = Db::table('crm_leads')->where('to_gh_time','between',[$start_time.' 00:00:00',$end_time.' 23:59:59'])->where('pr_user_bef' ,'=', Session::get('username'))->where(['status' => 2])->count();
         // 区别管理员和业务员
 
 
-        $this->assign('cluesCount', $cluesCount);
+        // $this->assign('cluesCount', $cluesCount);
         $this->assign('clientCount', $clientCount);
         $this->assign('liberumCount', $liberumCount);
 
 
         //获取本周线索 ->whereTime('at_time', 'week') 
-        $cluesCount_week = Db::table('crm_leads')->where(['status' => 0, 'pr_user' => Session::get('username')])->count();
+        // $cluesCount_week = Db::table('crm_leads')->where(['status' => 0, 'pr_user' => Session::get('username')])->count();
         //获取本月转客户数据 ->whereTime('to_kh_time', 'month') 
-        $clientCount_month = Db::table('crm_leads')->where(['status' => 1, 'issuccess' => -1, 'pr_user' => Session::get('username')])->count();
+        $clientCount_month = Db::table('crm_leads')->where($where)->where(['status' => 1, 'issuccess' => -1, 'pr_user' => Session::get('username')])->count();
+
         //获取今年公海数据 ->whereTime('to_gh_time', 'year') 
-        $liberumCount_year = Db::table('crm_leads')->where(['status' => 2])->count();
-        //成交数 TODO
-        $clientCount_cj = Db::table('crm_leads')->where(['status' => 1, 'issuccess' => 1, 'pr_user' => Session::get('username')])->count();
+        $liberumCount_year = Db::table('crm_leads')->where('to_gh_time','between',[$start_time.' 00:00:00',$end_time.' 23:59:59'])->where(['status' => 2])->count();
+
+
+        // $clientCount_cj = Db::table('crm_leads')->where($where)->where(['status' => 1, 'issuccess' => 1, 'pr_user' => Session::get('username')])->count();
+        // $clientCount_cj = Db::table('crm_leads')->where(['status' => 1, 'issuccess' => 1, 'pr_user' => Session::get('username')])->count();
+        $clientCount_cj = Db::table('crm_client_order')->where($whereOrder)->count();
+
         $this->assign('clientCount_cj', $clientCount_cj);
 
         //月度排名（名）、月目标（元）、已成交（元）、完成率（%）、已成交（单）、提成点（%），
         //管理员添加业绩设置权限。
-        $userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username,mubiao,ticheng')->select();
+        $userlist = Db::name('admin')->where($whereAdmin)->field('admin_id,username,mubiao,ticheng')->select();
+
+
 
         //所有业务员
         foreach ($userlist as $key => $value) {
@@ -119,7 +144,8 @@ class Index extends Common
             $userlist[$key] = $value;
         }
         // 获取所有业务员
-        $userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username,mubiao,ticheng')->select();
+        $userlist = Db::name('admin')->where($whereAdmin)->field('admin_id,username,mubiao,ticheng')->select();
+
 
         foreach ($userlist as $key => $value) {
             $username = $value['username'];
@@ -185,7 +211,7 @@ class Index extends Common
 
 
 
-        $this->assign('cluesCount_week', $cluesCount_week);
+        // $this->assign('cluesCount_week', $cluesCount_week);
         $this->assign('clientCount_month', $clientCount_month);
         $this->assign('liberumCount_year', $liberumCount_year);
         // 获取待办事项

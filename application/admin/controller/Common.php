@@ -35,6 +35,7 @@ class Common extends Controller
 
     public $yygid=12;//运营id
     public $ywzgid=11;//业务主管
+    public $ywgid=10;//业务员
 
 
     protected $mod, $role, $system, $nav, $menudata, $cache_model, $categorys, $module, $moduleid, $adminRules, $HrefId;

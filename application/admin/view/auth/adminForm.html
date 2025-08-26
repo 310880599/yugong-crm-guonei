@@ -7,6 +7,7 @@
         <div class="layui-form-item">
             <label class="layui-form-label">所属用户组</label>
             <div class="layui-input-4">
+                 
                 <select name="group_id" id="user_group" lay-verify="required" lay-filter="groupSelect">
                     <option value="">请选择用户组</option>
                     {volist name="authGroup" id="vo"}
@@ -168,7 +169,7 @@
         $('#operation-role-item').remove(); // 移除已存在的运营角色选项
         // 如果已选择运营用户组
         if (selectedText === '运营') {
-            if (is_admin ||is_position) {
+            if (is_admin ||is_position =='1') {
                 // 创建运营职位单选按钮组HTML
 
                 var roleHtml = '<div class="layui-form-item" id="operation-role-item" style="display:block">'

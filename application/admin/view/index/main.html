@@ -42,15 +42,27 @@
             <div class="layui-row layui-col-space15">
                 <div class="layui-col-sm6 layui-col-md4">
                     <div class="layui-card">
-                        <div class="layui-card-header">
+                        <!-- <div class="layui-card-header">
                             总线索
-                            <!-- <span class="layui-badge layui-bg-blue layuiadmin-badge">周</span> -->
+                            <span class="layui-badge layui-bg-blue layuiadmin-badge">周</span>
                         </div>
                         <div class="layui-card-body layuiadmin-card-list">
                             <p class="layuiadmin-big-font">{$cluesCount} 条</p>
                             <p>
                                 总线索
                                 <span class="layuiadmin-span-color">{$cluesCount} 条</span>
+                            </p>
+                        </div>
+                    </div> -->
+                    <div class="layui-card-header">
+                            订单
+                            <span class="layui-badge layui-bg-cyan layuiadmin-badge">月</span>
+                        </div>
+                        <div class="layui-card-body layuiadmin-card-list">
+                            <p class="layuiadmin-big-font">{$orderCount} 个</p>
+                            <p>
+                                我的订单
+                                <span class="layuiadmin-span-color">{$myOrderCount} 个</span>
                             </p>
                         </div>
                     </div>
@@ -60,7 +72,7 @@
                     <div class="layui-card">
                         <div class="layui-card-header">
                             我的客户
-                            <!-- <span class="layui-badge layui-bg-cyan layuiadmin-badge">月</span> -->
+                            <span class="layui-badge layui-bg-cyan layuiadmin-badge">月</span>
                         </div>
                         <div class="layui-card-body layuiadmin-card-list">
                             <p class="layuiadmin-big-font">{$clientCount_month}</p>
@@ -77,6 +89,7 @@
                     <div class="layui-card">
                         <div class="layui-card-header">
                             公海
+                            <span class="layui-badge layui-bg-cyan layuiadmin-badge">月</span>
                             <!-- <span class="layui-badge layui-bg-green layuiadmin-badge">年</span> -->
                         </div>
                         <div class="layui-card-body layuiadmin-card-list">
@@ -84,7 +97,7 @@
                             <p class="layuiadmin-big-font">{$liberumCount}</p>
                             <p>
                                 总数据
-                                <span class="layuiadmin-span-color">{$liberumCount} 条</span>
+                                <span class="layuiadmin-span-color">{$liberumCount_year} 条</span>
                             </p>
                         </div>
                     </div>
