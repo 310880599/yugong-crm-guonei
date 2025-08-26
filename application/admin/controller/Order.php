@@ -117,6 +117,7 @@ class Order extends Common
             $data['customer_type'] = Request::param('customer_type');
             $data['product_name'] = Request::param('product_name');
             $data['source'] = Request::param('source');
+            $data['oper_user'] = Request::param('oper_user');
             $data['team_name'] = Request::param('team_name');
             // $userExist = db('crm_leads')->where('phone', $data['phone'])->find();
             // if ($userExist){
@@ -149,6 +150,9 @@ class Order extends Common
         // var_dump($userlist);
         $this->assign('username', Session::get('username'));
         $this->assign('team_name', Session::get('team_name'));
+        $yyList = $this->getYyList();
+        $this->assign('yyList', json_encode($yyList['yyList']));
+        $this->assign('_yyList', json_encode($yyList['_yyList']));
         return $this->fetch('order/add');
     }
     public function changeyewu()
@@ -234,6 +238,9 @@ class Order extends Common
 
         $this->assign('username', Session::get('username'));
         $this->assign('team_name', Session::get('team_name'));
+        $yyList = $this->getYyList();
+        $this->assign('yyList', json_encode($yyList['yyList']));
+        $this->assign('_yyList', json_encode($yyList['_yyList']));
         return $this->fetch('order/edit');
     }
     //删除客户

@@ -13,6 +13,10 @@
     <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
     <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+    <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
+    <script src="/static/admin/js/select.js"></script>
+
+
     <style>
         .layui-form-pane .layui-form-label {
             width: 110px;
@@ -73,7 +77,6 @@
         }
     </style>
 </head>
-
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 
     <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户来源、用户名、备注 -->
@@ -150,6 +153,13 @@
                 </div>
             </div>
             <div class="layui-form-item">
+                <label class="layui-form-label">产品名称</label>
+                <div class="layui-input-4">
+                    <input type="text" id="product_name" name="product_name" placeholder="请输入产品名称" class="layui-input" lay-verify="required">
+
+                </div>
+            </div>
+            <div class="layui-form-item">
                 <label class="layui-form-label">客户级别</label>
                 <div class="layui-input-4">
                     <select name="kh_rank" id="kh_rank" lay-verify="required">
@@ -166,7 +176,8 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">客户来源</label>
                 <div class="layui-input-4">
-                    <select name="kh_status" id="kh_status" lay-verify="required">
+                    <select name="kh_status" id="kh_status" lay-filter="kh_status" lay-verify="required">
+
                         <option value="">请选择客户来源</option>
 
                         {volist name='khStatusList' id='vo'}
@@ -176,12 +187,19 @@
                     </select>
                 </div>
             </div>
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">运营人员</label>
+                <div class="layui-input-4">
+                    <input type="text" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" class="layui-input" lay-verify="required">
+                </div>
+            </div>
             <!-- <div class="layui-form-item">
             <label class="layui-form-label">用户名</label>
             <div class="layui-input-4">
                 <input type="text" id="kh_username" name="kh_username" lay-verify="required" placeholder="请输入用户名" class="layui-input">
             </div>
-        </div> -->
+            </div> -->
             <div class="layui-form-item">
                 <label class="layui-form-label">备注</label>
                 <div class="layui-input-4">
@@ -236,7 +254,7 @@
     </script>
     <script>
 
-
+        var yyList = {$yyList| raw};
         layui.use(['form', 'layer'], function () {
             var form = layui.form, layer = layui.layer, $ = layui.jquery;
             //验证
@@ -330,16 +348,27 @@
                 }
             });
 
+            
+       
+            // 监听客户来源变化
+            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name');
+
+
+            form.on('select(kh_status)', function(data) {
+                khSelect.clear();
+                var source = data.value;
+                var users = yyList[source] || [];
+                khSelect.setOptions(users);
+            });
 
             function checkContactRequired() {
                 const fields = {
                     whatsapp: $('input[name="whatsapp"]').val().trim(),
                     ali_id: $('input[name="ali_id"]').val().trim(),
                     wechat: $('input[name="wechat"]').val().trim(),
-                    emails: $('.emails').map(function () { console.log($(this).val().trim()); return $(this).val().trim(); }).get(),
+                    emails: $('.emails').map(function () { return $(this).val().trim(); }).get(),
                     phones: $('.phones').map(function () { return $(this).val().trim(); }).get()
                 };
-                console.log(fields);
                 // 检查是否有至少一个联系方式有值
                 return !!(
                     fields.whatsapp ||
@@ -385,9 +414,10 @@
 
 
                     if (res.code == 0) {
-                        layer.msg(res.msg, { time: 2000 });
-                        layer.close(layer.index);
-                        window.parent.location.reload();
+                        layer.msg(res.msg, { time: 2000 }, function () {
+                            layer.close(layer.index);
+                            window.parent.location.reload();
+                        });
                     } else {
                         layer.msg(res.msg, { time: 2000 });
                     }
@@ -398,6 +428,7 @@
             });
         });
     </script>
+
 </body>
 
 </html>

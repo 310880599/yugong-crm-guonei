@@ -117,3 +117,17 @@ CREATE TABLE `crm_client_order` (
 ALTER TABLE `crm_contacts`
 ADD COLUMN `vdigits` varchar(255) DEFAULT '' COMMENT '纯数字' AFTER `contact_value`,
 ADD INDEX `inx_vdigits` (`vdigits`) USING BTREE;
+
+
+-- 运营端需求
+ALTER TABLE `admin`
+ADD COLUMN `org` varchar(10) DEFAULT '' COMMENT '所属组织(admin,1s,2s,3s)',
+ADD COLUMN `channel` varchar(30) DEFAULT '' COMMENT '渠道',
+ADD COLUMN `position` tinyint(1) DEFAULT 0 COMMENT '1-运营总监/2-运营主管';
+
+ALTER TABLE `crm_leads`
+ADD COLUMN `oper_user` varchar(30) DEFAULT '' COMMENT '所属运营',
+ADD COLUMN  `product_name` varchar(100) DEFAULT '' COMMENT '产品名称';
+
+ALTER TABLE `crm_client_order`
+ADD COLUMN `oper_user` varchar(30) DEFAULT '' COMMENT '所属运营';

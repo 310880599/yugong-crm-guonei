@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
     <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+    <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
+    <script src="/static/admin/js/select.js"></script>
     <style>
         .layui-form-pane .layui-form-label {
             width: 110px;
@@ -68,7 +70,6 @@
         }
     </style>
 </head>
-
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 
 
@@ -165,6 +166,13 @@
                 </div>
             </div>
             <div class="layui-form-item">
+                <label class="layui-form-label">产品名称</label>
+                <div class="layui-input-4">
+                    <input type="text" id="product_name" name="product_name" value="{$result.product_name}" placeholder="请输入产品名称" class="layui-input">
+
+                </div>
+            </div>
+            <div class="layui-form-item">
                 <label class="layui-form-label">客户级别</label>
                 <div class="layui-input-4">
                     <select name="kh_rank" id="kh_rank">
@@ -182,7 +190,8 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">客户来源</label>
                 <div class="layui-input-4">
-                    <select name="kh_status" id="kh_status">
+                    <select name="kh_status" id="kh_status" lay-filter="kh_status">
+
                         <option value="">请选择客户来源</option>
 
                         {volist name='khStatusList' id='vo'}
@@ -191,6 +200,12 @@
                         {/volist}
 
                     </select>
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">运营人员</label>
+                <div class="layui-input-4">
+                    <input type="text" value="{$vo.oper_user}" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" class="layui-input" lay-verify="required">
                 </div>
             </div>
             <!-- <div class="layui-form-item">
@@ -218,43 +233,43 @@
     </div>
     {include file="common/foot"/}
     <script>
-document.getElementById('whatsapp').addEventListener('keypress', function(event) {
-    // 阻止空格键输入 (keyCode 32)
-    if (event.keyCode === 32) {
-        event.preventDefault();
-    }
-});
+        document.getElementById('whatsapp').addEventListener('keypress', function (event) {
+            // 阻止空格键输入 (keyCode 32)
+            if (event.keyCode === 32) {
+                event.preventDefault();
+            }
+        });
 
-document.getElementById('whatsapp').addEventListener('paste', function(event) {
-    // 获取剪贴板内容
-    const clipboardData = event.clipboardData || window.clipboardData;
-    const pastedText = clipboardData.getData('text');
-    
-    if (!pastedText) return;
-    
-    // 清除所有空格
-    const cleanedText = pastedText.replace(/\s/g, '');
-    
-    // 阻止默认粘贴行为
-    event.preventDefault();
-    
-    // 获取当前光标位置
-    const startPos = this.selectionStart;
-    const endPos = this.selectionEnd;
-    
-    // 插入处理后的文本
-    this.value = this.value.substring(0, startPos) 
-                + cleanedText 
+        document.getElementById('whatsapp').addEventListener('paste', function (event) {
+            // 获取剪贴板内容
+            const clipboardData = event.clipboardData || window.clipboardData;
+            const pastedText = clipboardData.getData('text');
+
+            if (!pastedText) return;
+
+            // 清除所有空格
+            const cleanedText = pastedText.replace(/\s/g, '');
+
+            // 阻止默认粘贴行为
+            event.preventDefault();
+
+            // 获取当前光标位置
+            const startPos = this.selectionStart;
+            const endPos = this.selectionEnd;
+
+            // 插入处理后的文本
+            this.value = this.value.substring(0, startPos)
+                + cleanedText
                 + this.value.substring(endPos);
-    
-    // 恢复光标位置
-    const newPos = startPos + cleanedText.length;
-    this.setSelectionRange(newPos, newPos);
-});
-</script>
+
+            // 恢复光标位置
+            const newPos = startPos + cleanedText.length;
+            this.setSelectionRange(newPos, newPos);
+        });
+    </script>
     <script>
 
-
+        var yyList = {$yyList| raw};
         layui.use(['form', 'layer'], function () {
             var form = layui.form, layer = layui.layer, $ = layui.jquery;
             //验证
@@ -310,10 +325,9 @@ document.getElementById('whatsapp').addEventListener('paste', function(event) {
                     whatsapp: $('input[name="whatsapp"]').val().trim(),
                     ali_id: $('input[name="ali_id"]').val().trim(),
                     wechat: $('input[name="wechat"]').val().trim(),
-                    emails: $('.emails').map(function () { console.log($(this).val().trim()); return $(this).val().trim(); }).get(),
+                    emails: $('.emails').map(function () { return $(this).val().trim(); }).get(),
                     phones: $('.phones').map(function () { return $(this).val().trim(); }).get()
                 };
-                console.log(fields);
                 // 检查是否有至少一个联系方式有值
                 return !!(
                     fields.whatsapp ||
@@ -323,6 +337,20 @@ document.getElementById('whatsapp').addEventListener('paste', function(event) {
                     fields.phones.some(v => v)
                 );
             }
+            
+                   
+            // 监听客户来源变化
+            var users = yyList["{$result.kh_status}"] || [];
+            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),users,'运营人员',"{$result.oper_user}",'name');
+
+
+            form.on('select(kh_status)', function(data) {
+                khSelect.clear();
+                var source = data.value;
+                var users = yyList[source] || [];
+                khSelect.setOptions(users);
+            });
+
             //监听提交
             form.on('submit(submit)', function (data) {
 
@@ -335,9 +363,10 @@ document.getElementById('whatsapp').addEventListener('paste', function(event) {
                 $.post("{:url('Client/edit')}", data.field, function (res) {
 
                     if (res.code == 0) {
-                        layer.msg(res.msg, { time: 2000 });
-                        layer.close(layer.index);
-                        window.parent.location.reload();
+                        layer.msg(res.msg, { time: 2000 }, function () {
+                            layer.close(layer.index);
+                            window.parent.location.reload();
+                        });
                     } else {
                         layer.msg(res.msg, { time: 2000 });
                     }

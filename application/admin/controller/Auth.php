@@ -13,6 +13,29 @@ use think\Validate;
 
 class Auth extends Common
 {
+    //增删改权限判断
+    private  function checkAuth($rule)
+    {
+        $current_admin = Admin::getMyInfo();
+        //超级管理员
+        if ($current_admin['group_id'] == 1) {
+            return true;
+        }
+        //运营主管
+        // $where = [['group_id', $this->yygid], ['position', '<>', 0]];
+        if ($current_admin['group_id'] == $this->yygid && $current_admin['position'] != 0) {
+            return true;
+        }
+
+        //业务主管
+        if ($current_admin['group_id'] == $this->ywzgid) {
+
+            return true;
+        }
+        return false;
+    }
+
+
     //管理员列表
     public function adminList()
     {
@@ -30,12 +53,28 @@ class Auth extends Common
             if ($val) {
                 $map['username|email|tel'] = ['like', "%" . $val . "%"];
             }
+            if ($current_admin && $current_admin->org != 'admin') {
+                $map['org'] = $current_admin->org;
+            }
 
             // 权限控制逻辑
             if ($current_admin && $current_admin->group_id == 11) {
                 // 如果是主管(group_id=11)，显示同team_name的管理员
                 if (!empty($current_admin->team_name)) {
                     $map['team_name'] = $current_admin->team_name;
+                } else {
+                    // 如果team_name为空，只显示自己
+                    $map['admin_id'] = $admin_id;
+                }
+            } else if ($current_admin && $current_admin->group_id == 12) {
+                //运营主管
+                if (!empty($current_admin->team_name)) {
+                    $map['team_name'] = $current_admin->team_name;
+                    if ($current_admin->position == 0) {
+                        $map['admin_id'] = $admin_id;
+                    } elseif ($current_admin->position == 2) {
+                        $map['channel'] = $current_admin->channel;
+                    }
                 } else {
                     // 如果team_name为空，只显示自己
                     $map['admin_id'] = $admin_id;
@@ -60,6 +99,11 @@ class Auth extends Common
     public function adminAdd()
     {
         if (Request::isAjax()) {
+            //判断是否有添加权限
+            if (!$this->checkAuth('adminAdd')) {
+                return $result = ['code' => 0, 'msg' => '您无此操作权限'];
+            }
+
             $data = input('post.');
             $check_user = Admin::get(['username' => $data['username']]);
             if ($check_user) {
@@ -98,31 +142,68 @@ class Auth extends Common
             // 获取当前用户信息
             $admin_id = session('aid');
             $current_admin = Admin::get($admin_id);
-
+            if (!$current_admin) {
+                return $this->error('用户不存在');
+            }
+            $result = [];
+            // 组织列表
+            $orgList = self::ORG;
             // 查询用户组
-            if ($current_admin && $current_admin->group_id == 1) {
+            if ($current_admin && $current_admin['group_id'] == 1) {
                 // 超级管理员可以显示所有用户组
                 $auth_group = AuthGroup::all();
             } else {
-                // 其他用户只能看到普通员工组
-                $auth_group = AuthGroup::where('group_id', '=', 10)->select();
+                $orgList = ['' => $current_admin['org']];
+                if ($current_admin->group_id == $this->yygid) {
+                    //运营只能看到运营
+                    $auth_group = AuthGroup::where('group_id', '=', $this->yygid)->select();
+                    $result['is_yy'] = 1;
+                } else {
+                    // 其他用户只能看到普通员工组
+                    $auth_group = AuthGroup::where('group_id', '=', 10)->select();
+                }
             }
+            $result['channel'] = $current_admin['channel'] ?? "";
+            $result['username'] = $current_admin['username'] ?? "";
+            $result['is_admin'] = $current_admin['group_id'] == 1 ? 1 : 0;
+
 
             // 获取主管列表
-            $leaderList = \app\admin\model\Admin::where('group_id', 11)
-                ->field('admin_id, username')->select();
+            $leaderList = $this->getLeaderList($current_admin['group_id']);
 
+            $this->assign('team_name', $current_admin['team_name']);
+            $this->assign('orgList', $orgList);
             $this->assign('leaderList', $leaderList);
             $this->assign('authGroup', $auth_group);
             $this->assign('title', lang('add') . lang('admin'));
             $this->assign('info', 'null');
             $this->assign('selected', 'null');
+            $this->assign('result', $result);
             return view('adminForm');
         }
     }
+
+    //获取主管列表
+    private function getLeaderList($group_id)
+    {
+        if ($group_id == $this->yygid) {
+            $leaderList = \app\admin\model\Admin::where('group_id', $group_id)->where('position', '<>', 0)
+                ->field('admin_id, username')->select();
+        } else {
+            $leaderList = \app\admin\model\Admin::where('group_id', 11)
+                ->field('admin_id, username')->select();
+        }
+        return $leaderList;
+    }
+
     //删除管理员
     public function adminDel()
     {
+        //判断是否有删除权限
+        if (!$this->checkAuth('adminDel')) {
+            return $result = ['code' => 0, 'msg' => '您无此操作权限'];
+        }
+
         $admin_id = input('post.admin_id');
         if (session('aid') == 1) {
             Admin::where('admin_id', '=', $admin_id)->delete();
@@ -152,14 +233,18 @@ class Auth extends Common
     public function adminEdit()
     {
         if (request()->isPost()) {
+            //判断是否有修改权限
+            if (!$this->checkAuth('adminEdit')) {
+                return $result = ['code' => 0, 'msg' => '您无此操作权限'];
+            }
             //return $result = ['code'=>0,'msg'=>'当前为演示系统无法修改信息!'];
             $data = input('post.');
             $pwd = input('post.pwd');
             $map[] = ['admin_id', '<>', $data['admin_id']];
             $where['admin_id'] = $data['admin_id'];
             $info = Admin::getInfo(input('admin_id'));
-            if(!$info){
-                return $result = ['code'=>0,'msg'=>'用户不存在!'];
+            if (!$info) {
+                return $result = ['code' => 0, 'msg' => '用户不存在!'];
             }
             if ($data['username']) {
                 $map[] = ['username', '=', $data['username']];
@@ -193,15 +278,25 @@ class Auth extends Common
             // $this->assign('title',lang('edit').lang('admin'));
             // return view('adminForm');
             $auth_group = AuthGroup::all();
+
             $info = Admin::getInfo(input('admin_id'));
             // 获取主管列表供下拉选择
             $leaderList = \app\admin\model\Admin::where('group_id', 11)
                 ->field('admin_id, username')->select();
             $this->assign('leaderList', $leaderList);
-
+            //当前用户信息\
+            $current_admin = Admin::getInfo(session('aid'));
+            // 组织列表
+            $orgList = self::ORG;
+            $result['is_yy'] = $current_admin['group_id'] == $this->yygid ? 1 : 0;
+            $result['channel'] = $current_admin['channel'] ?? "";
+            $result['is_admin'] = $current_admin['group_id'] == 1 ? 1 : 0;
+            $this->assign('orgList', $orgList);
             $this->assign('info', json_encode($info, true));
             $this->assign('authGroup', $auth_group);
+            $this->assign('is_edit', 1);
             $this->assign('title', lang('edit') . lang('admin'));
+            $this->assign('result', $result);
             return view('adminForm');
         }
     }
@@ -408,5 +503,21 @@ class Auth extends Common
             $this->assign('rule', $admin_rule);
             return $this->fetch();
         }
+    }
+
+
+    public function getChannels()
+    {
+        $list = Db::name('crm_client_status')->field('id,status_name')->select();
+        $channels = [];
+        foreach ($list as $li) {
+            $name = strtolower($li['status_name']);
+            if (empty($this->channel_map[$name])) {
+                continue;
+            }
+            $channels[] = ['id' => $li['id'], 'name' => $this->channel_map[$name]];
+        }
+
+        return json(['code' => 1, 'msg' => '获取成功!', 'data' => $channels]);
     }
 }

@@ -1,0 +1,52 @@
+ .layui-form-select.custom-select {
+     position: relative;
+     display: inline-block;
+     width: 100%;
+ }
+
+ .layui-form-select.custom-select .layui-input {
+     width: 100%;
+     box-sizing: border-box;
+     padding-right: 25px;
+ }
+
+ .layui-form-select.custom-select .arrow {
+     position: absolute;
+     right: 10px;
+     top: 50%;
+     transform: translateY(-50%);
+     cursor: pointer;
+     user-select: none;
+ }
+
+ .layui-form-select.custom-select dl {
+     position: absolute;
+     top: 100%;
+     left: 0;
+     right: 0;
+     border: 1px solid #e6e6e6;
+     background: #fff;
+     display: none;
+     max-height: 150px;
+     overflow-y: auto;
+     z-index: 1000;
+ }
+
+ .layui-form-select.custom-select dl dd {
+     padding: 5px 10px;
+     cursor: pointer;
+     margin: 0;
+ }
+
+ .layui-form-select.custom-select dl dd:hover {
+     background-color: #f2f2f2;
+ }
+
+ .layui-form-select option {
+     cursor: pointer;
+ }
+
+ .layui-form-select option:hover {
+     background-color: #009688;
+     color: #fff;
+ }

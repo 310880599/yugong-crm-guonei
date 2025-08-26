@@ -838,7 +838,7 @@ class Client extends Common
             }
         }
         if (empty($contact)) return [false, '请至少填写WhatsApp、阿里id、微信、邮箱或号码中的一个'];
-        $require_check = [];;
+        $require_check = [];
         foreach ($contact as $k => $v) {
             if (is_string($v)) $v = explode(',', $v);
             $duplicates = getDuplicates($v);
@@ -881,7 +881,7 @@ class Client extends Common
         foreach ($require_checke as $i => $v) {
             //判断是否是手机号或者whatsapp号码
             if (self::validatePhoneNumber($v)) {
-                $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->where('vdigits', 'like', '%' . $v)->find();
+                $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->where('vdigits',$v)->whereOrRaw("CONCAT(contact_extra, vdigits) = '{$v}'")->find();
                 if ($contactExist) {
                     $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
                     return [false, $contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']];
@@ -911,7 +911,8 @@ class Client extends Common
     {
         // 清理特殊字符
         $cleaned = preg_replace('/[^\w@._#]/', '', $phone);
-        $phone = substr($cleaned, -8);
+        // $phone = substr($cleaned, -8);
+        $phone = $cleaned;
         // 国际手机号正则: 可选+,首位非0,6-14位数字
         return preg_match('/^\+?[1-9]\d{6,14}$/', $cleaned) === 1;
     }
@@ -943,9 +944,9 @@ class Client extends Common
                 ];
 
 
-                $find = db('crm_contacts')->where(['is_delete' => 1, 'contact_value' => $contact_value])->find();
+                $find = Db::table('crm_contacts')->where(['is_delete' => 1, 'contact_value' => $contact_value])->find();
                 if ($find) {
-                    db('crm_contacts')->where('id', $find['id'])->update($temp);
+                    Db::table('crm_contacts')->where('id', $find['id'])->update($temp);
                 } else {
                     $contactData[] = $temp;
                 }
@@ -954,21 +955,23 @@ class Client extends Common
         return $contactData;
     }
 
-
     //新建客户
     public function add()
     {
         if (request()->isPost()) {
+            $this->redisLock();
             // <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户状态、用户名、备注 -->
             $contact = [];
             list($res, $require_check) = $this->checkData($contact);
             if (!$res) return fail($require_check);
             $data['kh_name'] = Request::param('kh_name');
             $data['xs_area'] = Request::param('xs_area');
-            // $data['kh_contact'] = Request::param('kh_contact');
+            $data['kh_contact'] = Request::param('kh_contact');
             $data['kh_rank'] = Request::param('kh_rank');
             $data['kh_status'] = Request::param('kh_status');
             // $data['kh_username'] = Request::param('kh_username');
+            $data['product_name'] = Request::param('product_name');
+            $data['oper_user'] = Request::param('oper_user');
             $data['remark'] = Request::param('remark');
             // $data['kh_need'] = Request::param('kh_need');
             $data['at_user'] = Session::get('username');
@@ -983,19 +986,21 @@ class Client extends Common
             Db::startTrans();
             try {
                 // 客户信息保存
-                db('crm_leads')->insert($data);
+                Db::table('crm_leads')->insert($data);
                 $id = Db::getLastInsID();
                 if (!$id) {
                     return fail('客户信息插入失败');
                 }
                 $contactData = $this->assemblyData($contact, $id);
-                db('crm_contacts')->insertAll($contactData);
+                Db::table('crm_contacts')->insertAll($contactData);
                 // 提交事务
                 Db::commit();
+                $this->redisUnLock();
                 return success();
             } catch (\Exception $e) {
                 // 回滚事务
                 Db::rollback();
+                $this->redisUnLock();
                 return fail($e->getMessage());
             }
         }
@@ -1010,17 +1015,21 @@ class Client extends Common
         // $this->assign('xsAreaList', $xsAreaList);
         $this->assign('khRankList', $khRankList);
         $this->assign('khStatusList', $khStatusList);
-
+        $yyList = $this->getYyList();
+        $this->assign('yyList', json_encode($yyList['yyList']));
+        $this->assign('_yyList', json_encode($yyList['_yyList']));
         //新增地区联动
         $countries = $this->getCountries();
         $this->assign('countries', $countries);
 
         return $this->fetch('client/add');
     }
+
     //编辑客户
     public function edit()
     {
         if (Request::isAjax()) {
+            $this->redisLock();
             $data = Request::param();
             $data['ut_time'] = date("Y-m-d H:i:s", time());
             $contact = [];
@@ -1032,22 +1041,21 @@ class Client extends Common
             foreach (self::CONTACT_MAP as $k => $v) {
                 unset($data[$k]);
             }
-
-            Db::startTrans();
             try {
                 //删除客户关联联系方式
-                db('crm_contacts')->where(['leads_id' => $data['id']])->update(['is_delete' => 1]);
-
+                Db::table('crm_contacts')->where(['leads_id' => $data['id']])->update(['is_delete' => 1]);
                 $contactData = $this->assemblyData($contact, $data['id']);
-                db('crm_contacts')->insertAll($contactData);
+                Db::table('crm_contacts')->insertAll($contactData);
                 //客户信息保存
                 Db::table('crm_leads')->where(['id' => $data['id']])->where('status', 1)->update($data);
                 // 提交事务
                 Db::commit();
+                // $this->redisUnLock();
                 return success();
             } catch (\Exception $e) {
                 // 回滚事务
                 Db::rollback();
+                $this->redisUnLock();
                 return fail($e->getMessage());
             }
         }
@@ -1091,8 +1099,12 @@ class Client extends Common
         }
         unset($con_map, $contact);
         $this->assign('contact', $contacts);
+        $yyList = $this->getYyList();
+        $this->assign('yyList', json_encode($yyList['yyList']));
+        $this->assign('_yyList', json_encode($yyList['_yyList']));
         return $this->fetch('client/edit');
     }
+
     //删除客户
     // 修改del方法支持批量删除
     public function del()
@@ -1135,8 +1147,6 @@ class Client extends Common
         }
     }
 
-
-
     //客户级别
     public function rankList()
     {
@@ -1150,6 +1160,7 @@ class Client extends Common
         }
         return $this->fetch();
     }
+
     //添加客户级别
     public function rankAdd()
     {
@@ -1244,6 +1255,7 @@ class Client extends Common
             $data['add_time'] = time();
             $result = Db::table('crm_client_status')->insert($data);
             if ($result) {
+                cache('sourceList', null);
                 $msg = ['code' => 0, 'msg' => '添加成功！', 'data' => []];
                 return json($msg);
             } else {
@@ -1276,6 +1288,7 @@ class Client extends Common
                     // 所有的客户状态全部膝盖
                     $result2 = Db::table('crm_leads')->where(['kh_status' => $oldstatusname])->update(['kh_status' => $newstatusname]);
                 }
+                cache('sourceList', null);
                 $msg = ['code' => 0, 'msg' => '编辑成功！', 'data' => []];
                 return json($msg);
             } else {
@@ -1307,6 +1320,7 @@ class Client extends Common
         if ($result) {
             // 所有的客户状态全部膝盖
             $result2 = Db::table('crm_leads')->where(['kh_status' => $oldstatusname])->update(['kh_status' => '']);
+            cache('sourceList', null);
             $msg = ['code' => 0, 'msg' => '删除成功！', 'data' => []];
             return json($msg);
         } else {
@@ -1342,11 +1356,11 @@ class Client extends Common
                     $count++;
                 }
                 // 添加日志记录
-                // $this->addOperLog(
-                //     $value,
-                //     '移入公海',
-                //     "移入 [{$pr_gh_type}] 公海池"
-                // );
+                $this->addOperLog(
+                    $value,
+                    '移入公海',
+                    "移入 [{$pr_gh_type}] 公海池"
+                );
             }
             if ($count > 0) {
                 $msg = ['code' => 0, 'msg' => $count . '个客户移入公海成功！', 'data' => []];
@@ -1557,11 +1571,11 @@ class Client extends Common
                     $count++;
                 }
                 // 添加日志记录
-                // $this->addOperLog(
-                //     $value,
-                //     '转移负责人',
-                //     "从 [{$data['pr_user_bef']['pr_user']}] 转移给 [{$username}]"
-                // );
+                $this->addOperLog(
+                    $value,
+                    '转移负责人',
+                    "从 [{$data['pr_user_bef']['pr_user']}] 转移给 [{$username}]"
+                );
             }
 
 

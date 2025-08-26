@@ -19,6 +19,7 @@ class Admin extends Model
                 session('avatar', $avatar);
                 //记录团队名称
                 session('team_name', $user['team_name']);
+                session('user_info', $user);
                 return ['code' => 1, 'msg' => '登录成功!']; //信息正确
             } else {
                 return ['code' => 0, 'msg' => '用户名或者密码错误，重新输入!']; //密码错误
@@ -33,5 +34,18 @@ class Admin extends Model
         return Db::name('admin')->where('admin_id', $userId)->find();
     }
 
+    public function getMyInfo(){
+        $info = session('user_info');
+        if($info){
+            return $info;
+        }
+        $admin_id = session('aid');
+        $info = Db::name('admin')->where('admin_id', $admin_id)->find();
+        if($info){
+            session('user_info', $info);
+        }
+        return $info;
+
+    }
     // 验证码检查方法已移除
 }

@@ -1,7 +1,8 @@
 {include file="common/head"/}
 <script>
     var ADMIN = '/static/admin';
-    var navs = {$menus|raw};
+    var navs = {$menus| raw};
+    var organizations = {$organizations| raw};
 </script>
 <div class="layui-layout layui-layout-admin">
     <div class="layui-header header">
@@ -44,7 +45,9 @@
                     </a>
                     <dl class="layui-nav-child">
                         <dd>
-                            <a href="{:url('index/logout')}"><i class="fa fa-sign-out" aria-hidden="true"></i>{:lang('logout')}</a>
+                            <a href="{:url('index/logout')}"><i class="fa fa-sign-out"
+                                    aria-hidden="true"></i>{:lang('logout')}</a>
+                            <a href="javascript:;" onclick="document.getElementById('main-iframe').src = '{:url('index/editPasswd')}'"><i class="fa fa-sign-out" aria-hidden="true"></i>{:lang('editPasswd')}</a>
                         </dd>
                     </dl>
                 </li>
@@ -54,7 +57,8 @@
                     <a href="{:url(config('app.default_module').'/index/index')}" target="_blank">{:lang('home')}</a>
                 </li>
                 <li class="layui-nav-item">
-                    <a href="{:url('index/logout')}"><i class="fa fa-sign-out" aria-hidden="true"></i> {:lang('logout')}</a>
+                    <a href="{:url('index/logout')}"><i class="fa fa-sign-out" aria-hidden="true"></i>
+                        {:lang('logout')}</a>
                 </li>
             </ul>
         </div>
@@ -65,14 +69,15 @@
     <div class="layui-body" style="bottom: 0;border-left: solid 2px #1AA094;" id="admin-body">
         <div class="layui-tab admin-nav-card layui-tab-brief" lay-filter="admin-tab">
             <ul class="layui-tab-title">
-                <li class="layui-this">
+                <li class="layui-this"  onclick="document.getElementById('main-iframe').src = '{:url('main')}'">
+
                     <i class="icon icon-earth" aria-hidden="true"></i>
                     <cite>控制面板</cite>
                 </li>
             </ul>
             <div class="layui-tab-content" style="min-height: 150px; padding: 0;">
                 <div class="layui-tab-item layui-show">
-                    <iframe src="{:url('main')}"></iframe>
+                    <iframe id="main-iframe" src="{:url('main')}"></iframe>
                 </div>
             </div>
         </div>
@@ -92,24 +97,103 @@
         <i class="layui-icon">&#xe602;</i>
     </div>
     <div class="site-mobile-shade"></div>
-    {include file="common/foot"/}
-    <script src="/static/admin/js/index.js"></script>
-    <script>
-        layui.use('layer',function(){
-            var $ = layui.jquery, layer = layui.layer;
-            $('#cache').click(function () {
-                document.cookie="skin=;expires="+new Date().toGMTString();
-                layer.confirm('确认要清除缓存？', {icon: 3}, function () {
-                    $.post('{:url("clear")}',function (data) {
-                        layer.msg(data.info, {icon: 6}, function (index) {
-                            layer.close(index);
-                            window.location.href = data.url;
-                        });
+</div>
+{include file="common/foot"/}
+<script src="/static/admin/js/index.js"></script>
+<script>
+    layui.use('layer', function () {
+        var $ = layui.jquery, layer = layui.layer;
+        $('#cache').click(function () {
+            document.cookie = "skin=;expires=" + new Date().toGMTString();
+            layer.confirm('确认要清除缓存？', { icon: 3 }, function () {
+                $.post('{:url("clear")}', function (data) {
+                    layer.msg(data.info, { icon: 6 }, function (index) {
+                        layer.close(index);
+                        window.location.href = data.url;
                     });
                 });
             });
-        })
-    </script>
-</div>
+        });
+    })
+</script>
+<script>
+
+    // 检查organizations变量是否存在且有数据
+    if (typeof organizations !== 'undefined' && organizations.length > 0) {
+
+
+        // 创建遮罩层
+        const mask = document.createElement('div');
+        mask.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+        // 创建表单容器
+        const formContainer = document.createElement('div');
+        formContainer.style.cssText = 'background:white;padding:20px;border-radius:5px;width:300px;';
+
+        // 创建标题
+        const title = document.createElement('h3');
+        title.textContent = '请选择组织';
+        title.style.marginTop = '0';
+
+        // 创建下拉选择框
+        const select = document.createElement('select');
+        select.style.cssText = 'width:100%;padding:8px;margin-bottom:15px;';
+
+        // 填充组织选项
+        organizations.forEach(org => {
+            const option = document.createElement('option');
+            option.value = org;
+            option.textContent = org;
+            select.appendChild(option);
+        });
+
+        // 创建提交按钮
+        const submitBtn = document.createElement('button');
+        submitBtn.textContent = '确定';
+        submitBtn.style.cssText = 'padding:8px 16px;background:#1AA094;color:white;border:none;border-radius:3px;cursor:pointer;';
+
+        // 提交按钮点击事件
+        submitBtn.onclick = function () {
+            const selectedOrg = select.value;
+            // 禁用按钮防止重复提交
+            this.disabled = true;
+            this.textContent = '提交中...';
+
+            // 发送AJAX请求
+            $.post('{:url("index/saveorg")}', {
+                org: selectedOrg,
+                admin_id: {$admin_id}
+            }, function (response) {
+                if (response.code === 1) {
+                    layer.msg('组织选择成功！', { icon: 6 }, function () {
+                        // 关闭遮罩层并刷新页面
+                        document.body.removeChild(mask);
+                        window.location.reload();
+                    });
+                } else {
+                    layer.msg('提交失败：' + response.msg, { icon: 5 });
+                    // 恢复按钮状态
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '确定';
+                }
+            }, 'json').fail(function (xhr) {
+                layer.msg('请求失败，请重试', { icon: 5 });
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.textContent = '确定';
+            });
+        };
+
+        // 组装表单元素
+        formContainer.appendChild(title);
+        formContainer.appendChild(select);
+        formContainer.appendChild(submitBtn);
+        mask.appendChild(formContainer);
+
+        // 添加到页面
+        document.body.appendChild(mask);
+    }
+</script>
 </body>
+
 </html>
