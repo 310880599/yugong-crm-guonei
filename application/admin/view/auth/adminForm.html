@@ -7,7 +7,6 @@
         <div class="layui-form-item">
             <label class="layui-form-label">所属用户组</label>
             <div class="layui-input-4">
-                 
                 <select name="group_id" id="user_group" lay-verify="required" lay-filter="groupSelect">
                     <option value="">请选择用户组</option>
                     {volist name="authGroup" id="vo"}
@@ -117,6 +116,7 @@
         var form = layui.form, layer = layui.layer, $ = layui.jquery, upload = layui.upload;
         var info = {$info|raw};
         var is_admin = {$result['is_admin']};
+        var is_position = "{$result['is_position']}";
         var channel = "{$result['channel']}";
 
     form.val("form", info);
@@ -124,6 +124,41 @@
         $('#adPic').attr('src', info.avatar);
     }
     form.render();
+
+    function getChannelList(ele){
+        // 发送请求获取渠道列表
+        url = "{:url('getChannels')}";
+        $.get(url, function (res) {
+            if (res.code > 0) {
+                // 创建渠道选择框HTML
+                var channelHtml = '<div class="layui-form-item" id="channel-item">'
+                    + '<label class="layui-form-label">所属渠道</label>'
+                    + '<div class="layui-input-4">'
+                    + '<select name="channel" lay-verify="required">'
+                    + '<option value="">请选择渠道</option>';
+
+                // 动态添加渠道选项
+                
+                $.each(res.data, function (index, item) {
+                    sel='';
+                    if((info && item.name== info.channel)||(channel && item.name== channel))
+                    {
+                    sel='selected class="layui-this"'
+                    }
+                    channelHtml += '<option '+sel+' value="' + item.name + '">' + item.name + '</option>';
+                });
+
+                channelHtml += '</select></div></div>';
+                // 先插入渠道选择框，再插入职位单选框
+                $(ele).after(channelHtml);
+                form.render('select'); // 重新渲染表单
+            } else {
+                layer.msg('获取渠道列表失败', { icon: 2 });
+            }
+        });
+            
+    }
+
 
     // 监听用户组选择框
     function handleOperationGroup(){
@@ -133,49 +168,22 @@
         $('#operation-role-item').remove(); // 移除已存在的运营角色选项
         // 如果已选择运营用户组
         if (selectedText === '运营') {
-            if (is_admin) {
+            if (is_admin ||is_position) {
                 // 创建运营职位单选按钮组HTML
 
                 var roleHtml = '<div class="layui-form-item" id="operation-role-item" style="display:block">'
                     + '<label class="layui-form-label">运营职位</label>'
                     + '<div class="layui-input-4 ">'
-                 + '<input type="radio" name="position" value="1" title="运营总监" lay-filter="operationPosition" ' + (info && info.position == 1 ? 'checked' : '') + '>'
+                    + '<input type="radio" name="position" value="1" title="运营总监" lay-filter="operationPosition" ' + (info && info.position == 1 ? 'checked' : '') + '>'
                     + '<input type="radio" name="position" value="2" title="运营主管" lay-filter="operationPosition" ' + (info && info.position == 2 ? 'checked' : '') + '>'
+                    + '<input type="radio" name="position" value="0" title="运营专员" lay-filter="operationPosition" ' + (info && info.position == 0 ? 'checked' : '') + '>'
                     + '</div></div>';
-
                 // 直接插入到用户组选择框后面
                 $formItem.after(roleHtml);
                 form.render('radio');
                 // 发送请求获取渠道列表
-                $.get('{:url("getChannels")}', function (res) {
-                    if (res.code > 0) {
-                        // 创建渠道选择框HTML
-                        var channelHtml = '<div class="layui-form-item" id="channel-item">'
-                            + '<label class="layui-form-label">所属渠道</label>'
-                            + '<div class="layui-input-4">'
-                            + '<select name="channel" lay-verify="required">'
-                            + '<option value="">请选择渠道</option>';
-
-                        // 动态添加渠道选项
-                        
-                        $.each(res.data, function (index, item) {
-                            sel='';
-                            if(info && item.name== info.channel)
-                            {
-                               sel='selected class="layui-this"'
-                            }
-                            channelHtml += '<option '+sel+' value="' + item.name + '">' + item.name + '</option>';
-                        });
-
-                        channelHtml += '</select></div></div>';
-                        // 先插入渠道选择框，再插入职位单选框
-                        $('#operation-role-item').after(channelHtml);
-                        form.render('select'); // 重新渲染表单
-                    } else {
-                        layer.msg('获取渠道列表失败', { icon: 2 });
-                    }
-                });
-            }
+                getChannelList('#operation-role-item');
+             }
             else
             {
                 // 创建渠道选择框HTML

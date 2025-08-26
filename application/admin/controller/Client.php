@@ -881,7 +881,10 @@ class Client extends Common
         foreach ($require_checke as $i => $v) {
             //判断是否是手机号或者whatsapp号码
             if (self::validatePhoneNumber($v)) {
-                $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->where('vdigits',$v)->whereOrRaw("CONCAT(contact_extra, vdigits) = '{$v}'")->find();
+                $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->where(function($q) use($v){
+                    $q->where('vdigits',$v)
+                    ->whereOrRaw("CONCAT(contact_extra, vdigits) = '{$v}'");
+                })->find();
                 if ($contactExist) {
                     $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
                     return [false, $contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']];

@@ -166,6 +166,7 @@ class Auth extends Common
             $result['channel'] = $current_admin['channel'] ?? "";
             $result['username'] = $current_admin['username'] ?? "";
             $result['is_admin'] = $current_admin['group_id'] == 1 ? 1 : 0;
+            $result['is_position'] = $current_admin['position'] == 1 ? 1 : 0;
 
 
             // 获取主管列表
@@ -291,6 +292,7 @@ class Auth extends Common
             $result['is_yy'] = $current_admin['group_id'] == $this->yygid ? 1 : 0;
             $result['channel'] = $current_admin['channel'] ?? "";
             $result['is_admin'] = $current_admin['group_id'] == 1 ? 1 : 0;
+            $result['is_position'] = $current_admin['position'] == 1 ? 1 : 0;
             $this->assign('orgList', $orgList);
             $this->assign('info', json_encode($info, true));
             $this->assign('authGroup', $auth_group);
