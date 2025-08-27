@@ -233,7 +233,7 @@ class Auth extends Common
     //更新管理员信息
     public function adminEdit()
     {
-       if (request()->isPost()) {
+        if (request()->isPost()) {
     // 判断是否有修改权限
     if (!$this->checkAuth('adminEdit')) {
         return $result = ['code' => 0, 'msg' => '您无此操作权限'];
@@ -296,8 +296,7 @@ class Auth extends Common
     }
 
     return $result = ['code' => 1, 'msg' => '管理员修改成功!', 'url' => url('adminList')];
-}
-        } else {
+} else {
             // $auth_group = AuthGroup::all();
             // $admin = new Admin();
             // $info = $admin->getInfo(input('admin_id'));
@@ -308,12 +307,11 @@ class Auth extends Common
             $auth_group = AuthGroup::all();
 
             $info = Admin::getInfo(input('admin_id'));
-            // 获取主管列表供下拉选择
-            $leaderList = \app\admin\model\Admin::where('group_id', 11)
-                ->field('admin_id, username')->select();
-            $this->assign('leaderList', $leaderList);
             //当前用户信息\
             $current_admin = Admin::getInfo(session('aid'));
+	     // 获取主管列表供下拉选择
+	                 $leaderList = $this->getLeaderList($current_admin['group_id']);
+	                             $this->assign('leaderList', $leaderList);
             // 组织列表
             $orgList = self::ORG;
             $result['is_yy'] = $current_admin['group_id'] == $this->yygid ? 1 : 0;
