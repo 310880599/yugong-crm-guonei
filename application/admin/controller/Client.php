@@ -996,6 +996,13 @@ class Client extends Common
                 }
                 $contactData = $this->assemblyData($contact, $id);
                 Db::table('crm_contacts')->insertAll($contactData);
+
+                //新增商品
+                $product_name = Request::param('product_name');
+                $product = $this->checkProduct($product_name);
+                if(!$product){
+                    $this->addProduct($product_name);
+                }
                 // 提交事务
                 Db::commit();
                 $this->redisUnLock();
@@ -1024,7 +1031,9 @@ class Client extends Common
         //新增地区联动
         $countries = $this->getCountries();
         $this->assign('countries', $countries);
-
+        //新增商品
+        $productList = $this->getProductList();
+        $this->assign('productList', $productList);
         return $this->fetch('client/add');
     }
 
@@ -1051,6 +1060,12 @@ class Client extends Common
                 Db::table('crm_contacts')->insertAll($contactData);
                 //客户信息保存
                 Db::table('crm_leads')->where(['id' => $data['id']])->where('status', 1)->update($data);
+                //新增商品
+                $product_name = Request::param('product_name');
+                $product = $this->checkProduct($product_name);
+                if(!$product){
+                    $this->addProduct($product_name);
+                }
                 // 提交事务
                 Db::commit();
                 // $this->redisUnLock();
@@ -1105,6 +1120,9 @@ class Client extends Common
         $yyList = $this->getYyList();
         $this->assign('yyList', json_encode($yyList['yyList']));
         $this->assign('_yyList', json_encode($yyList['_yyList']));
+        //新增商品
+        $productList = $this->getProductList();
+        $this->assign('productList', $productList);
         return $this->fetch('client/edit');
     }
 

@@ -205,7 +205,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">运营人员</label>
                 <div class="layui-input-4">
-                    <input type="text" value="{$vo.oper_user}" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" class="layui-input" lay-verify="required">
+                    <input type="text" value="{$vo.oper_user}" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" class="layui-input" >
                 </div>
             </div>
             <!-- <div class="layui-form-item">
@@ -337,7 +337,7 @@
                     fields.phones.some(v => v)
                 );
             }
-            
+            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称',"{$result.product_name}");
                    
             // 监听客户来源变化
             var users = yyList["{$result.kh_status}"] || [];

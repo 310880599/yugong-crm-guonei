@@ -127,6 +127,13 @@ class Order extends Common
 
             $result = Db::table('crm_client_order')->insert($data);
             if ($result) {
+           //新增商品
+                $product_name = Request::param('product_name');
+                $product = $this->checkProduct($product_name);
+                if(!$product){
+                    $this->addProduct($product_name);
+                }
+
                 $msg = ['code' => 0, 'msg' => '添加成功！', 'data' => []];
                 return json($msg);
             } else {
@@ -153,6 +160,9 @@ class Order extends Common
         $yyList = $this->getYyList();
         $this->assign('yyList', json_encode($yyList['yyList']));
         $this->assign('_yyList', json_encode($yyList['_yyList']));
+        //新增商品
+        $productList = $this->getProductList();
+        $this->assign('productList', $productList);
         return $this->fetch('order/add');
     }
     public function changeyewu()
@@ -192,8 +202,8 @@ class Order extends Common
                     $res['source'] = $custinfo['kh_status'];
                     $res['pr_user'] = $custinfo['pr_user'];
                     $res['country'] = $custinfo['xs_area'];
-                    // $res['pr_user'] = $custinfo['pr_user'];
-                    $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $custinfo['kh_status'] . ",所属业务员:" . $custinfo['pr_user'];
+                    $res['oper_user'] = $custinfo['oper_user'];
+                    $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $custinfo['kh_status'] . ",所属业务员:" . $custinfo['pr_user']. ",所属运营:" . $custinfo['oper_user'];
                 }
             } else {
                 $res['code'] = 0;
@@ -213,6 +223,13 @@ class Order extends Common
 
             $result = Db::table('crm_client_order')->where(['id' => $data['id']])->update($data);
             if ($result) {
+                //新增商品
+                $product_name = Request::param('product_name');
+                $product = $this->checkProduct($product_name);
+                if(!$product){
+                    $this->addProduct($product_name);
+                }
+
                 $msg = ['code' => 0, 'msg' => '编辑成功！', 'data' => []];
                 return json($msg);
             } else {
@@ -241,6 +258,10 @@ class Order extends Common
         $yyList = $this->getYyList();
         $this->assign('yyList', json_encode($yyList['yyList']));
         $this->assign('_yyList', json_encode($yyList['_yyList']));
+        //新增商品
+        $productList = $this->getProductList();
+        $this->assign('productList', $productList);
+
         return $this->fetch('order/edit');
     }
     //删除客户
@@ -394,34 +415,7 @@ class Order extends Common
             'totalProfit' => number_format($totalProfit, 2),
         ];
     }
-    private function buildTimeWhere($timebucket, $field = 'create_time')
-    {
-        if (!$timebucket) {
-            return [];
-        }
 
-        $timeRanges = [
-            'today' => ['today', 'today'],
-            'yesterday' => ['yesterday', 'yesterday'],
-            'week' => ['monday this week', 'sunday this week'],
-            'last week' => ['monday last week', 'sunday last week'],
-            'month' => ['first day of this month', 'last day of this month'],
-            'last month' => ['first day of last month', 'last day of last month'],
-            'year' => ['first day of january this year', 'last day of december this year'],
-            'last year' => ['first day of january last year', 'last day of december last year'],
-            '-2 hours' => [date('Y-m-d H:i:s', strtotime('-2 hours')), null]
-        ];
-
-        if (isset($timeRanges[$timebucket])) {
-            list($start, $end) = $timeRanges[$timebucket];
-            if ($timebucket === '-2 hours') {
-                return [[$field, '>=', $start]];
-            }
-            return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($start)), date('Y-m-d 23:59:59', strtotime($end))]];
-        }
-        // 自定义日期
-        return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($timebucket)), date('Y-m-d 23:59:59', strtotime($timebucket . '+1 day'))]];
-    }
 
     /**
      * 获取指定字段的总和

@@ -48,7 +48,6 @@ CREATE TABLE `crm_contacts` (
   `is_delete` tinyint(1) DEFAULT '0' COMMENT '0-正常/1-删除',
   `created_at` datetime DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uniq_contact` (`contact_type`, `contact_value`) USING BTREE COMMENT '唯一索引',
   INDEX leads_id (leads_id),
   INDEX `idx_contact_value` (`contact_value`) USING BTREE COMMENT '联系方式值索引',
   INDEX `idx_is_delete` (`is_delete`) USING BTREE COMMENT '删除索引'
@@ -131,3 +130,13 @@ ADD COLUMN  `product_name` varchar(100) DEFAULT '' COMMENT '产品名称';
 
 ALTER TABLE `crm_client_order`
 ADD COLUMN `oper_user` varchar(30) DEFAULT '' COMMENT '所属运营';
+
+
+CREATE TABLE `crm_products` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_name` varchar(255) DEFAULT NULL COMMENT '产品名称',
+  `org` varchar(10) DEFAULT '' COMMENT '所属组织(admin,1s,2s,3s)',
+  PRIMARY KEY (`id`),
+  INDEX `idx_product_name` (`product_name`),
+  INDEX `idx_org` (`org`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '产品表';

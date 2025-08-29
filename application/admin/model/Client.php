@@ -5,13 +5,34 @@ namespace app\admin\model;
 use app\admin\controller\Client as ControllerClient;
 use think\Model;
 use think\Db;
+use app\admin\model\Contacts;
+
 
 class Client extends Model
 {
+    protected $table = 'crm_leads';
+
+
+    public function contacts()
+    {
+        return $this->hasMany(Contacts::class, 'leads_id', 'id')->where('is_delete', 0)->field('leads_id,contact_type,contact_extra,contact_value,vdigits');
+    }
+
+    public function getContactAttr($value)
+    {
+        $contactMap = array_flip(ControllerClient::CONTACT_MAP);
+        $v_foramt = [];
+        foreach ($this->contacts as $v) {
+            $contactType = $contactMap[$v['contact_type']] ?? '';
+            $contactValue = $contactType . ':' . $v['contact_extra'] . $v['contact_value'];
+            $v_foramt[] = $contactValue;
+        }
+        return $v_foramt;
+    }
+
     //查询
     public function getClientSearchList($page, $limit, $keyword)
     {
-
 
         $mapAtTime = []; //添加时间
         $mapKhRank = []; //客户级别

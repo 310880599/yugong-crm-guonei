@@ -11,7 +11,8 @@
         <div class="layui-form-item">
             <label class="layui-form-label">父级</label>
             <div class="layui-input-4">
-                <select name="pid" lay-verify="required" lay-filter="pid" >
+                <select name="pid" lay-verify="required" lay-filter="pid" lay-search >
+
                     <option value="0">默认顶级</option>
                     {volist name="admin_rule" id="vo"}
                         <option value="{$vo.id}">{$vo.lefthtml}{$vo.title}</option>

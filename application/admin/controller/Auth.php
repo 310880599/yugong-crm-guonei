@@ -281,12 +281,12 @@ class Auth extends Common
             $auth_group = AuthGroup::all();
 
             $info = Admin::getInfo(input('admin_id'));
-            // 获取主管列表供下拉选择
-            $leaderList = \app\admin\model\Admin::where('group_id', 11)
-                ->field('admin_id, username')->select();
-            $this->assign('leaderList', $leaderList);
-            //当前用户信息\
+   
+            //当前用户信息
             $current_admin = Admin::getInfo(session('aid'));
+            // 获取主管列表供下拉选择
+            $leaderList = $this->getLeaderList($current_admin['group_id']);
+            $this->assign('leaderList', $leaderList);
             // 组织列表
             $orgList = self::ORG;
             $result['is_yy'] = $current_admin['group_id'] == $this->yygid ? 1 : 0;

@@ -5,6 +5,7 @@ namespace app\admin\controller;
 use think\Db;
 use think\Controller;
 use app\admin\model\Admin;
+
 class Common extends Controller
 {
     const ORG = [
@@ -33,9 +34,9 @@ class Common extends Controller
         'YMX' => 'YMX',
     ];
 
-    public $yygid=12;//运营id
-    public $ywzgid=11;//业务主管
-    public $ywgid=10;//业务员
+    public $yygid = 12; //运营id
+    public $ywzgid = 11; //业务主管
+    public $ywgid = 10; //业务员
 
 
     protected $mod, $role, $system, $nav, $menudata, $cache_model, $categorys, $module, $moduleid, $adminRules, $HrefId;
@@ -107,7 +108,7 @@ class Common extends Controller
         $redis_name  = md5(request()->path() . json_encode(request()->param()));
         $redis = new \Redis();
         $redis->connect('127.0.0.1', 6379);
-        if ($redis->get($redis_name)) return $this->result([],500,'操作过于频繁，请稍后再试');
+        if ($redis->get($redis_name)) return $this->result([], 500, '操作过于频繁，请稍后再试');
         $redis->setex($redis_name, 30, 1);
     }
 
@@ -123,14 +124,14 @@ class Common extends Controller
     //客户来源列表
     public function getSoruceList()
     {
-        if($source_list = cache('sourceList')){
+        if ($source_list = cache('sourceList')) {
             return $source_list;
         }
         $list = DB::table('crm_client_status')->field('id,status_name as name')->select();
 
         $source_list = [];
-        foreach($list as $v){
-            $source_list[$v['name']]= $v['id'];
+        foreach ($list as $v) {
+            $source_list[$v['name']] = $v['id'];
         }
         cache('sourceList', $source_list);
         return $source_list;
@@ -139,25 +140,106 @@ class Common extends Controller
 
 
     //运营人员列表
-    public function getYyList($channel=null)
+    public function getYyList($channel = null)
     {
         $current_admin = Admin::getMyInfo();
-        $where = [['group_id','=',$this->yygid]];
+        $where = [['group_id', '=', $this->yygid]];
 
-        if($current_admin['org']  && $current_admin['org'] !='admin')$where[]=['org','=',$current_admin['org']];
+        if ($current_admin['org']  && $current_admin['org'] != 'admin') $where[] = ['org', '=', $current_admin['org']];
 
-        if($channel)$where[]=['channel','=',$channel];
+        if ($channel) $where[] = ['channel', '=', $channel];
 
-        $yyList=[];
-        $_yyList=[];
-        $list = Admin::where($where)->order('org')->order('channel','asc')->field('admin_id,username,channel')->select();
-        $channel_list = array_intersect_key( $this->channel_map, $this->getSoruceList());
+        $yyList = [];
+        $_yyList = [];
+        $list = Admin::where($where)->order('org')->order('channel', 'asc')->field('admin_id,username,channel')->select();
+        $channel_list = array_intersect_key($this->channel_map, $this->getSoruceList());
         $channel_list = array_flip($channel_list);
-        
-        foreach($list as $v){
-            $_yyList[]=['id'=>$v['admin_id'],'name'=>$v['username']];
-            $yyList[$channel_list[$v['channel']]][]=['id'=>$v['admin_id'],'name'=>$v['username']];
+
+        foreach ($list as $v) {
+            $_yyList[] = ['id' => $v['admin_id'], 'name' => $v['username']];
+            $yyList[$channel_list[$v['channel']]][] = ['id' => $v['admin_id'], 'name' => $v['username']];
         }
-        return ['yyList'=>$yyList,'_yyList'=>$_yyList];
+        return ['yyList' => $yyList, '_yyList' => $_yyList];
+    }
+
+    //新增产品
+    public function addProduct($product_name)
+    {
+        $current_admin = Admin::getMyInfo();
+        $data['org'] = $current_admin['org'];
+        $data['product_name'] = $product_name;
+        $res = Db::name('crm_products')->insert($data);
+        cache($current_admin['org'] . '_product_list', null);
+        return $res;
+    }
+
+    //判断是否存在商品
+    public function checkProduct($product_name)
+    {
+        if (!$product_name) return true;
+        $current_admin = Admin::getMyInfo();
+        $where = [['product_name', '=', $product_name]];
+        if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = ['org', '=', $current_admin['org']];
+        $res = Db::name('crm_products')->where($where)->find();
+        return $res;
+    }
+
+
+    //产品列表
+    public function getProductList()
+    {
+        $current_admin = Admin::getMyInfo();
+        $where = [];
+        if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = ['org', '=', $current_admin['org']];
+        $list = Db::name('crm_products')->where($where)->group('product_name')->field('product_name')->select();
+        $list = array_column($list, 'product_name');
+        return json_encode($list);
+    }
+
+    public function _search($params, $model, $callback = null)
+    {
+        $size = $params['limit'] ?? config('pageSize');
+        $page = $params['page'] ?? 1;
+        $table = $model->getTable();
+        $_model = $model->getModel();
+        if ($callback) $model = call_user_func($callback, $model, $params);
+
+        $model->order($table . '.id', 'desc');
+        $list = $model->paginate(array('list_rows' => $size, 'page' => $page))->toArray();
+        if (method_exists($_model, '_formatData')) {
+            foreach ($list['data'] as &$item) {
+                $_model->_formatData($item);
+            }
+        }
+        return $list;
+    }
+
+    public function buildTimeWhere($timebucket, $field = 'create_time')
+    {
+        if (!$timebucket) {
+            return [];
+        }
+
+        $timeRanges = [
+            'today' => ['today', 'today'],
+            'yesterday' => ['yesterday', 'yesterday'],
+            'week' => ['monday this week', 'sunday this week'],
+            'last week' => ['monday last week', 'sunday last week'],
+            'month' => ['first day of this month', 'last day of this month'],
+            'last month' => ['first day of last month', 'last day of last month'],
+            'year' => ['first day of january this year', 'last day of december this year'],
+            'last year' => ['first day of january last year', 'last day of december last year'],
+            '-2 hours' => [date('Y-m-d H:i:s', strtotime('-2 hours')), null]
+        ];
+
+        if (isset($timeRanges[$timebucket])) {
+            list($start, $end) = $timeRanges[$timebucket];
+            if ($timebucket === '-2 hours') {
+                return [[$field, '>=', $start]];
+            }
+            return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($start)), date('Y-m-d 23:59:59', strtotime($end))]];
+        }
+        // 自定义日期
+        return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($timebucket)), date('Y-m-d 23:59:59', strtotime($timebucket . '+1 day'))]];
     }
 }

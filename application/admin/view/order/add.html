@@ -58,6 +58,7 @@
                         $('#checklabel').css('color', 'green');
                         $('#cname').val(result['msg']['custname']);
                         $('#pr_user').val(result['msg']['pr_user']);
+                        $('#oper_user_input').val(result['msg']['oper_user']);
                         $('#country').val(result['msg']['country']);
                         $('#kh_username').val(result['msg']['kh_username']);
                         // $('#source').val(result['msg']['source']);
@@ -157,7 +158,7 @@
                 <label class="layui-form-label">运营人员</label>
                 <div class="layui-input-4">
                     <input type="text" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" class="layui-input"
-                        lay-verify="required">
+                       >
                 </div>
             </div>
             <div class="layui-form-item">
@@ -263,6 +264,9 @@
                     }
                 }
             });
+
+            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称');
+
        
             // 监听客户来源变化
             const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name');

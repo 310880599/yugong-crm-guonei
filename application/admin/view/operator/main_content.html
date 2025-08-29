@@ -1,0 +1,251 @@
+<!-- 左边统计 -->
+ 
+
+<div class=" layui-col-md8">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md6">
+            <div class="layui-card fold-card">
+
+                <div class="layui-card-header">业务询盘排行</div>
+                <div class="layui-card-body table-scroll">
+                    <table id="yw_list_table" class="layui-table layui-table-sm fold-table">
+                        <thead>
+                            <tr>
+                                <th>业务员</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['yw_data']['list']" id='vo'}
+                            <tr>
+                                <td><b>{$vo['username']}</b> ({$vo['team_name']})</td>
+                                <td>{$vo['yw_num']}</td>
+                            </tr>
+                            {/volist}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="layui-col-md6">
+            <div class="layui-card">
+                <div class="layui-card-header">业务询盘汇总</div>
+                <div class="layui-card-body">
+                    <table id="yw_total_table" class="layui-table layui-table-sm">
+
+                        <thead>
+                            <tr>
+                                <th>团队</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['yw_data']['total']" id='vo' key="k" }
+                            <tr>
+                                <td><span style="font-weight: 600;">{$vo['team_name']}</span> </td>
+                                <td>{$vo['yw_num']}</td>
+                            </tr>
+                            {/volist}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md6">
+
+            <div class="layui-card fold-card">
+                <div class="layui-card-header">运营询盘排行</div>
+                <div class="layui-card-body table-scroll">
+                    <table id="yy_list_table" class="layui-table layui-table-sm fold-table">
+                        <thead>
+                            <tr>
+                                <th>运营</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['yy_data']['list']" id='vo'}
+                            <tr>
+                                <td><b>{$vo['username']}</b> ({$vo['channel']})</td>
+                                <td>{$vo['yy_num']}</td>
+                            </tr>
+                            {/volist}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="layui-col-md6">
+            <div class="layui-card">
+                <div class="layui-card-header">运营询盘汇总</div>
+                <div class="layui-card-body">
+                    <table id="yy_total_table" class="layui-table layui-table-sm">
+
+                        <thead>
+                            <tr>
+                                <th>团队</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['yy_data']['total']" id='vo'}
+                            <tr>
+                                <td><b>{$vo['channel']}</b></td>
+                                <td>{$vo['yy_num']}</td>
+                            </tr>
+                            {/volist}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md6">
+            <div class="layui-card">
+                <div class="layui-card-header">销售产品排行</div>
+                <div class="layui-card-body">
+                    <table id="sp_list_table" class="layui-table layui-table-sm">
+
+                        <thead>
+                            <tr>
+                                <th>产品</th>
+                                <th>销售数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['product_data']['order_prod']" id='vo'}
+                            <tr>
+                                <td>{$vo['product_name']}</td>
+                                <td>{$vo['count']}</td>
+                            </tr>
+                            {/volist}
+                            {if !$data['product_data']['order_prod']}<tr>
+                                <td colspan="2">暂无数据</td>
+                            </tr>{/if}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="layui-col-md6">
+            <div class="layui-card">
+                <div class="layui-card-header">询盘产品排行</div>
+                <div class="layui-card-body">
+                    <table id="pd_list_table" class="layui-table layui-table-sm">
+
+                        <thead>
+                            <tr>
+                                <th>产品</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            {volist name="$data['product_data']['oper_prod']" id='vo'}
+                            <tr>
+                                <td>{$vo['product_name']}</td>
+                                <td>{$vo['count']}</td>
+                            </tr>
+                            {/volist}
+                            {if !$data['product_data']['oper_prod']}<tr>
+                                <td colspan="2">暂无数据</td>
+                            </tr>{/if}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 右边待办 + 动态 -->
+<div class="layui-col-md4">
+    <div class="layui-card">
+        <div class="layui-card-header">{$wenhou}</div>
+        <div class="layui-card-body layui-text">
+            欢迎回来！祝你工作顺利 👍
+        </div>
+    </div>
+
+    <div class="layui-card">
+        <div class="layui-card-header">待办事项</div>
+        <div class="layui-card-body">
+            <table class="layui-table layui-table-sm">
+                <tbody>
+                    <tr>
+                        <td>今日已跟进</td>
+                        <td>{$today_count}</td>
+                    </tr>
+                    <tr>
+                        <td>未跟进个数</td>
+                        <td>{$all_count}</td>
+                    </tr>
+                    <tr>
+                        <td>跟进率</td>
+                        <td>{$genjinlv}%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="layui-card">
+        <div class="layui-card-header">最近动态</div>
+        <div class="layui-card-body">
+            <dl class="layuiadmin-card-status">
+                {volist name='result' id='vo'}
+                <dd>
+                    <div class="layui-status-img">
+                        <a><img src="{$vo.avatar}" style="border-radius:50%"></a>
+                    </div>
+                    <div>
+                        <p>{$vo.username} <em style="color:red;">跟进</em>
+                            <a href="{:url('Client/dialogue')}?id={$vo.id}"> {$vo.kh_name}</a>
+                        </p>
+                        <p class="msg"><b style="color: burlywood;">记录:</b> {$vo.reply_msg}</p>
+                        <span>时间：{$vo.create_date|date='Y-m-d H:i:s'}</span>
+                    </div>
+                </dd>
+                {/volist}
+            </dl>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+
+        // 遍历所有 fold-card，自动加按钮
+        $('.fold-card').each(function () {
+            var $card = $(this);
+            var $header = $card.find('.layui-card-header');
+            var $scroll = $card.find('.table-scroll');
+
+            // 如果表格高度超出折叠高度才添加按钮
+            if ($scroll[0].scrollHeight > $scroll.height()) {
+                if ($header.find('.toggle-table').length === 0) {
+                    $header.append('<button class="layui-btn layui-btn-xs toggle-table" title="展开/折叠">展开</button>');
+                }
+            }
+        });
+
+    });
+
+    // 委托绑定点击事件，保证动态生成表格也生效
+    $(document).on('click', '.toggle-table', function () {
+        var $btn = $(this);
+        var $scroll = $btn.closest('.fold-card').find('.table-scroll');
+
+        if ($scroll.hasClass('expanded')) {
+            $scroll.removeClass('expanded');
+            $btn.text('展开');
+        } else {
+            $scroll.addClass('expanded');
+            $btn.text('折叠');
+        }
+    });
+</script>

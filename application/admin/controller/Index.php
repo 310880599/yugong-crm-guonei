@@ -50,9 +50,7 @@ class Index extends Common
                 }
             }
         }
-        // 
-        $curname = Session::get('username');
-        $curget = Db::table('admin')->where(['username' => $curname])->find();
+        $curget = Admin::getMyInfo();
         $curgetnum = $curget['curgetnum'];
         $sysinfo = Db::table('system')->where(['id' => 1])->field('maxgetnum,custlimit')->find();
         $maxgetnum = $sysinfo['maxgetnum'];
@@ -63,8 +61,13 @@ class Index extends Common
                 array_shift($organizations);
             }
         } else $organizations = [];
+        $main ='main';
+        if($curget['group_id'] == $this->yygid){
+             $main ='Operator/main';
+        }
         $this->assign('organizations', json_encode($organizations));
         $this->assign('admin_id', $curget['admin_id']);
+        $this->assign('main', $main);
         $this->assign('curgetnum', ($maxgetnum - $curgetnum));
         $this->assign('menus', json_encode($menus, true));
         return $this->fetch();
