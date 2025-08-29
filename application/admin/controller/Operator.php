@@ -65,8 +65,8 @@ class Operator extends Common
                 $query->where($where);
             }
             if (!empty($keyword['at_time'])) {
-                $at_time = explode(' - ', $keyword['at_time']);
-                $query->where('at_time', 'between time', [$at_time[0], $at_time[1]]);
+                $where[] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+                $query->where($where);
             }
             // 限制当前用户
             $query->where(['oper_user' => Session::get('username')]);
@@ -82,9 +82,24 @@ class Operator extends Common
         ];
     }
 
+    public function perPanel()
+    {
+        $params  = Request::param();
+        if (request()->isPost()) {
+            $data = $this->getPerPanelData($params);
+            $this->assign('data', $data);
+            return $this->fetch('per_content');
+        }
+        $data = $this->getPerPanelData($params);
+        $this->assign('data', $data);
+        return $this->fetch();
+    }
+
+
     //数据分析
     public function main()
     {
+        
         $params  = Request::param();
 
         //最近跟进动态  
@@ -148,13 +163,9 @@ class Operator extends Common
             $o_where[] = $this->buildTimeWhere($keyword['timebucket'], 'create_time');
         }
         if (!empty($keyword['at_time'])) {
-            $at_time = explode(' - ', $keyword['at_time']);
-            $l_where[] = ['at_time', 'between time', [$at_time[0], $at_time[1]]];
-            $o_where[] = ['create_time', 'between time', [$at_time[0], $at_time[1]]];
+            $l_where[] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+            $o_where[] = $this->buildTimeWhere($keyword['at_time'], 'create_time');
         }
-
-
-
         //业务询盘数据
         $yw_where = array_merge($where, [['group_id', 'in', [$this->ywgid, $this->ywzgid]]]);
         $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
@@ -166,11 +177,12 @@ class Operator extends Common
         $yyData_total = $this->getLeadsSubQuery($l_where, 'oper_user')->where('channel', '<>', '')->where($yy_where)->group('team_name,channel')->field('team_name,channel,count(oper_user) as yy_num')->order('yy_num', 'desc')->order('team_name')->order('channel')->select();
 
         //产品数据
-        $oper_prod = Db::table('crm_leads')->join('admin', 'crm_leads.pr_user = admin.username')->where($where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->select();
-        $order_prod = Db::table('crm_client_order')->join('admin', 'crm_client_order.oper_user = admin.username')->where($o_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->select();
+        $oper_prod = Db::table('crm_leads')->join('admin', 'crm_leads.pr_user = admin.username')->where($where)->where($l_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->limit(10)->select();
+        $order_prod = Db::table('crm_client_order')->join('admin', 'crm_client_order.oper_user = admin.username')->where($where)->where($o_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->limit(10)->select();
 
-        $xp_count = Db::table('crm_leads')->where('at_time','between time',[strtotime('first day of this month'),time()])->where('oper_user',$current_admin['username'])->count();
-        $profit = Db::table('crm_client_order')->where('create_time','between time',[strtotime('first day of this month'),time()])->where('oper_user',$current_admin['username'])->sum('profit');
+
+        $xp_count = Db::table('crm_leads')->where([$this->buildTimeWhere('month', 'at_time')])->where('oper_user', $current_admin['username'])->count();
+        $profit = Db::table('crm_client_order')->where([$this->buildTimeWhere('month', 'create_time')])->where('oper_user', $current_admin['username'])->sum('profit');
         $data['xp_count'] = $xp_count;
         $data['profit'] = $profit;
 
@@ -183,6 +195,38 @@ class Operator extends Common
 
         $data['org'] = $current_admin['org'];
 
+        return $data;
+    }
+
+    private function getPerPanelData($params)
+    {
+        $data = [
+            'yw_data' => [],
+            'yy_data' => [],
+            'product_data' => [],
+        ];
+        $keyword  = $params['keyword'] ?? [];
+        $current_admin = Admin::getMyInfo();
+        $where = [['org', '=', $current_admin['org']],];
+        $l_where = [['oper_user', '=', $current_admin['username']]];
+        if (!empty($keyword['timebucket'])) {
+            $l_where[] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+        }
+        if (!empty($keyword['at_time'])) {
+            $l_where[] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+        }
+
+        //业务询盘数据
+        $yw_where = array_merge($where, [['group_id', 'in', [$this->ywgid, $this->ywzgid]]]);
+        $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
+        $ywData_total = $this->getLeadsSubQuery($l_where)->where('a.team_name', '<>', '')->where($yw_where)->group('a.team_name')->field('a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
+
+
+        //产品数据
+        $oper_prod = Db::table('crm_leads')->join('admin', 'crm_leads.pr_user = admin.username')->where($where)->where($l_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->select();
+        $data['yw_data']['list'] = $ywData;
+        $data['yw_data']['total'] = $ywData_total;
+        $data['product_data']['oper_prod'] = $oper_prod;
         return $data;
     }
 

@@ -47,7 +47,7 @@
     }
 
     .table-scroll {
-        max-height: 200px;
+        max-height: 250px;
         /* 折叠高度 */
         overflow: hidden;
         transition: max-height 0.3s ease;
@@ -223,7 +223,23 @@
 
         // 初始隐藏日期范围选择框
         $('#at_time').hide();
+        // 委托绑定
+        $(document).on('click', '.toggle-table', function () {
+            var $btn = $(this);
+            var $scroll = $btn.closest('.fold-card').find('.table-scroll');
 
+            if ($scroll.length === 0) {
+                console.warn("未找到 table-scroll 容器");
+                return;
+            }
+            $scroll.toggleClass('expanded');
+            console.log('点击了' + $scroll.hasClass('expanded'));
+            if ($scroll.hasClass('expanded')) {
+                $btn.text('折叠');
+            } else {
+                $btn.text('展开');
+            }
+        }); 
 
     })
 </script>

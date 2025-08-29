@@ -1,5 +1,5 @@
 <!-- 左边统计 -->
- 
+
 
 <div class=" layui-col-md8">
     <div class="layui-row layui-col-space15">
@@ -217,35 +217,20 @@
 </div>
 
 <script>
-    $(document).ready(function () {
-
-        // 遍历所有 fold-card，自动加按钮
+    function initFoldCard() {
         $('.fold-card').each(function () {
             var $card = $(this);
             var $header = $card.find('.layui-card-header');
             var $scroll = $card.find('.table-scroll');
-
-            // 如果表格高度超出折叠高度才添加按钮
-            if ($scroll[0].scrollHeight > $scroll.height()) {
-                if ($header.find('.toggle-table').length === 0) {
-                    $header.append('<button class="layui-btn layui-btn-xs toggle-table" title="展开/折叠">展开</button>');
-                }
+        if ($scroll.length && $scroll[0].scrollHeight > $scroll.height()+20) {
+            if ($header.find('.toggle-table').length === 0) {
+                $header.append('<button class="layui-btn layui-btn-xs toggle-table">展开</button>');
             }
-        });
-
-    });
-
-    // 委托绑定点击事件，保证动态生成表格也生效
-    $(document).on('click', '.toggle-table', function () {
-        var $btn = $(this);
-        var $scroll = $btn.closest('.fold-card').find('.table-scroll');
-
-        if ($scroll.hasClass('expanded')) {
-            $scroll.removeClass('expanded');
-            $btn.text('展开');
         } else {
-            $scroll.addClass('expanded');
-            $btn.text('折叠');
+            $header.find('.toggle-table').remove();
         }
     });
+    }
+    // 页面初始化时运行一次
+    $(document).ready(initFoldCard);
 </script>

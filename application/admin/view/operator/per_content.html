@@ -1,0 +1,107 @@
+<!-- 左边统计 -->
+
+
+<div class=" layui-col-md12">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md4">
+            <div class="layui-card fold-card">
+
+                <div class="layui-card-header">业务询盘排行</div>
+                <div class="layui-card-body table-scroll">
+                    <table id="yw_list_table" class="layui-table layui-table-sm fold-table">
+                        <thead>
+                            <tr>
+                                <th>业务员</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['yw_data']['list']" id='vo'}
+                            <tr>
+                                <td><b>{$vo['username']}</b> ({$vo['team_name']})</td>
+                                <td>{$vo['yw_num']}</td>
+                            </tr>
+                            {/volist}
+                            {if !$data['product_data']['oper_prod']}<tr>
+                                <td colspan="2">暂无数据</td>
+                            </tr>{/if}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="layui-col-md4">
+            <div class="layui-card">
+                <div class="layui-card-header">业务询盘汇总</div>
+                <div class="layui-card-body">
+                    <table id="yw_total_table" class="layui-table layui-table-sm">
+
+                        <thead>
+                            <tr>
+                                <th>团队</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['yw_data']['total']" id='vo' key="k" }
+                            <tr>
+                                <td><span style="font-weight: 600;">{$vo['team_name']}</span> </td>
+                                <td>{$vo['yw_num']}</td>
+                            </tr>
+                            {/volist}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="layui-col-md4">
+            <div class="layui-card fold-card">
+                <div class="layui-card-header">询盘产品排行</div>
+                <div class="layui-card-body table-scroll">
+
+                    <table id="pd_list_table" class="layui-table layui-table-sm fold-table">
+
+                        <thead>
+                            <tr>
+                                <th>产品</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            {volist name="$data['product_data']['oper_prod']" id='vo'}
+                            <tr>
+                                <td>{$vo['product_name']}</td>
+                                <td>{$vo['count']}</td>
+                            </tr>
+                            {/volist}
+                            {if !$data['product_data']['oper_prod']}<tr>
+                                <td colspan="2">暂无数据</td>
+                            </tr>{/if}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function initFoldCard() {
+        $('.fold-card').each(function () {
+            var $card = $(this);
+            var $header = $card.find('.layui-card-header');
+            var $scroll = $card.find('.table-scroll');
+            if ($scroll.length && $scroll[0].scrollHeight > $scroll.height() + 20) {
+                if ($header.find('.toggle-table').length === 0) {
+                    $header.append('<button class="layui-btn layui-btn-xs toggle-table">展开</button>');
+                }
+            } else {
+                $header.find('.toggle-table').remove();
+            }
+        });
+    }
+    // 页面初始化时运行一次
+    $(document).ready(initFoldCard);
+</script>

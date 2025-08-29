@@ -219,7 +219,6 @@ class Common extends Controller
         if (!$timebucket) {
             return [];
         }
-
         $timeRanges = [
             'today' => ['today', 'today'],
             'yesterday' => ['yesterday', 'yesterday'],
@@ -237,8 +236,15 @@ class Common extends Controller
             if ($timebucket === '-2 hours') {
                 return [[$field, '>=', $start]];
             }
+
             return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($start)), date('Y-m-d 23:59:59', strtotime($end))]];
         }
+
+        if (strpos($timebucket, '-') !== false) {
+            list($start, $end) = explode(' - ', $timebucket);
+            return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($start)), date('Y-m-d 23:59:59', strtotime($end))]];
+        }
+        
         // 自定义日期
         return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($timebucket)), date('Y-m-d 23:59:59', strtotime($timebucket . '+1 day'))]];
     }
