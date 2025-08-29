@@ -234,43 +234,69 @@ class Auth extends Common
     public function adminEdit()
     {
         if (request()->isPost()) {
-            //判断是否有修改权限
-            if (!$this->checkAuth('adminEdit')) {
-                return $result = ['code' => 0, 'msg' => '您无此操作权限'];
-            }
-            //return $result = ['code'=>0,'msg'=>'当前为演示系统无法修改信息!'];
-            $data = input('post.');
-            $pwd = input('post.pwd');
-            $map[] = ['admin_id', '<>', $data['admin_id']];
-            $where['admin_id'] = $data['admin_id'];
-            $info = Admin::getInfo(input('admin_id'));
-            if (!$info) {
-                return $result = ['code' => 0, 'msg' => '用户不存在!'];
-            }
-            if ($data['username']) {
-                $map[] = ['username', '=', $data['username']];
-                $check_user = Admin::where($map)->find();
-                if ($check_user) {
-                    return $result = ['code' => 0, 'msg' => '用户已存在，请重新输入用户名!'];
-                }
-            }
-            if ($pwd && $pwd != $info['pwd']) {
-                $data['pwd'] = input('post.pwd', '', 'md5');
-            } else {
-                unset($data['pwd']);
-            }
-            $msg = $this->validate($data, 'app\admin\validate\Admin');
-            if ($msg != 'true') {
-                return $result = ['code' => 0, 'msg' => $msg];
-            }
-            Admin::update($data, $where);
-            if ($data['admin_id'] == session('aid')) {
-                session('username', $data['username']);
-                $avatar = $data['avatar'] == '' ? '/static/admin/images/0.jpg' : $data['avatar'];
-                session('avatar', $avatar);
-            }
-            return $result = ['code' => 1, 'msg' => '管理员修改成功!', 'url' => url('adminList')];
-        } else {
+    // 判断是否有修改权限
+    if (!$this->checkAuth('adminEdit')) {
+        return $result = ['code' => 0, 'msg' => '您无此操作权限'];
+    }
+
+    $data = input('post.');
+    $pwd = input('post.pwd');
+    $map[] = ['admin_id', '<>', $data['admin_id']];
+    $where['admin_id'] = $data['admin_id'];
+    $info = Admin::getInfo(input('admin_id'));
+
+    if (!$info) {
+        return $result = ['code' => 0, 'msg' => '用户不存在!'];
+    }
+
+    // 保存旧的用户名
+    $oldUsername = $info['username'];
+
+    if ($data['username']) {
+        $map[] = ['username', '=', $data['username']];
+        $check_user = Admin::where($map)->find();
+        if ($check_user) {
+            return $result = ['code' => 0, 'msg' => '用户已存在，请重新输入用户名!'];
+        }
+    }
+
+    if ($pwd && $pwd != $info['pwd']) {
+        $data['pwd'] = input('post.pwd', '', 'md5');
+    } else {
+        unset($data['pwd']);
+    }
+
+    $msg = $this->validate($data, 'app\admin\validate\Admin');
+    if ($msg != 'true') {
+        return $result = ['code' => 0, 'msg' => $msg];
+    }
+
+    // 开启事务（可选）
+    Db::startTrans();
+    try {
+        Admin::update($data, $where);
+
+        // 如果 username 发生变化，同步更新 crm_leads 表
+        if (isset($data['username']) && $data['username'] !== $oldUsername) {
+            Db::name('crm_leads')
+                ->where('pr_user', $oldUsername)
+                ->update(['pr_user' => $data['username']]);
+        }
+
+        Db::commit();
+    } catch (\Exception $e) {
+        Db::rollback();
+        return ['code' => 0, 'msg' => '更新失败，请重试'];
+    }
+
+    if ($data['admin_id'] == session('aid')) {
+        session('username', $data['username']);
+        $avatar = $data['avatar'] == '' ? '/static/admin/images/0.jpg' : $data['avatar'];
+        session('avatar', $avatar);
+    }
+
+    return $result = ['code' => 1, 'msg' => '管理员修改成功!', 'url' => url('adminList')];
+} else {
             // $auth_group = AuthGroup::all();
             // $admin = new Admin();
             // $info = $admin->getInfo(input('admin_id'));
