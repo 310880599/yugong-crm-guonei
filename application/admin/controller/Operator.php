@@ -90,6 +90,7 @@ class Operator extends Common
             $this->assign('data', $data);
             return $this->fetch('per_content');
         }
+        $params['keyword']['timebucket'] = 'today';
         $data = $this->getPerPanelData($params);
         $this->assign('data', $data);
         return $this->fetch();
