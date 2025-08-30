@@ -1453,11 +1453,7 @@ class Client extends Common
         $contactGroup = $this->formatContact($result['contacts'])[$result['id']];
         $result['contacts'] = $this->getContactType($contactGroup);
         $cid = Session::get('aid'); //获取当前登录账号
-        $curname = Session::get('username'); //获取当前登录账号
-        $curname = Session::get('username'); //获取当前登录账号
-
-
-
+        $curname = Session::get('username'); //获取当前登录账
         //$this ->assign('cid',$cid);  //获取当前登录账号$data['id']
         $group_id = Db::table('admin')->where(['admin_id' => $cid])->field('group_id')->find();
 

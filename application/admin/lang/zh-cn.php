@@ -2,7 +2,7 @@
 return [
     'hello'         => '欢迎使用CLTPHP',
     'adminInfo'     => '个人信息',
-    'logout'        =>'注销',
+    'logout'        =>'退出',
     'editPasswd'    =>'修改密码',
     'home'          =>'浏览网站',
     'clearCache'    =>'清除缓存',

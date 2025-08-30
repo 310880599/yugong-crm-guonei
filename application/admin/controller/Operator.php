@@ -5,7 +5,6 @@ namespace app\admin\controller;
 use think\Db;
 use think\facade\Request;
 use think\facade\Session;
-use think\Container;
 use app\admin\model\Admin;
 
 class Operator extends Common
@@ -82,18 +81,122 @@ class Operator extends Common
         ];
     }
 
-    public function perPanel()
+    //跟进
+    public function dialogue()
     {
-        $params  = Request::param();
-        if (request()->isPost()) {
-            $data = $this->getPerPanelData($params);
-            $this->assign('data', $data);
-            return $this->fetch('per_content');
+        $result = Db::table('crm_leads')->where(['id' => Request::param('id')])->find();
+        $result['comment'] = Db::table('crm_comment')->alias('com')->join('admin adm', 'com.user_id = adm.admin_id')->where(['leads_id' => Request::param('id')])->field('com.*,adm.username,adm.avatar')->select();
+        foreach ($result['comment'] as $k => $v) {
+            $result['comment'][$k]['reply'] = Db::table('crm_reply')->where(['comment_id' => $v['id']])->select();
         }
-        $params['keyword']['timebucket'] = 'today';
-        $data = $this->getPerPanelData($params);
-        $this->assign('data', $data);
+        $current_admin = Admin::getMyInfo();
+        $this->assign('group_id', $current_admin['group_id']);
+        $this->assign('curname', $current_admin['username']);
+        $this->assign('result', $result);
         return $this->fetch();
+    }
+
+    public function order()
+    {
+        if (request()->isPost()) {
+            $params = Request::param();
+            if (!isset($params['keyword'])) {
+                $params['keyword'] = [];
+            }
+            $params['keyword']['timebucket'] = 'month';
+            Request::merge($params);
+            return $this->personOrderSearch();
+        }
+        $this->assign('customer_type', Order::CUSTOMER_TYPE);
+        $this->assign('sourceList', Db::name('crm_client_status')->distinct(true)->column('status_name'));
+        return $this->fetch();
+    }
+
+    public function personOrderSearch()
+    {
+        $where = [];
+        $client_where = [];
+        $oper_user = Session::get('username') ?? '';
+        //展示自己创建的订单
+        $where[] = ['oper_user', '=', $oper_user];
+        $client_where[] = ['oper_user', '=', $oper_user];
+        //判断权限
+        $page = input('page') ?? 1;
+        $limit = input('limit') ?? config('pageSize');
+        $keyword = Request::param('keyword');
+        // 过滤掉 null 元素
+        if ($keyword) $keyword = array_filter($keyword);
+
+        // if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
+        if (isset($keyword['order_no'])) $where[] = ['order_no', 'like', "%{$keyword['order_no']}%"];
+        if (isset($keyword['timebucket'])) {
+            $where[] = $this->buildTimeWhere($keyword['timebucket'], 'order_time');
+
+            $timeWhere['at_time'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+            $timeWhere['to_kh_time'] = $this->buildTimeWhere($keyword['timebucket'], 'to_kh_time');
+            $client_where[] =  function ($query) use ($timeWhere) {
+                $query->where(...$timeWhere['at_time']);
+                $query->whereOr(...$timeWhere['to_kh_time']);
+            };
+        }
+        if (isset($keyword['min_money'])) $where[] = ['money', '>', $keyword['min_money']];
+        if (isset($keyword['max_money'])) $where[] = ['money', '<', $keyword['max_money']];
+        if (isset($keyword['min_profit'])) $where[] = ['profit', '>', $keyword['min_profit']];
+        if (isset($keyword['max_profit'])) $where[] = ['profit', '<', $keyword['max_profit']];
+        if (isset($keyword['min_margin_rate'])) $where[] = ['margin_rate', '>', $keyword['min_margin_rate']];
+        if (isset($keyword['max_margin_rate'])) $where[] = ['margin_rate', '<', $keyword['max_margin_rate']];
+        if (isset($keyword['cname'])) {
+            $where[] = ['cname', 'like', "%{$keyword['cname']}%"];
+            // $client_where[] = ['kh_name', 'like', "%{$keyword['cname']}%"];
+        }
+        if (isset($keyword['contact'])) {
+            $where[] = ['contact', 'like', "%{$keyword['contact']}%"];
+        }
+        if (isset($keyword['customer_type'])) {
+            $where[] = ['customer_type', '=', $keyword['customer_type']];
+        }
+        if (isset($keyword['product_name'])) {
+            $where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
+        }
+        if (isset($keyword['source'])) {
+            $where[] = ['source', '=', $keyword['source']];
+            //兼容历史数据
+            $kh_source = strtolower($keyword['source']);
+            $client_where[] = ['kh_status', 'like', "%$kh_source%"];
+        }
+        $list = Db::table('crm_client_order')
+            ->where($where)
+            ->order('create_time desc')
+            ->paginate([
+                'list_rows' => $limit,
+                'page' => $page
+            ])
+            ->toArray();
+
+
+        //成单率
+
+        $totalInquiries = Db::table('crm_leads')->where('status', 1)->where($client_where)->count();
+
+        $successOrders = $list['total'];
+        $successRate = $totalInquiries > 0 ? ($successOrders / $totalInquiries * 100) : 0;
+        $totalMoney = Db::table('crm_client_order')
+            ->where($where)
+            ->sum('money');
+        $totalProfit = Db::table('crm_client_order')
+            ->where($where)
+            ->sum('profit');
+        return $result = [
+            'code' => 0,
+            'msg' => '获取成功!',
+            'data' => $list['data'],
+            'count' => $list['total'],
+            'rel' => 1,
+            'totalInquiries' => $totalInquiries,
+            'successRate' => number_format($successRate, 2),
+            'totalMoney' => number_format($totalMoney, 2),
+            'totalProfit' => number_format($totalProfit, 2),
+        ];
     }
 
 
@@ -145,6 +248,20 @@ class Operator extends Common
         $data = $this->getPanelData($params);
         $this->assign('data', $data);
         return $this->fetch('op_main');
+    }
+
+    public function perPanel()
+    {
+        $params  = Request::param();
+        if (request()->isPost()) {
+            $data = $this->getPerPanelData($params);
+            $this->assign('data', $data);
+            return $this->fetch('per_content');
+        }
+        $params['keyword']['timebucket'] = 'today';
+        $data = $this->getPerPanelData($params);
+        $this->assign('data', $data);
+        return $this->fetch();
     }
 
     private function getPanelData($params)

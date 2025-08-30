@@ -156,7 +156,7 @@ class Index extends Common
             // ✅ 查询当月客户数量
             $clientCountMonth = Db::table('crm_leads')
                 ->where(['pr_user' => $username, 'status' => 1])
-                ->whereTime('ut_time', 'month') // 根据你的创建时间字段调整
+                ->whereTime('at_time', 'month') // 根据你的创建时间字段调整
                 ->count();
 
             // 添加字段
