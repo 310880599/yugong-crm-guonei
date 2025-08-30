@@ -195,20 +195,20 @@
                 { field: 'last_up_records', title: '最新跟进记录' },
                 { field: 'pr_user', title: '负责人' },
                 { field: 'at_time', title: '创建时间', sort: true },
-                { fixed: 'right',width: 120, title: '操作', align: 'center', toolbar: '#action' }
+                { width: 120, title: '操作', align: 'center', toolbar: '#action' }
             ]];
 
             restoreColWidth(cols[0]);   // ← 从本地恢复
 
             /* ===== 3. 渲染表格 ===== */
-            var tableIns = table.render({
+            var tableIns = table.render({ 
                 elem: '#' + tableId,
                 id: tableId,
                 url: '{:url("perList")}',
                 method: 'post',
                 toolbar: '#topBtn',
                 defaultToolbar: ['filter'],
-                where: { keyword: {"timebucket":"today"} },
+                where: { keyword: { "timebucket": "today" } },
                 page: true,
                 limit: 10,
                 cols: cols,
@@ -260,11 +260,11 @@
                 trigger: 'click'
             });
 
-             // 控制日期范围选择框的显示与隐藏
-            form.on('select(dateRange)', function(data) {
+            // 控制日期范围选择框的显示与隐藏
+            form.on('select(dateRange)', function (data) {
                 const isCustom = data.value === '';
                 $('#at_time').toggle(isCustom);
-                if(!isCustom){
+                if (!isCustom) {
                     $('#at_time').val('');
                 }
             });
@@ -272,7 +272,7 @@
             // 初始隐藏日期范围选择框
             $('#at_time').hide();
         });
-        const products = new EditableSelect(document.getElementById('product_name'), {$productList| raw}, '产品');
+        const products = new EditableSelect(document.getElementById('product_name'), {$productList|raw}, '产品');
         // 公共弹窗方法
         function layer_add(title, url) {
             layer.open({
