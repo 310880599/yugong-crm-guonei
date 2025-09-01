@@ -108,6 +108,12 @@
             }
         });
     }
+
     // 页面初始化时运行一次
-    $(document).ready(initFoldCard);
+    $(document).ready(init);
+
+    function init() {
+        initFoldCard();
+        ExportSelectTables.addCheckboxes();
+    }
 </script>

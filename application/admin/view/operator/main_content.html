@@ -224,15 +224,20 @@
             var $card = $(this);
             var $header = $card.find('.layui-card-header');
             var $scroll = $card.find('.table-scroll');
-        if ($scroll.length && $scroll[0].scrollHeight > $scroll.height()+20) {
-            if ($header.find('.toggle-table').length === 0) {
-                $header.append('<button class="layui-btn layui-btn-xs toggle-table">展开</button>');
+            if ($scroll.length && $scroll[0].scrollHeight > $scroll.height() + 20) {
+                if ($header.find('.toggle-table').length === 0) {
+                    $header.append('<button class="layui-btn layui-btn-xs toggle-table">展开</button>');
+                }
+            } else {
+                $header.find('.toggle-table').remove();
             }
-        } else {
-            $header.find('.toggle-table').remove();
-        }
-    });
+        });
     }
     // 页面初始化时运行一次
-    $(document).ready(initFoldCard);
+    $(document).ready(init);
+
+    function init(){
+        initFoldCard();
+         ExportSelectTables.addCheckboxes();
+    }
 </script>
