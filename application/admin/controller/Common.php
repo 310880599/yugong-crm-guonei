@@ -10,8 +10,8 @@ class Common extends Controller
 {
     const ORG = [
         0 => 'admin',
-        1 => '1s',
-        2 => '2s',
+        1 => '豫工',
+        // 2 => '2s',
         3 => '3s'
     ];
     public  $channel_map = [
