@@ -37,6 +37,7 @@ class Common extends Controller
     public $yygid = 12; //运营id
     public $ywzgid = 11; //业务主管
     public $ywgid = 10; //业务员
+    public $org_fgx=',';
 
 
     protected $mod, $role, $system, $nav, $menudata, $cache_model, $categorys, $module, $moduleid, $adminRules, $HrefId;
@@ -143,12 +144,12 @@ class Common extends Controller
     public function getYyList($channel = null)
     {
         $current_admin = Admin::getMyInfo();
-        $where = [['group_id', '=', $this->yygid]];
-
-        if ($current_admin['org']  && $current_admin['org'] != 'admin') $where[] = ['org', '=', $current_admin['org']];
+        $where = [['group_id', '=', $this->yygid], ['is_open', '=', 1]];
+        if ($current_admin['org']  &&  $current_admin['org'] != 'admin') {
+            $where[] = $this->getOrgWhere($current_admin['org']);
+        }
 
         if ($channel) $where[] = ['channel', '=', $channel];
-
         $yyList = [];
         $_yyList = [];
         $list = Admin::where($where)->order('org')->order('channel', 'asc')->field('admin_id,username,channel')->select();
@@ -244,8 +245,22 @@ class Common extends Controller
             list($start, $end) = explode(' - ', $timebucket);
             return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($start)), date('Y-m-d 23:59:59', strtotime($end))]];
         }
-        
+
         // 自定义日期
         return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($timebucket)), date('Y-m-d 23:59:59', strtotime($timebucket . '+1 day'))]];
+    }
+
+    public function getOrg($org){
+        return explode($this->org_fgx,trim($org, $this->org_fgx));
+    }
+
+    public function getOrgWhere($org){
+        return function ($query) use($org){
+           $org_list = $this->getOrg($org);
+           $query->where('org', 'in',$org_list);
+           foreach($org_list as $v){
+               $query->whereOr('org', 'like', '%'.$this->org_fgx . $v. $this->org_fgx.'%');
+           }
+        };  
     }
 }

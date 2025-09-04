@@ -89,6 +89,7 @@ class Client extends Common
     public function index()
     {
         if (request()->isPost()) {
+            return $this->personClientSearch();
             $page = input('page', 1);
             $pageSize = input('limit', config('pageSize'));
             $adminId = Session::get('aid');
@@ -136,7 +137,7 @@ class Client extends Common
                 ])
                 ->leftJoin('crm_contacts c', 'l.id = c.leads_id')
                 ->group('l.id')
-                ->order('l.ut_time desc')
+                ->order('l.at_time desc')
                 ->paginate([
                     'list_rows' => $pageSize,
                     'page' => $page
@@ -174,13 +175,14 @@ class Client extends Common
     public function perCliList()
     {
         if (request()->isPost()) {
+            return $this->personClientSearch();
             $key = input('post.key');
             $page = input('page') ? input('page') : 1;
             $pageSize = input('limit') ? input('limit') : config('pageSize');
             $list = db('crm_leads')
                 ->where(['status' => 1, 'issuccess' => -1])
                 ->where(['pr_user' => Session::get('username')])
-                ->order('ut_time desc')
+                ->order('at_time desc')
                 ->paginate(array('list_rows' => $pageSize, 'page' => $page))
                 ->toArray();
             return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
@@ -191,7 +193,8 @@ class Client extends Common
         $khRankList = Db::table('crm_client_rank')->select();
         $khStatusList = Db::table('crm_client_status')->select();
         $xsSourceList = Db::table('crm_clues_source')->select();
-
+        $yyList = $this->getYyList();
+        $this->assign('_yyList', json_encode($yyList['_yyList']));
         $this->assign('khRankList', $khRankList);
         $this->assign('khStatusList', $khStatusList);
         $this->assign('xsSourceList', $xsSourceList);  //线索/客户来源
@@ -214,7 +217,7 @@ class Client extends Common
             $pageSize = input('limit') ? input('limit') : config('pageSize');
             $list = db('crm_leads')
                 ->where($where)
-                ->order('ut_time desc')
+                ->order('at_time desc')
                 ->paginate(array('list_rows' => $pageSize, 'page' => $page))
                 ->toArray();
             return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
@@ -881,9 +884,9 @@ class Client extends Common
         foreach ($require_checke as $i => $v) {
             //判断是否是手机号或者whatsapp号码
             if (self::validatePhoneNumber($v)) {
-                $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->where(function($q) use($v){
-                    $q->where('vdigits',$v)
-                    ->whereOrRaw("CONCAT(contact_extra, vdigits) = '{$v}'");
+                $contactExist = db('crm_contacts')->where($where)->where('is_delete', 0)->where(function ($q) use ($v) {
+                    $q->where('vdigits', $v)
+                        ->whereOrRaw("CONCAT(contact_extra, vdigits) = '{$v}'");
                 })->find();
                 if ($contactExist) {
                     $find =  db('crm_leads')->where('id', $contactExist['leads_id'])->find();
@@ -1000,7 +1003,7 @@ class Client extends Common
                 //新增商品
                 $product_name = Request::param('product_name');
                 $product = $this->checkProduct($product_name);
-                if(!$product){
+                if (!$product) {
                     $this->addProduct($product_name);
                 }
                 // 提交事务
@@ -1063,7 +1066,7 @@ class Client extends Common
                 //新增商品
                 $product_name = Request::param('product_name');
                 $product = $this->checkProduct($product_name);
-                if(!$product){
+                if (!$product) {
                     $this->addProduct($product_name);
                 }
                 // 提交事务
@@ -1419,6 +1422,12 @@ class Client extends Common
         $page = input('page') ? input('page') : 1;
         $limit = input('limit') ? input('limit') : config('pageSize');
         $keyword = Request::param('keyword');
+              if (!empty($keyword['timebucket'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+        }
+        if (!empty($keyword['at_time'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+        }
         $list = model('client')->getClientSearchList($page, $limit, $keyword);
         return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
     }
@@ -1428,6 +1437,12 @@ class Client extends Common
         $page = input('page') ? input('page') : 1;
         $limit = input('limit') ? input('limit') : config('pageSize');
         $keyword = Request::param('keyword');
+        if (!empty($keyword['timebucket'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+        }
+        if (!empty($keyword['at_time'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+        }
         $list = model('client')->getPersonClientSearchList($page, $limit, $keyword);
         return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
     }

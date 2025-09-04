@@ -266,6 +266,7 @@ class Operator extends Common
 
     private function getPanelData($params)
     {
+        
         $data = [
             'yw_data' => [],
             'yy_data' => [],
@@ -273,7 +274,7 @@ class Operator extends Common
         ];
         $keyword  = $params['keyword'] ?? [];
         $current_admin = Admin::getMyInfo();
-        $where = [['org', '=', $current_admin['org']]];
+        $where = [$this->getOrgWhere($current_admin['org']),['is_open','=',1]];
         $l_where = [];
         $o_where = [];
         if (!empty($keyword['timebucket'])) {
@@ -286,12 +287,12 @@ class Operator extends Common
         }
         //业务询盘数据
         $yw_where = array_merge($where, [['group_id', 'in', [$this->ywgid, $this->ywzgid]]]);
-        $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
+        $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->order('a.username')->select();
         $ywData_total = $this->getLeadsSubQuery($l_where)->where('a.team_name', '<>', '')->where($yw_where)->group('a.team_name')->field('a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
 
         //运营数据
         $yy_where = array_merge($where, [['group_id', '=', $this->yygid]]);
-        $yyData = $this->getLeadsSubQuery($l_where, 'oper_user')->where($yy_where)->group('username,team_name,channel')->field('username,team_name,channel,count(oper_user) as yy_num')->order('yy_num', 'desc')->order('team_name')->order('channel')->select();
+        $yyData = $this->getLeadsSubQuery($l_where, 'oper_user')->where($yy_where)->group('username,team_name,channel')->field('username,team_name,channel,count(oper_user) as yy_num')->order('yy_num', 'desc')->order('team_name')->order('channel')->order('username')->select();
         $yyData_total = $this->getLeadsSubQuery($l_where, 'oper_user')->where('channel', '<>', '')->where($yy_where)->group('team_name,channel')->field('team_name,channel,count(oper_user) as yy_num')->order('yy_num', 'desc')->order('team_name')->order('channel')->select();
 
         //产品数据
@@ -311,8 +312,8 @@ class Operator extends Common
         $data['product_data']['oper_prod'] = $oper_prod;
         $data['product_data']['order_prod'] = $order_prod;
 
-        $data['org'] = $current_admin['org'];
-
+        $data['org'] = trim($current_admin['org'],$this->org_fgx);
+        
         return $data;
     }
 
@@ -325,7 +326,7 @@ class Operator extends Common
         ];
         $keyword  = $params['keyword'] ?? [];
         $current_admin = Admin::getMyInfo();
-        $where = [['org', '=', $current_admin['org']],];
+        $where = [$this->getOrgWhere($current_admin['org']),['is_open','=',1]];
         $l_where = [['oper_user', '=', $current_admin['username']]];
         if (!empty($keyword['timebucket'])) {
             $l_where[] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
@@ -336,7 +337,7 @@ class Operator extends Common
 
         //业务询盘数据
         $yw_where = array_merge($where, [['group_id', 'in', [$this->ywgid, $this->ywzgid]]]);
-        $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
+        $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->order('a.username')->select();
         $ywData_total = $this->getLeadsSubQuery($l_where)->where('a.team_name', '<>', '')->where($yw_where)->group('a.team_name')->field('a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
 
 

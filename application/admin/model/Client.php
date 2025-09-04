@@ -42,13 +42,9 @@ class Client extends Model
         $mapXsSource = []; //线索/客户来源
         $mapPrUser = []; //业务员/负责人
 
-
-        if ($keyword['at_time'] != '') {
-            $at = $keyword['at_time']; //日期
-            $end_at = date('Y-m-d', strtotime("$at+1day"));
-            $mapAtTime = [['at_time', 'between time', [strtotime($at), strtotime($end_at)]]];
+        if (!empty($keyword['timebucket'])) {
+            $mapAtTime[]= $keyword['timebucket'];
         }
-
         if ($keyword['kh_rank'] != '') {
 
             $mapKhRank =  ['kh_rank' => $keyword['kh_rank']];
@@ -100,9 +96,7 @@ class Client extends Model
             ->where($mapPrUser)
             ->where($mapAtTime)
             ->where(['status' => 1, 'issuccess' => -1])
-            ->whereTime('at_time', $keyword['timebucket'] ? $keyword['timebucket'] : null)
-            //->whereTime('at_time',$keyword['timebucket'] ? $keyword['timebucket'] : '')
-            ->order('ut_time desc')
+            ->order('at_time desc')
             ->paginate(array('list_rows' => $limit, 'page' => $page))
             ->toArray();
 
@@ -139,13 +133,11 @@ class Client extends Model
         $mapPhone = []; //手机号模糊查询
         $mapKhName = []; //客户名称
         $mapXsSource = []; //线索/客户来源
+        $where = [];
 
 
-
-        if ($keyword['at_time'] != '') {
-            $at = $keyword['at_time']; //日期
-            $end_at = date('Y-m-d', strtotime("$at+1day"));
-            $mapAtTime = [['at_time', 'between time', [strtotime($at), strtotime($end_at)]]];
+        if (!empty($keyword['timebucket'])) {
+            $mapAtTime[] = $keyword['timebucket'];
         }
 
         if ($keyword['kh_rank'] != '') {
@@ -162,6 +154,10 @@ class Client extends Model
             $mapPhone = $this->getContactSearch($keyword['phone']);
         }
 
+        if (!empty($keyword['oper_user'] )) {
+            $where[] =['oper_user', 'like', '%' . $keyword['oper_user'] . '%'];
+        }
+
         if ($keyword['kh_name'] != '') {
             $mapKhName = [['kh_name', 'like', '%' . $keyword['kh_name'] . '%']];
         }
@@ -171,8 +167,6 @@ class Client extends Model
             $mapXsSource =  ['xs_source' => $keyword['xs_source']];
         }
 
-
-
         $result  = Db::table('crm_leads')
             ->where($mapPhone)
             ->where($mapKhName)
@@ -180,10 +174,10 @@ class Client extends Model
             ->where($mapKhRank)
             ->where($mapXsSource)
             ->where($mapAtTime)
+            ->where($where)
             ->where(['status' => 1, 'issuccess' => -1]) //0 线索，1客户，2公海
             ->where(['pr_user' => session('username')]) //负责人
-            ->whereTime('at_time', $keyword['timebucket'] ? $keyword['timebucket'] : null)
-            ->order('ut_time desc')
+            ->order('at_time desc')
             ->paginate(array('list_rows' => $limit, 'page' => $page))
             ->toArray();
 
@@ -259,7 +253,7 @@ class Client extends Model
             ->where(['status' => 1, 'issuccess' => 1]) //0 线索，1客户，2公海
             // ->where(['pr_user' => session('username')]) //负责人
             ->whereTime('at_time', $keyword['timebucket'] ? $keyword['timebucket'] : null)
-            ->order('ut_time desc')
+            ->order('at_time desc')
             ->paginate(array('list_rows' => $limit, 'page' => $page))
             ->toArray();
 

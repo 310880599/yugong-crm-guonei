@@ -63,15 +63,7 @@
 
                     <div class="layui-form-item" style="text-align: left;padding-left: 20px;">
 
-                        <div class="layui-inline">
-                            <label class="layui-form-label">日期查询：</label>
-                            <div class="layui-input-inline">
-                                <input type="text" class="layui-input" autocomplete="off" name="at_time" id="at_time"
-                                    placeholder="请输入日期查询">
-                            </div>
-
-                        </div>
-
+            
                         <div class="layui-inline">
                             <label class="layui-form-label">客户级别：</label>
                             <div class="layui-input-inline">
@@ -107,23 +99,6 @@
                             </div>
                         </div>
 
-                        <!-- <div class="layui-inline">
-                        <label class="layui-form-label">时间查询：</label>
-                        <div class="layui-input-inline">
-                            <select name="timebucket">
-                                <option value="">请选择时间</option>
-                                <option value="today">今天</option>
-                                <option value="yesterday">昨天</option>
-                                <option value="week">本周</option>
-                                <option value="last week">上周</option>
-                                <option value="month">本月</option>
-                                <option value="last month">上月</option>
-                                <option value="year">今年</option>
-                                <option value="last year">去年</option>
-                                <option value="-2 hours">两个小时内</option>
-                            </select>
-                        </div>
-                    </div> -->
 
                         <div class="layui-inline">
                             <label class="layui-form-label" style="">客户名称：</label>
@@ -132,20 +107,6 @@
                                     class="layui-input">
                             </div>
                         </div>
-
-                        <!--    <div class="layui-inline">
-                        <label class="layui-form-label">客户来源：</label>
-                        <div class="layui-input-inline">
-                            <select name="xs_source" id="xs_source">
-                                <option value="">请选择客户来源</option>
-
-                                {volist name='xsSourceList' id='vo'}
-                                <option value="{$vo.source_name}">{$vo.source_name}</option>
-                                {/volist}
-
-                            </select>
-                        </div>
-                    </div> -->
 
 
                         <div class="layui-inline">
@@ -159,6 +120,27 @@
                                     {/volist}
 
                                 </select>
+                            </div>
+                        </div>
+
+                        <div class="layui-inline">
+                            <label class="layui-form-label">日期查询：</label>
+                            <div class="layui-input-inline">
+                                <select id="dateRange" lay-filter="dateRange" name="timebucket" class="layui-select">
+                                    <option value="">自定义</option>
+                                    <option value="today">今天</option>
+                                    <option value="yesterday">昨天</option>
+                                    <option value="week">本周</option>
+                                    <option value="last week">上周</option>
+                                    <option value="month" selected>本月</option>
+                                    <option value="last month">上月</option>
+                                    <option value="year">今年</option>
+                                    <option value="last year">去年</option>
+                                    <option value="-2 hours">两个小时内</option>
+                                </select>
+                            </div>
+                            <div class="layui-input-inline">
+                                <input type="text" class="layui-input" id="at_time" name="at_time" placeholder="选择日期范围">
                             </div>
                         </div>
 
@@ -216,6 +198,7 @@
                 elem: '#table-list',
                 url: '{:url("index")}',
                 method: 'post',
+                where: { keyword: { "timebucket": "month" } },
                 toolbar: '#topBtn',
                 defaultToolbar: ['filter', 'print', 'exports'],
                 cols: [[
@@ -449,9 +432,23 @@
 
             });
 
+                    // 日期控件
             laydate.render({
-                elem: '#at_time'
+                elem: '#at_time',
+                range: true, // 开启范围选择
+                trigger: 'click'
             });
+            // 控制日期范围选择框的显示与隐藏
+            form.on('select(dateRange)', function (data) {
+                const isCustom = data.value === '';
+                $('#at_time').toggle(isCustom);
+                if (!isCustom) {
+                    $('#at_time').val('');
+                }
+            });
+
+            // 初始隐藏日期范围选择框
+            $('#at_time').hide();
 
             //批量导入
             var indexMsg;

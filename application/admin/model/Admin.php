@@ -1,4 +1,5 @@
 <?php
+
 namespace app\admin\model;
 
 use think\Model;
@@ -31,21 +32,24 @@ class Admin extends Model
 
     public function getInfo($userId)
     {
-        return Db::name('admin')->where('admin_id', $userId)->find();
+        $info = Db::name('admin')->where('admin_id', $userId)->find();
+        return $info;
     }
 
-    public function getMyInfo(){
-        $info = session('user_info');
-        if($info){
-            return $info;
+    public function getMyInfo($refresh = false)
+    {
+        if (!$refresh) {
+            $info = session('user_info');
+            if ($info) {
+                return $info;
+            }
         }
         $admin_id = session('aid');
         $info = Db::name('admin')->where('admin_id', $admin_id)->find();
-        if($info){
+        if ($info) {
             session('user_info', $info);
         }
         return $info;
-
     }
     // 验证码检查方法已移除
 }

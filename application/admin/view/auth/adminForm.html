@@ -7,7 +7,7 @@
         <div class="layui-form-item">
             <label class="layui-form-label">所属用户组</label>
             <div class="layui-input-4">
-                 
+
                 <select name="group_id" id="user_group" lay-verify="required" lay-filter="groupSelect">
                     <option value="">请选择用户组</option>
                     {volist name="authGroup" id="vo"}
@@ -22,8 +22,8 @@
                 <select name="parent_id">
                     <option value="0">无（不设上级）</option>
                     {volist name="leaderList" id="vo"}
-                    <option value="{$vo.admin_id}" {if $result['username'] == $vo.username}selected{/if}>{$vo.username}</option>
-
+                    <option value="{$vo.admin_id}" {if $result['username']==$vo.username}selected{/if}>{$vo.username}
+                    </option>
                     {/volist}
                 </select>
             </div>
@@ -38,15 +38,11 @@
         <div class="layui-form-item">
             <label class="layui-form-label">所属组织</label>
             <div class="layui-input-4">
-                <select name="org" lay-verify="required">
-                    {if count($orgList)==1}
-                    <option value="{$orgList['']}" selected>{$orgList['']}</option>
-                    {else/}
+                <select name="org" lay-verify="required" multiple  lay-search id="orgSelect" lay-filter="orgSelect">
                     <option value="">请选择组织</option>
                     {volist name="orgList" id="vo"}
                     <option value="{$vo}">{$vo}</option>
                     {/volist}
-                    {/if}
                 </select>
             </div>
         </div>
@@ -112,145 +108,151 @@
     </form>
 </div>
 {include file="common/foot"/}
+<link rel="stylesheet" href="/static/admin/css/multiSelect.css">
 <script>
-    layui.use(['form', 'layer', 'upload'], function () {
-        var form = layui.form, layer = layui.layer, $ = layui.jquery, upload = layui.upload;
+
+    layui.config({
+         base: '/js/' // 扩展模块目录
+    }).extend({
+    formMulti: 'form.mutil',
+    });
+    layui.use(['formMulti', 'layer', 'upload'], function() {
+        var form = layui.formMulti, layer = layui.layer, $ = layui.jquery, upload = layui.upload;
         var info = {$info|raw};
-        var is_admin = {$result['is_admin']};
+        var is_admin = "{$result['is_admin']}";
         var is_position = "{$result['is_position']}";
         var channel = "{$result['channel']}";
 
-    form.val("form", info);
-    if (info) {
-        $('#adPic').attr('src', info.avatar);
-    }
-    form.render();
+        form.val("form", info);
+        if (info) {
+            $('#adPic').attr('src', info.avatar);
+        }
+        form.render();
+        function getChannelList(ele) {
+            // 发送请求获取渠道列表
+            url = "{:url('getChannels')}";
+            $.get(url, function (res) {
+                if (res.code > 0) {
+                    // 创建渠道选择框HTML
+                    var channelHtml = '<div class="layui-form-item" id="channel-item">'
+                        + '<label class="layui-form-label">所属渠道</label>'
+                        + '<div class="layui-input-4">'
+                        + '<select name="channel" lay-verify="required">'
+                        + '<option value="">请选择渠道</option>';
 
-    function getChannelList(ele){
-        // 发送请求获取渠道列表
-        url = "{:url('getChannels')}";
-        $.get(url, function (res) {
-            if (res.code > 0) {
-                // 创建渠道选择框HTML
-                var channelHtml = '<div class="layui-form-item" id="channel-item">'
-                    + '<label class="layui-form-label">所属渠道</label>'
-                    + '<div class="layui-input-4">'
-                    + '<select name="channel" lay-verify="required">'
-                    + '<option value="">请选择渠道</option>';
+                    // 动态添加渠道选项
 
-                // 动态添加渠道选项
-                
-                $.each(res.data, function (index, item) {
-                    sel='';
-                    if((info && item.name== info.channel)||(channel && item.name== channel))
-                    {
-                    sel='selected class="layui-this"'
-                    }
-                    channelHtml += '<option '+sel+' value="' + item.name + '">' + item.name + '</option>';
-                });
+                    $.each(res.data, function (index, item) {
+                        sel = '';
+                        if ((info && item.name == info.channel) || (channel && item.name == channel)) {
+                            sel = 'selected class="layui-this"'
+                        }
+                        channelHtml += '<option ' + sel + ' value="' + item.name + '">' + item.name + '</option>';
+                    });
 
-                channelHtml += '</select></div></div>';
-                // 先插入渠道选择框，再插入职位单选框
-                $(ele).after(channelHtml);
-                form.render('select'); // 重新渲染表单
-            } else {
-                layer.msg('获取渠道列表失败', { icon: 2 });
-            }
-        });
-            
-    }
+                    channelHtml += '</select></div></div>';
+                    // 先插入渠道选择框，再插入职位单选框
+                    $(ele).after(channelHtml);
+                    $('#orgSelect').attr('lay-ignore', true);
+                    form.render('select'); // 重新渲染表单
+                     $('#orgSelect').removeAttr('lay-ignore');
+                } else {
+                    layer.msg('获取渠道列表失败', { icon: 2 });
+                }
+            });
+
+        }
 
 
-    // 监听用户组选择框
-    function handleOperationGroup(){
-        var selectedText = $('#user_group option:selected').text();
-        var $formItem =$('#user_group').closest('.layui-form-item');
-        $('#channel-item').remove();
-        $('#operation-role-item').remove(); // 移除已存在的运营角色选项
-        // 如果已选择运营用户组
-        if (selectedText === '运营') {
-            if (is_admin ||is_position =='1') {
-                // 创建运营职位单选按钮组HTML
-
-                var roleHtml = '<div class="layui-form-item" id="operation-role-item" style="display:block">'
-                    + '<label class="layui-form-label">运营职位</label>'
-                    + '<div class="layui-input-4 ">'
-                    + '<input type="radio" name="position" value="1" title="运营总监" lay-filter="operationPosition" ' + (info && info.position == 1 ? 'checked' : '') + '>'
-                    + '<input type="radio" name="position" value="2" title="运营主管" lay-filter="operationPosition" ' + (info && info.position == 2 ? 'checked' : '') + '>'
-                    + '<input type="radio" name="position" value="0" title="运营专员" lay-filter="operationPosition" ' + (info && info.position == 0 ? 'checked' : '') + '>'
-                    + '</div></div>';
-                // 直接插入到用户组选择框后面
-                $formItem.after(roleHtml);
-                form.render('radio');
-                // 发送请求获取渠道列表
-                getChannelList('#operation-role-item');
-             }
-            else
-            {
-                // 创建渠道选择框HTML
-                var channelHtml = '<div class="layui-form-item" id="channel-item">'
-                    + '<label class="layui-form-label">所属渠道</label>'
-                    + '<div class="layui-input-4">'
-                    + '<select name="channel" lay-verify="required">'
-                    + '<option value="'+channel+'" selected>'+channel+'</option>'
-                    + '</select></div></div>';
-                $formItem.after(channelHtml);
-                form.render('select'); // 重新渲染表单
-            }
-        } else {
-            // 不是运营用户组时移除渠道选择框
+        // 监听用户组选择框
+        function handleOperationGroup() {
+            var selectedText = $('#user_group option:selected').text();
+            var $formItem = $('#user_group').closest('.layui-form-item');
             $('#channel-item').remove();
-        }
-    }
-    
-    handleOperationGroup();
+            $('#operation-role-item').remove(); // 移除已存在的运营角色选项
+            // 如果已选择运营用户组
+            if (selectedText === '运营') {
+                if (is_admin == '1' || is_position == '1') {
+                    // 创建运营职位单选按钮组HTML
 
-    form.on('select(groupSelect)', function (data) {
-        handleOperationGroup();
-    });
-
-   
-
-    form.on('submit(submit)', function (data) {
-        loading = layer.load(1, { shade: [0.1, '#fff'] });
-        $.post("", data.field, function (res) {
-            layer.close(loading);
-            if (res.code > 0) {
-                layer.msg(res.msg, { time: 1800, icon: 1 }, function () {
-                    location.href = res.url;
-                });
+                    var roleHtml = '<div class="layui-form-item" id="operation-role-item" style="display:block">'
+                        + '<label class="layui-form-label">运营职位</label>'
+                        + '<div class="layui-input-4 ">'
+                        + '<input type="radio" name="position" value="1" title="运营总监" lay-filter="operationPosition" ' + (info && info.position == 1 ? 'checked' : '') + '>'
+                        + '<input type="radio" name="position" value="2" title="运营主管" lay-filter="operationPosition" ' + (info && info.position == 2 ? 'checked' : '') + '>'
+                        + '<input type="radio" name="position" value="0" title="运营专员" lay-filter="operationPosition" ' + (info && info.position == 0 ? 'checked' : '') + '>'
+                        + '</div></div>';
+                    // 直接插入到用户组选择框后面
+                    $formItem.after(roleHtml);
+                    form.render('radio');
+                    // 发送请求获取渠道列表
+                    getChannelList('#operation-role-item');
+                }
+                else {
+                    // 创建渠道选择框HTML
+                    var channelHtml = '<div class="layui-form-item" id="channel-item">'
+                        + '<label class="layui-form-label">所属渠道</label>'
+                        + '<div class="layui-input-4">'
+                        + '<select name="channel" lay-verify="required">'
+                        + '<option value="' + channel + '" selected>' + channel + '</option>'
+                        + '</select></div></div>';
+                    $formItem.after(channelHtml);
+                    $('#orgSelect').attr('lay-ignore', true);
+                    form.render('select'); // 重新渲染表单
+                    $('#channel-item').removeAttr('lay-ignore');
+                }
             } else {
-                layer.msg(res.msg, { time: 1800, icon: 2 });
+                // 不是运营用户组时移除渠道选择框
+                $('#channel-item').remove();
+            }
+        }
+
+        handleOperationGroup();
+
+        form.on('select(groupSelect)', function (data) {
+            handleOperationGroup();
+        });
+        
+        form.on('submit(submit)', function (data) {
+            loading = layer.load(1, { shade: [0.1, '#fff'] });
+            $.post("", data.field, function (res) {
+                layer.close(loading);
+                if (res.code > 0) {
+                    layer.msg(res.msg, { time: 1800, icon: 1 }, function () {
+                        location.href = res.url;
+                    });
+                } else {
+                    layer.msg(res.msg, { time: 1800, icon: 2 });
+                }
+            });
+        });
+
+        //普通图片上传
+        var uploadInst = upload.render({
+            elem: '#adBtn'
+            , url: '{:url("UpFiles/upload")}'
+            , before: function (obj) {
+                //预读本地文件示例，不支持ie8
+                obj.preview(function (index, file, result) {
+                    $('#adPic').attr('src', result); //图片链接（base64）
+                });
+            },
+            done: function (res) {
+                if (res.code > 0) {
+                    $('#avatar').val(res.url);
+                } else {
+                    //如果上传失败
+                    return layer.msg('上传失败');
+                }
+            }
+            , error: function () {
+                //演示失败状态，并实现重传
+                var demoText = $('#demoText');
+                demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
+                demoText.find('.demo-reload').on('click', function () {
+                    uploadInst.upload();
+                });
             }
         });
-    });
-    
-    //普通图片上传
-    var uploadInst = upload.render({
-        elem: '#adBtn'
-        , url: '{:url("UpFiles/upload")}'
-        , before: function (obj) {
-            //预读本地文件示例，不支持ie8
-            obj.preview(function (index, file, result) {
-                $('#adPic').attr('src', result); //图片链接（base64）
-            });
-        },
-        done: function (res) {
-            if (res.code > 0) {
-                $('#avatar').val(res.url);
-            } else {
-                //如果上传失败
-                return layer.msg('上传失败');
-            }
-        }
-        , error: function () {
-            //演示失败状态，并实现重传
-            var demoText = $('#demoText');
-            demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
-            demoText.find('.demo-reload').on('click', function () {
-                uploadInst.upload();
-            });
-        }
-    });
-    });
+        });
 </script>

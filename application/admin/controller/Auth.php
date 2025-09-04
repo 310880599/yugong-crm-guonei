@@ -43,52 +43,54 @@ class Auth extends Common
             $val = input('val');
             $url['val'] = $val;
             $this->assign('testval', $val);
-
+            
             // 获取当前用户信息
             $admin_id = session('aid');
             $current_admin = Admin::get($admin_id);
-
+            if(!$current_admin){
+                return $result = ['code' => 0, 'msg' => '用户不存在'];
+            }
             // 构建查询条件
             $map = [];
+            $where = [];
             if ($val) {
-                $map['username|email|tel'] = ['like', "%" . $val . "%"];
+                $map['username'] = ['like', "%" . $val . "%"];
             }
-            if ($current_admin && $current_admin->org != 'admin') {
-                $map['org'] = $current_admin->org;
+            if ($current_admin['group_id'] != 1 && $current_admin['org'] != 'admin') {
+                $where[]=$this->getOrgWhere($current_admin['org']);
             }
-
             // 权限控制逻辑
-            if ($current_admin && $current_admin->group_id == 11) {
+            if ($current_admin['group_id'] == 11) {
                 // 如果是主管(group_id=11)，显示同team_name的管理员
-                if (!empty($current_admin->team_name)) {
-                    $map['team_name'] = $current_admin->team_name;
+                if (!empty($current_admin['team_name'])) {
+                    $map['team_name'] = $current_admin['team_name'];
                 } else {
                     // 如果team_name为空，只显示自己
                     $map['admin_id'] = $admin_id;
                 }
-            } else if ($current_admin && $current_admin->group_id == 12) {
+            } else if ($current_admin['group_id'] == 12) {
                 //运营主管
-                if (!empty($current_admin->team_name)) {
-                    $map['team_name'] = $current_admin->team_name;
-                    if ($current_admin->position == 0) {
+                if (!empty($current_admin['team_name'])) {
+                    $map['team_name'] = $current_admin['team_name'];
+                    if ($current_admin['position'] == 0) {
                         $map['admin_id'] = $admin_id;
-                    } elseif ($current_admin->position == 2) {
-                        $map['channel'] = $current_admin->channel;
+                    } elseif ($current_admin['position'] == 2) {
+                        $map['channel'] = $current_admin['channel'];
                     }
                 } else {
                     // 如果team_name为空，只显示自己
                     $map['admin_id'] = $admin_id;
                 }
-            } else if (session('aid') != 1) {
+            } else if ($current_admin['group_id'] != 1) {
                 // 非超级管理员只能查看自己的信息
                 $map['admin_id'] = $admin_id;
             }
-
             // 查询数据
             $list = Db::table(config('database.prefix') . 'admin')->alias('a')
                 ->join(config('database.prefix') . 'auth_group ag', 'a.group_id = ag.group_id', 'left')
                 ->field('a.*,ag.title')
                 ->where($map)
+                ->where($where)
                 ->select();
 
             return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list, 'rel' => 1];
@@ -114,6 +116,7 @@ class Auth extends Common
             $data['is_open'] = 1;
             $data['add_time'] = time();
             $data['ip'] = request()->ip();
+            if($data['org'])$data['org'] = $this->org_fgx . implode($this->org_fgx , $data['org']) .$this->org_fgx  ;
             //验证
             $msg = $this->validate($data, 'app\admin\validate\Admin');
             if ($msg != 'true') {
@@ -149,11 +152,11 @@ class Auth extends Common
             // 组织列表
             $orgList = self::ORG;
             // 查询用户组
-            if ($current_admin && $current_admin['group_id'] == 1) {
+            if ($current_admin['group_id'] == 1 || strpos($current_admin['org'],'admin') !== false) {
                 // 超级管理员可以显示所有用户组
                 $auth_group = AuthGroup::all();
             } else {
-                $orgList = ['' => $current_admin['org']];
+                $orgList = $this->getOrg($current_admin['org']);
                 if ($current_admin->group_id == $this->yygid) {
                     //运营只能看到运营
                     $auth_group = AuthGroup::where('group_id', '=', $this->yygid)->select();
@@ -171,13 +174,13 @@ class Auth extends Common
 
             // 获取主管列表
             $leaderList = $this->getLeaderList($current_admin['group_id']);
-
+            $info['org'] = $this->getOrg($current_admin['org']);
             $this->assign('team_name', $current_admin['team_name']);
             $this->assign('orgList', $orgList);
             $this->assign('leaderList', $leaderList);
             $this->assign('authGroup', $auth_group);
             $this->assign('title', lang('add') . lang('admin'));
-            $this->assign('info', 'null');
+            $this->assign('info', json_encode($info, true));
             $this->assign('selected', 'null');
             $this->assign('result', $result);
             return view('adminForm');
@@ -234,69 +237,69 @@ class Auth extends Common
     public function adminEdit()
     {
         if (request()->isPost()) {
-    // 判断是否有修改权限
-    if (!$this->checkAuth('adminEdit')) {
-        return $result = ['code' => 0, 'msg' => '您无此操作权限'];
-    }
+            // 判断是否有修改权限
+            if (!$this->checkAuth('adminEdit')) {
+                return $result = ['code' => 0, 'msg' => '您无此操作权限'];
+            }
 
-    $data = input('post.');
-    $pwd = input('post.pwd');
-    $map[] = ['admin_id', '<>', $data['admin_id']];
-    $where['admin_id'] = $data['admin_id'];
-    $info = Admin::getInfo(input('admin_id'));
+            $data = input('post.');
+            $pwd = input('post.pwd');
+            $map[] = ['admin_id', '<>', $data['admin_id']];
+            $where['admin_id'] = $data['admin_id'];
+            $info = Admin::getInfo(input('admin_id'));
 
-    if (!$info) {
-        return $result = ['code' => 0, 'msg' => '用户不存在!'];
-    }
+            if (!$info) {
+                return $result = ['code' => 0, 'msg' => '用户不存在!'];
+            }
 
-    // 保存旧的用户名
-    $oldUsername = $info['username'];
+            // 保存旧的用户名
+            $oldUsername = $info['username'];
 
-    if ($data['username']) {
-        $map[] = ['username', '=', $data['username']];
-        $check_user = Admin::where($map)->find();
-        if ($check_user) {
-            return $result = ['code' => 0, 'msg' => '用户已存在，请重新输入用户名!'];
-        }
-    }
+            if ($data['username']) {
+                $map[] = ['username', '=', $data['username']];
+                $check_user = Admin::where($map)->find();
+                if ($check_user) {
+                    return $result = ['code' => 0, 'msg' => '用户已存在，请重新输入用户名!'];
+                }
+            }
 
-    if ($pwd && $pwd != $info['pwd']) {
-        $data['pwd'] = input('post.pwd', '', 'md5');
-    } else {
-        unset($data['pwd']);
-    }
+            if ($pwd && $pwd != $info['pwd']) {
+                $data['pwd'] = input('post.pwd', '', 'md5');
+            } else {
+                unset($data['pwd']);
+            }
 
-    $msg = $this->validate($data, 'app\admin\validate\Admin');
-    if ($msg != 'true') {
-        return $result = ['code' => 0, 'msg' => $msg];
-    }
+            $msg = $this->validate($data, 'app\admin\validate\Admin');
+            if ($msg != 'true') {
+                return $result = ['code' => 0, 'msg' => $msg];
+            }
+            if($data['org'])$data['org'] = $this->org_fgx . implode($this->org_fgx , $data['org']) .$this->org_fgx  ;
+            // 开启事务（可选）
+            Db::startTrans();
+            try {
+                Admin::update($data, $where);
 
-    // 开启事务（可选）
-    Db::startTrans();
-    try {
-        Admin::update($data, $where);
+                // 如果 username 发生变化，同步更新 crm_leads 表
+                if (isset($data['username']) && $data['username'] !== $oldUsername) {
+                    Db::name('crm_leads')
+                        ->where('pr_user', $oldUsername)
+                        ->update(['pr_user' => $data['username']]);
+                }
 
-        // 如果 username 发生变化，同步更新 crm_leads 表
-        if (isset($data['username']) && $data['username'] !== $oldUsername) {
-            Db::name('crm_leads')
-                ->where('pr_user', $oldUsername)
-                ->update(['pr_user' => $data['username']]);
-        }
+                Db::commit();
+            } catch (\Exception $e) {
+                Db::rollback();
+                return ['code' => 0, 'msg' => '更新失败，请重试'];
+            }
 
-        Db::commit();
-    } catch (\Exception $e) {
-        Db::rollback();
-        return ['code' => 0, 'msg' => '更新失败，请重试'];
-    }
+            if ($data['admin_id'] == session('aid')) {
+                session('username', $data['username']);
+                $avatar = $data['avatar'] == '' ? '/static/admin/images/0.jpg' : $data['avatar'];
+                session('avatar', $avatar);
+            }
 
-    if ($data['admin_id'] == session('aid')) {
-        session('username', $data['username']);
-        $avatar = $data['avatar'] == '' ? '/static/admin/images/0.jpg' : $data['avatar'];
-        session('avatar', $avatar);
-    }
-
-    return $result = ['code' => 1, 'msg' => '管理员修改成功!', 'url' => url('adminList')];
-} else {
+            return $result = ['code' => 1, 'msg' => '管理员修改成功!', 'url' => url('adminList')];
+        } else {
             // $auth_group = AuthGroup::all();
             // $admin = new Admin();
             // $info = $admin->getInfo(input('admin_id'));
@@ -304,10 +307,9 @@ class Auth extends Common
             // $this->assign('authGroup',$auth_group);
             // $this->assign('title',lang('edit').lang('admin'));
             // return view('adminForm');
-            $auth_group = AuthGroup::all();
 
             $info = Admin::getInfo(input('admin_id'));
-   
+
             //当前用户信息
             $current_admin = Admin::getInfo(session('aid'));
             // 获取主管列表供下拉选择
@@ -315,10 +317,23 @@ class Auth extends Common
             $this->assign('leaderList', $leaderList);
             // 组织列表
             $orgList = self::ORG;
+            if ($current_admin['group_id'] == 1 || strpos($current_admin['org'],'admin') !== false) {
+                // 超级管理员可以显示所有用户组
+                $auth_group = AuthGroup::all();
+            } else {
+                $orgList = $this->getOrg($current_admin['org']);
+                if ($current_admin['group_id'] == $this->yygid) {
+                    //运营只能看到运营
+                    $auth_group = AuthGroup::where('group_id', '=', $this->yygid)->select();
+                } else {
+                    $auth_group = AuthGroup::where('group_id', '<>', $this->yygid)->where('group_id', '<>', 1)->select();
+                }
+            }
             $result['is_yy'] = $current_admin['group_id'] == $this->yygid ? 1 : 0;
             $result['channel'] = $current_admin['channel'] ?? "";
             $result['is_admin'] = $current_admin['group_id'] == 1 ? 1 : 0;
             $result['is_position'] = $current_admin['position'] == 1 ? 1 : 0;
+            $info['org'] = $this->getOrg($info['org']);
             $this->assign('orgList', $orgList);
             $this->assign('info', json_encode($info, true));
             $this->assign('authGroup', $auth_group);
