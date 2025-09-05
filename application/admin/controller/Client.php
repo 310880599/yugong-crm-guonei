@@ -175,18 +175,25 @@ class Client extends Common
     public function perCliList()
     {
         if (request()->isPost()) {
-            return $this->personClientSearch();
-            $key = input('post.key');
-            $page = input('page') ? input('page') : 1;
-            $pageSize = input('limit') ? input('limit') : config('pageSize');
-            $list = db('crm_leads')
-                ->where(['status' => 1, 'issuccess' => -1])
-                ->where(['pr_user' => Session::get('username')])
-                ->order('at_time desc')
-                ->paginate(array('list_rows' => $pageSize, 'page' => $page))
-                ->toArray();
-            return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
-        }
+        $key = input('post.key');
+        $page = input('page') ? input('page') : 1;
+        $pageSize = input('limit') ? input('limit') : 30; // 默认 50 条
+
+        $list = db('crm_leads')
+            ->where(['status' => 1])  // 只展示有效客户
+            ->where(['pr_user' => Session::get('username')])  // 属于当前用户
+            ->order('ut_time desc')
+            ->paginate(['list_rows' => $pageSize, 'page' => $page])
+            ->toArray();
+
+        return [
+            'code' => 0,
+            'msg' => '获取成功!',
+            'data' => $list['data'],
+            'count' => $list['total'],
+            'rel' => 1
+        ];
+    }
 
 
 
