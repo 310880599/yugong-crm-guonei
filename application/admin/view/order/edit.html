@@ -258,9 +258,12 @@
             form.on('submit(submit)', function (data) {
                 $.post("{:url('Order/edit')}", data.field, function (res) {
                     if (res.code == 0) {
-                        layer.msg(res.msg, { time: 2000 });
-                        layer.close(layer.index);
-                        window.parent.location.reload();
+                        // layer.msg(res.msg, { time: 2000 });
+                        // layer.close(layer.index);
+                        // window.parent.location.reload();
+                        var index = parent.layer.getFrameIndex(window.name);
+                        parent.layer.close(index);
+                        parent.layui.table.reload('table-list');
                     } else {
                         layer.msg(res.msg, { time: 2000 });
                     }

@@ -54,6 +54,10 @@ class Order extends Common
         $teamList = $this->getTeamList();
         $this->assign('teamList', $teamList);
 
+        //查询所有公司
+        $orgList = self::ORG;
+        $this->assign('orgList', $orgList);
+        
         //查询所有客户来源
         $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
         $this->assign('sourceList', $sourceList);
@@ -334,6 +338,7 @@ class Order extends Common
         $keyword = Request::param('keyword');
         // 过滤掉 null 元素
         if ($keyword) $keyword = array_filter($keyword);
+        if(isset($keyword['timebucket'])||isset($keyword['at_time']))$keyword['timebucket']=isset($keyword['timebucket'])?$keyword['timebucket']:$keyword['at_time'];
         // if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
         if (isset($keyword['order_no'])) $where[] = ['order_no', 'like', "%{$keyword['order_no']}%"];
         if (isset($keyword['timebucket'])) {
@@ -363,14 +368,31 @@ class Order extends Common
         }
         if (isset($keyword['product_name'])) {
             $where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
+            $client_where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
         }
-        if ($team_name) {
-            $usernames = Db::table('admin')->where('team_name', $team_name)->column('username');
-            $client_where[] = ['pr_user', 'in', $usernames];
-        } else if (isset($keyword['team_name'])) {
+        if (!$team_name &&isset($keyword['team_name'])) {
             $where[] = ['team_name', '=', $keyword['team_name']];
-            $usernames = Db::table('admin')->where('team_name', $keyword['team_name'])->column('username');
-            $client_where[] = ['pr_user', 'in', $usernames];
+            $team_name = $keyword['team_name'];
+        }
+        $org_where = [];
+        if(!empty($keyword['org'])){
+            $org_where[] =  $this->getOrgWhere($keyword['org']);
+        }
+        if($team_name){
+            $usernames = Db::table('admin')->where('team_name', $team_name)->where($org_where)->column('username');
+        }else{
+            if(!empty($org_where)){
+                $usernames = Db::table('admin')->where($org_where)->column('username');
+            }
+        }
+        if(isset($usernames)){
+              if(!$usernames){
+                    $client_where[]=['pr_user', '=', time()];
+                    $where[]=['pr_user', '=', time()];
+                }else{
+                    $client_where[] = ['pr_user', 'in', $usernames];
+                    $where[] = ['pr_user', 'in', $usernames];
+                }
         }
         if (isset($keyword['source'])) {
             $where[] = ['source', '=', $keyword['source']];
@@ -413,6 +435,8 @@ class Order extends Common
             'successRate' => number_format($successRate, 2),
             'totalMoney' => number_format($totalMoney, 2),
             'totalProfit' => number_format($totalProfit, 2),
+            'totalProfitRate' => $totalMoney >0?number_format($totalProfit/$totalMoney*100, 2):0,
+            'totalCount' => $successOrders,
         ];
     }
 

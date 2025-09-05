@@ -101,7 +101,7 @@
                 <label class="layui-form-label">地区</label>
                 <div class="layui-input-4">
                     <!-- <input type="text" id="xs_area" name="xs_area" lay-verify="required" placeholder="请输入地区" class="layui-input" value="{$result.xs_area}"> -->
-                    <select name="xs_area" lay-filter="xs_area" lay-search>
+                    <select name="xs_area" lay-filter="xs_area" lay-search lay-verify="required">
                         <option value="">请选择地区</option>
                         {foreach $countries as $key=>$vo }
                         <option value="{$key}" data-code="{$vo}" {in name="$result.xs_area" value="$key" } selected
@@ -168,7 +168,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">产品名称</label>
                 <div class="layui-input-4">
-                    <input type="text" id="product_name" name="product_name" value="{$result.product_name}" placeholder="请输入产品名称" class="layui-input">
+                    <input type="text" id="product_name" name="product_name" value="{$result.product_name}" placeholder="请输入产品名称" class="layui-input" lay-verify="required">
 
                 </div>
             </div>
@@ -190,7 +190,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">客户来源</label>
                 <div class="layui-input-4">
-                    <select name="kh_status" id="kh_status" lay-filter="kh_status">
+                    <select name="kh_status" id="kh_status" lay-filter="kh_status" lay-verify="required">
 
                         <option value="">请选择客户来源</option>
 
@@ -364,8 +364,11 @@
 
                     if (res.code == 0) {
                         layer.msg(res.msg, { time: 2000 }, function () {
-                            layer.close(layer.index);
-                            window.parent.location.reload();
+                            // layer.close(layer.index);
+                            // // window.parent.location.reload();
+                            var index = parent.layer.getFrameIndex(window.name);
+                            parent.layer.close(index);
+                            parent.layui.table.reload('table-list');
                         });
                     } else {
                         layer.msg(res.msg, { time: 2000 });

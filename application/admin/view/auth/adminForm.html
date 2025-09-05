@@ -112,9 +112,9 @@
 <script>
 
     layui.config({
-         base: '/js/' // 扩展模块目录
+        //  base: '/js/' // 扩展模块目录
     }).extend({
-    formMulti: 'form.mutil',
+    formMulti: '/js/form.mutil',
     });
     layui.use(['formMulti', 'layer', 'upload'], function() {
         var form = layui.formMulti, layer = layui.layer, $ = layui.jquery, upload = layui.upload;
@@ -153,9 +153,8 @@
                     channelHtml += '</select></div></div>';
                     // 先插入渠道选择框，再插入职位单选框
                     $(ele).after(channelHtml);
-                    $('#orgSelect').attr('lay-ignore', true);
-                    form.render('select'); // 重新渲染表单
-                     $('#orgSelect').removeAttr('lay-ignore');
+                    form.val("form", info.org);
+                    form.render('select', 'channel'); // 重新渲染表单
                 } else {
                     layer.msg('获取渠道列表失败', { icon: 2 });
                 }
@@ -197,9 +196,8 @@
                         + '<option value="' + channel + '" selected>' + channel + '</option>'
                         + '</select></div></div>';
                     $formItem.after(channelHtml);
-                    $('#orgSelect').attr('lay-ignore', true);
-                    form.render('select'); // 重新渲染表单
-                    $('#channel-item').removeAttr('lay-ignore');
+                    form.val("form", info.org);
+                    form.render('select', 'channel'); // 重新渲染表单
                 }
             } else {
                 // 不是运营用户组时移除渠道选择框

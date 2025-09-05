@@ -119,12 +119,12 @@
                             <label class="layui-form-label">日期查询：</label>
                             <div class="layui-input-inline">
                                 <select id="dateRange" lay-filter="dateRange" name="timebucket" class="layui-select">
-                                    <option value="">自定义</option>
+                                    <option value="" selected>自定义</option>
                                     <option value="today" >今天</option>
                                     <option value="yesterday">昨天</option>
                                     <option value="week">本周</option>
                                     <option value="last week">上周</option>
-                                    <option value="month" selected>本月</option>
+                                    <option value="month" >本月</option>
                                     <option value="last month">上月</option>
                                     <option value="year">今年</option>
                                     <option value="last year">去年</option>
@@ -226,7 +226,7 @@
                 url: '{:url("perClilist")}',
                 method: 'post',
                 toolbar: '#topBtn',
-                where: { keyword: { "timebucket": "month" } },
+                // where: { keyword: { "timebucket": "month" } },
                 defaultToolbar: ['filter'],
                 page: true,
                 limit: 30,
@@ -423,7 +423,7 @@
             });
 
             // 初始隐藏日期范围选择框
-            $('#at_time').hide();
+            // $('#at_time').hide();
 
              const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name');
             // 文件上传
