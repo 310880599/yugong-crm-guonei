@@ -37,7 +37,7 @@ class Common extends Controller
     public $yygid = 12; //运营id
     public $ywzgid = 11; //业务主管
     public $ywgid = 10; //业务员
-    public $org_fgx=',';
+    public $org_fgx = ',';
 
 
     protected $mod, $role, $system, $nav, $menudata, $cache_model, $categorys, $module, $moduleid, $adminRules, $HrefId;
@@ -250,17 +250,28 @@ class Common extends Controller
         return [$field, 'between time', [date('Y-m-d 00:00:00', strtotime($timebucket)), date('Y-m-d 23:59:59', strtotime($timebucket . '+1 day'))]];
     }
 
-    public function getOrg($org){
-        return explode($this->org_fgx,trim($org, $this->org_fgx));
+    public function getOrg($org)
+    {
+        return explode($this->org_fgx, trim($org, $this->org_fgx));
     }
 
-    public function getOrgWhere($org){
-        return function ($query) use($org){
-           $org_list = $this->getOrg($org);
-           $query->where('org', 'in',$org_list);
-           foreach($org_list as $v){
-               $query->whereOr('org', 'like', '%'.$this->org_fgx . $v. $this->org_fgx.'%');
-           }
-        };  
+    public function getOrgWhere($org)
+    {
+        return function ($query) use ($org) {
+            $org_list = $this->getOrg($org);
+            $query->where('org', 'in', $org_list);
+            foreach ($org_list as $v) {
+                $query->whereOr('org', 'like', '%' . $this->org_fgx . $v . $this->org_fgx . '%');
+            }
+        };
+    }
+
+    //每个月的询盘数=当月录入询盘数-当月录入的询盘丢入公海数（仅当月）+当月从公海拾取数
+    public function getClientimeWhere($timebucket)
+    {
+        return function ($query) use ($timebucket) {
+            $query->where([$this->buildTimeWhere($timebucket, 'at_time')])
+                ->whereOr([$this->buildTimeWhere($timebucket, 'to_kh_time')]);
+        };
     }
 }

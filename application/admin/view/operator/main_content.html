@@ -6,6 +6,16 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
                 <div class="layui-card-header">业务询盘排行</div>
+                <div class="filter-bar">
+                    <label>团队筛选：</label>
+                    <select id="yw_team_filter" lay-filter="yw_team_filter" class="layui-select" style="width: 150px; margin-right: 15px;">
+                        <option value="">全部团队</option>
+                        {volist name="$data['yw_data']['total']" id='vo'}
+                        <option value="{$vo['team_name']}">{$vo['team_name']}</option>
+                        {/volist}
+                    </select>
+                    <div class="total">合计：<span>{$data['yw_data']['list']|array_column='yw_num'|array_sum}</span></div>
+                </div>
                 <div class="layui-card-body table-scroll">
                     <table id="yw_list_table" class="layui-table layui-table-sm fold-table">
                         <thead>
@@ -29,9 +39,12 @@
         <div class="layui-col-md6">
             <div class="layui-card export">
                 <div class="layui-card-header">业务询盘汇总</div>
+                <div class="filter-bar">
+                       <div><a href="javascript:void(0);" class="detail-link" data-url="{:url('getDetail')}" data-type="yw-total">查看详情</a></div>
+                      <div class="total">合计：<span>{$data['yw_data']['total']|array_column='yw_num'|array_sum}</span></div>
+                </div>
                 <div class="layui-card-body">
                     <table id="yw_total_table" class="layui-table layui-table-sm">
-
                         <thead>
                             <tr>
                                 <th>团队</th>
@@ -56,6 +69,16 @@
 
             <div class="layui-card fold-card export">
                 <div class="layui-card-header">运营询盘排行</div>
+                <div class="filter-bar">
+                    <label>团队筛选：</label>
+                    <select id="yy_team_filter" lay-filter="yy_team_filter" class="layui-select" style="width: 150px; margin-right: 15px;">
+                        <option value="">全部团队</option>
+                        {volist name="$data['yy_data']['total']" id='vo'}
+                        <option value="{$vo['channel']}">{$vo['channel']}</option>
+                        {/volist}
+                    </select>
+                    <div class="total">合计：<span>{$data['yy_data']['list']|array_column='yy_num'|array_sum}</span></div>
+                </div>
                 <div class="layui-card-body table-scroll">
                     <table id="yy_list_table" class="layui-table layui-table-sm fold-table">
                         <thead>
@@ -79,7 +102,9 @@
         <div class="layui-col-md6">
             <div class="layui-card export">
                 <div class="layui-card-header">运营询盘汇总</div>
-
+                <div class="filter-bar">
+                    <div class="total">合计：<span>{$data['yy_data']['total']|array_column='yy_num'|array_sum}</span></div>
+                </div>
                 <div class="layui-card-body">
                     <table id="yy_total_table" class="layui-table layui-table-sm">
 
@@ -109,7 +134,7 @@
 
                 <div class="layui-card-header">销售产品排行</div>
                 <div class="layui-card-body">
-                    <table id="sp_list_table" class="layui-table layui-table-sm">
+                    <table id="sp_list_table" class="layui-table layui-table-sm" data-url="getProdAll" data-params='{"data":{"type":"order"},"ele":["#at_time","#dateRange"]}'>
 
                         <thead>
                             <tr>
@@ -133,12 +158,11 @@
             </div>
         </div>
         <div class="layui-col-md6">
-            <div class="layui-card export">
+            <div class="layui-card export" >
 
                 <div class="layui-card-header">询盘产品排行</div>
                 <div class="layui-card-body">
-                    <table id="pd_list_table" class="layui-table layui-table-sm">
-
+                    <table id="pd_list_table" class="layui-table layui-table-sm" data-url="getProdAll" data-params='{"data":{"type":"oper"},"ele":["#at_time","#dateRange"]}' >
                         <thead>
                             <tr>
                                 <th>产品</th>
@@ -217,6 +241,26 @@
         </div>
     </div>
 </div>
+
+<!-- 详情弹窗 -->
+<div id="detailModal" style="display: none; padding: 20px;">
+    <div class="layui-row">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <span id="modalTitle">交叉统计表</span>
+                    <button style="float: right;" class="layui-btn layui-btn-sm" onclick="exportCrossTable()">导出表格</button>
+                </div>
+                <div class="layui-card-body">
+                    <div id="crossTableContainer" style="overflow-x: auto;">
+                        <!-- 表格将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
     function initFoldCard() {

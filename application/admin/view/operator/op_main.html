@@ -1,87 +1,6 @@
 {include file="common/head"/}
 <link rel="stylesheet" type="text/css" href="/static/admin/css/admin.css" />
-
-<style>
-    .layui-input-group .layui-input {
-        flex: 1;
-        border-radius: 0;
-    }
-
-    .layui-input-group .layui-btn {
-        border-radius: 0;
-    }
-
-    .msg {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        line-height: 1.6;
-        width: 100%;
-        max-height: 3.2em;
-        word-break: break-all;
-    }
-
-    .layuiadmin-card-status dd div.layui-status-img a {
-        width: 32px !important;
-        height: 32px !important;
-    }
-
-    .layuiadmin-big-font {
-        font-size: 26px;
-        font-weight: bold;
-        text-align: center;
-        padding: 10px 0;
-    }
-
-    /* 限制折叠高度 */
-    .fold-card {
-        border-radius: 8px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-        margin-bottom: 20px;
-    }
-
-    .table-wrapper {
-        padding: 0;
-    }
-
-    .table-scroll {
-        max-height: 250px;
-        /* 折叠高度 */
-        overflow: hidden;
-        transition: max-height 0.3s ease;
-    }
-
-    .table-scroll.expanded {
-        max-height: 1000px;
-        /* 展开高度，可根据需要调整 */
-        overflow: auto;
-    }
-
-    /* 滚动条美化 */
-    .table-scroll::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
-    .table-scroll::-webkit-scrollbar-thumb {
-        background-color: rgba(0, 0, 0, 0.2);
-        border-radius: 3px;
-    }
-
-    .table-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    /* 按钮样式 */
-    .toggle-table {
-        float: right;
-        cursor: pointer;
-        margin-top: -2px;
-    }
-</style>
-
+<link rel="stylesheet" type="text/css" href="/static/admin/css/panel.css" />
 <div class="admin-main layui-anim layui-anim-upbit">
     <!-- 冲突查询 -->
     <div class="layui-card">
@@ -172,11 +91,12 @@
 
     <div class="layui-row layui-col-space15">
         <div class="layui-col-md12">
-            <div class="layui-card-header"
+            <div class="layui-card-header tongji"
                 style="font-size:18px; font-weight:bold; color:#333; display:flex; align-items:center;">
                 <i class="layui-icon layui-icon-data" style="margin-right:8px; color:#009688;"></i>
                 {$data['org']} 数据统计
-                <button style="margin-left: 20px;" class="layui-btn layuiadmin-btn-list" onclick="ExportSelectTables.exportSelected('运营数据导出')">导出选中表格</button>
+                <button style="margin-left: 20px;" class="layui-btn layuiadmin-btn-list"
+                    onclick="ExportSelectTables.exportSelected('运营数据导出')">导出选中表格</button>
             </div>
         </div>
     </div>
@@ -227,8 +147,8 @@
         form.on('select(dateRange)', function (data) {
             const isCustom = data.value === '';
             $('#at_time').toggle(isCustom);
-            if(!isCustom){
-                 $('#at_time').val('');
+            if (!isCustom) {
+                $('#at_time').val('');
             }
 
         });
@@ -250,11 +170,61 @@
             } else {
                 $btn.text('展开');
             }
-        }); 
+        });
 
     })
+    // 询盘排行筛选功能
+    function filterList(selector, table) {
+        var selectedTeam = $(selector).val();
+        var totalSum = 0;
 
+        // 遍历业务询盘排行表格的每一行
+        $(table + ' tbody tr').each(function () {
+            var $row = $(this);
+            var teamName = $row.find('td:first').text();
+            // 提取团队名称（从括号中提取）
+            var match = teamName.match(/\(([^)]+)\)/);
+            if (match) {
+                teamName = match[1];
+            }
 
+            if (selectedTeam === '' || teamName === selectedTeam) {
+                $row.show();
+                // 累加显示的行的询盘数量
+                var num = parseInt($row.find('td:last').text()) || 0;
+                totalSum += num;
+            } else {
+                $row.hide();
+            }
+        });
+
+        // 更新合计显示
+        $(table).closest('.layui-card').find('.total span').text(totalSum);
+    }
+    $(document).on('change', '#yw_team_filter', function () {
+        filterList('#yw_team_filter', '#yw_list_table');
+    });
+    $(document).on('change', '#yy_team_filter', function () {
+        filterList('#yy_team_filter', '#yy_list_table');
+    });
+
+    $(document).on('click', '.detail-link', function () {
+        var url = $(this).data('url');
+        var params = {
+            'timebucket': $('#dateRange').val(),
+            'at_time': $('#at_time').val(),
+        }
+        url += '?' + $.param(params);
+        // 打开弹窗;
+        layer.open({
+            type: 2,
+            title: '询盘详情',
+            area: ['100%', '80%'],
+            maxmin: true,
+            content: url,
+
+        });
+    })
 </script>
 </body>
 

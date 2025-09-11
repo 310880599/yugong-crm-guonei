@@ -1,0 +1,125 @@
+.container {
+    padding: 20px;
+    min-height: 100vh;
+    border-radius: 10px;
+    margin: -10px;
+}
+
+.filter-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.filter-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.layui-form-item {
+    margin-bottom: 0;
+}
+
+.layui-form-label {
+    font-weight: 600;
+    color: #333;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+.layui-btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.layui-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.layui-btn-normal {
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    border: none;
+}
+
+.export-btn {
+    background: linear-gradient(45deg, #2196F3, #1976D2);
+    border: none;
+    color: white;
+}
+
+.export-btn:hover {
+    background: linear-gradient(45deg, #1976D2, #1565C0);
+}
+
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.loading .layui-icon {
+    font-size: 24px;
+    color: #667eea;
+    margin-right: 10px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.empty-data {
+    text-align: center;
+    padding: 60px 40px;
+    color: #999;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.empty-data .layui-icon {
+    font-size: 48px;
+    color: #ddd;
+    margin-bottom: 15px;
+    display: block;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+        margin: -5px;
+    }
+
+    .filter-section {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .layui-form-item .layui-inline {
+        display: block;
+        margin-bottom: 10px;
+    }
+
+}

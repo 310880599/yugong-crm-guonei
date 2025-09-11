@@ -1140,22 +1140,16 @@ class Client extends Common
         }
 
         $username = Session::get('username');
-
         Db::startTrans();
         try {
             // 验证并删除客户
-            $clients = Db::name('crm_leads')
-                ->where('id', 'in', $ids)
-                ->where(function ($query) use ($username) {
+            $clients = model('client')->with('contacts')->where('id','in',$ids)->where(function ($query) use ($username) {
                     $query->where('pr_user', $username)
                         ->whereOr('pr_user_bef', $username);
-                })
-                ->select();
-
-            if (empty($clients)) {
+                })->select();
+            if ($clients->isEmpty()) {
                 throw new \Exception('无权限删除选中客户');
             }
-
             // 删除主表记录和关联数据
             foreach ($ids as $id) {
                 Db::name('crm_contacts')->where('leads_id', $id)->delete();
@@ -1164,6 +1158,12 @@ class Client extends Common
             Db::name('crm_leads')->where('id', 'in', $ids)->delete();
 
             Db::commit();
+            //写入操作日志
+            $this->addOperLog(
+                     null,
+                    '删除客户',
+                    "$username 删除客户:".implode(',',$ids).'客户明细:'.$clients,
+                );
             return json(['code' => 0, 'msg' => '删除成功']);
         } catch (\Exception $e) {
             Db::rollback();

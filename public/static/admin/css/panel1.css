@@ -1,0 +1,111 @@
+.layui-input-group .layui-input {
+    flex: 1;
+    border-radius: 0;
+}
+
+.layui-input-group .layui-btn {
+    border-radius: 0;
+}
+
+.msg {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.6;
+    width: 100%;
+    max-height: 3.2em;
+    word-break: break-all;
+}
+
+.layuiadmin-card-status dd div.layui-status-img a {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+.layuiadmin-big-font {
+    font-size: 26px;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px 0;
+}
+
+/* 限制折叠高度 */
+.fold-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+}
+
+.table-wrapper {
+    padding: 0;
+}
+
+.table-scroll {
+    max-height: 250px;
+    /* 折叠高度 */
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.table-scroll.expanded {
+    max-height: 1000px;
+    /* 展开高度，可根据需要调整 */
+    overflow: auto;
+}
+
+/* 滚动条美化 */
+.table-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 按钮样式 */
+.toggle-table {
+    float: right;
+    cursor: pointer;
+    margin-top: -2px;
+}
+
+.total {
+    padding: 8px 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e6e6e6;
+    font-size: 14px;
+    background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+    text-align: right;
+    font-weight: 500;
+}
+
+.total select {
+    margin-right: 10px;
+    height: 32px;
+    line-height: 32px;
+    padding: 0 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.total span {
+    color: #ff4949;
+    font-weight: bold;
+    font-size: 16px;
+    font-style: italic;
+    margin-left: 5px;
+}

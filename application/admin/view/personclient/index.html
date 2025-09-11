@@ -163,10 +163,10 @@
     <script type="text/html" id="action">
 
     <a class="layui-btn layui-btn-primary layui-btn-xs"  href="{:url('dialogue')}?id={{d.id}}"><i class="layui-icon">&#xe654;</i>写跟进</a>
-    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
-    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
-    <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
-    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
+    <a class="layui-btn  layui-btn-xs"  data-id="{{d.id}}" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
+    <!-- <a class="layui-btn layui-btn-danger layui-btn-xs" data-id="{{d.id}}" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a> -->
 </script>
 
 
@@ -360,12 +360,16 @@
 
             // 行操作事件
             table.on('tool(table-list)', function (obj) {
-                var data = obj.data;
+                var layEvent =obj.event;
+                var id = obj.data.id;
+                lineEvent(layEvent,id);
+               });
 
-                if (obj.event === 'del') {
+            function lineEvent(event,id){
+                if (event === 'del') {
                     layer.confirm('确定要删除这个客户吗？', function (index) {
                         var loading = layer.load(1, { shade: [0.1, '#fff'] });
-                        $.post("{:url('del')}", { id: data.id }, function (res) {
+                        $.post("{:url('del')}", { ids: [id] }, function (res) {
                             layer.close(loading);
                             if (res.code === 0) {
                                 layer.msg(res.msg, { time: 1000, icon: 1 });
@@ -377,15 +381,15 @@
                         layer.close(index);
                     });
                 }
-                else if (obj.event === 'edit') {
-                    layer_add("编辑客户", "{:url('Client/edit')}?id=" + data.id);
+                else if (event === 'edit') {
+                    layer_add("编辑客户", "{:url('Client/edit')}?id=" + id);
                 }
-                else if (obj.event === 'alter') {
-                    layer_add("转移客户", "{:url('Client/alterPrUserPri')}?ids=" + data.id);
+                else if (event === 'alter') {
+                    layer_add("转移客户", "{:url('Client/alterPrUserPri')}?ids=" + id);
                 }
-                else if (obj.event === 'chengjiao') {
+                else if (event === 'chengjiao') {
                     layer.confirm('确定这个客户已成交吗？', function (index) {
-                        $.post("{:url('Client/chengjiao')}", { ids: data.id }, function (res) {
+                        $.post("{:url('Client/chengjiao')}", { ids: id }, function (res) {
                             layer.close(index);
                             if (res.code === 0) {
                                 layer.msg(res.msg, { time: 1000, icon: 1 });
@@ -396,6 +400,12 @@
                         });
                     });
                 }
+            };
+            // 浮层按钮事件委托
+            $('body').on('click', '.layui-layer-content [lay-event]', function(){
+                var layEvent = $(this).attr('lay-event');
+                var id = $(this).data('id');
+                lineEvent(layEvent,id);
             });
 
             // 搜索表单

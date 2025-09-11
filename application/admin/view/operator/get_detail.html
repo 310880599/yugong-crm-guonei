@@ -1,0 +1,346 @@
+{include file="common/head"/}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/details.css" />
+<style>
+    .team-table {
+        margin-bottom: 30px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .team-table-header {
+        padding: 12px;
+        font-weight: bold;
+        font-size: 16px;
+        color: white;
+        text-align: center;
+    }
+
+    .cross-table {
+        border-collapse: collapse;
+        width: 100%;
+        background-color: white;
+    }
+
+    .cross-table th,
+    .cross-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .cross-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    .cross-table .row-header {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+
+    .cross-table .total-col {
+        background-color: #e9ecef;
+        font-weight: bold;
+    }
+
+    .team-total-row {
+        background-color: #f8f9fa !important;
+        font-weight: bold;
+    }
+</style>
+<div class="container">
+    <div class="filter-section">
+        <form class="layui-form" id="filterForm">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">分析类型</label>
+                    <div class="layui-input-inline">
+                        <select name="type" id="analysisType">
+                            <option value="yw-total">业务统计</option>
+                            <!-- <option value="yy-total">运营统计</option> -->
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">时间范围</label>
+                    <div class="layui-input-inline">
+                        <select id="dateRange" lay-filter="dateRange" name="timebucket" class="layui-input">
+                            <option value="" {if $timebucket eq '' }selected{/if}>自定义</option>
+                            <option value="today" {if $timebucket eq 'today' }selected{/if}>今天</option>
+                            <option value="yesterday" {if $timebucket eq 'yesterday' }selected{/if}>昨天</option>
+                            <option value="week" {if $timebucket eq 'week' }selected{/if}>本周</option>
+                            <option value="month" {if $timebucket eq 'month' }selected{/if}>本月</option>
+                            <option value="last month" {if $timebucket eq 'last month' }selected{/if}>上月</option>
+                            <option value="year" {if $timebucket eq 'year' }selected{/if}>今年</option>
+                        </select>
+                    </div>
+                    <div class="layui-input-inline">
+                        <input type="text" class="layui-input" id="at_time" name="at_time" value="{$at_time}"
+                            placeholder="选择日期范围">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button class="layui-btn" type="button" id="searchBtn">查询</button>
+                    <button class="layui-btn layui-btn-primary" type="button" id="resetBtn">重置</button>
+                    <button class="layui-btn layui-btn-normal export-btn" type="button" id="exportBtn">导出Excel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <div id="loading" class="loading" style="display: none;">
+            <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i> 数据加载中...
+        </div>
+        <div id="emptyData" class="empty-data" style="display: none;">
+            <i class="layui-icon layui-icon-face-surprised"></i> 暂无数据
+        </div>
+        <div id="tableContent"></div>
+    </div>
+</div>
+<!-- <script src="/js/xlsx.full.min.js"></script> -->
+<script src="/js/xlsx.bundle.js"></script>
+<script src="/static/admin/js/export_utils.js"></script>
+{include file="common/foot"/}
+<script>
+    layui.use(['form', 'layer', 'laydate'], function () {
+        var form = layui.form;
+        var layer = layui.layer;
+        var laydate = layui.laydate;
+
+        // 获取URL参数
+        function getUrlParam(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]); return null;
+        }
+
+        // 初始化
+        $(document).ready(function () {
+            var type = getUrlParam('type') || 'yw-total';
+            $('#analysisType').val(type);
+            form.render('select');
+            loadData();
+        });
+
+        // 加载数据
+        function loadData() {
+            $('#loading').show();
+            $('#emptyData').hide();
+            $('#tableContent').hide();
+
+            var params = {
+                type: $('#analysisType').val(),
+                timebucket: $('#dateRange').val(),
+                at_time: $('#at_time').val()
+            };
+
+            $.ajax({
+                url: '{:url("operator/getDetail")}',
+                type: 'POST',
+                data: params,
+                dataType: 'json',
+                success: function (res) {
+                    $('#loading').hide();
+                    if (res.code === 200 && res.data) {
+                        renderTable(res.data);
+                        $('#tableContent').show();
+                    } else {
+                        $('#emptyData').show();
+                    }
+                },
+                error: function () {
+                    $('#loading').hide();
+                    $('#emptyData').show();
+                    layer.msg('数据加载失败');
+                }
+            });
+        }
+        // 渲染表格 - 每个团队分开渲染
+        function renderTable(data) {
+            var html = '';
+
+            // 生成颜色数组 - 使用HSL色彩空间生成不同色调
+            function generateColors(count) {
+                var colors = [];
+                for (var i = 0; i < count; i++) {
+                    var hue = (i * 360 / count) % 360;
+                    colors.push({
+                        header: 'hsl(' + hue + ', 80%, 45%)',
+                        light: 'hsl(' + hue + ', 60%, 95%)',
+                        medium: 'hsl(' + hue + ', 50%, 85%)',
+                        border: 'hsl(' + hue + ', 60%, 65%)'
+                    });
+                }
+                return colors;
+            }
+
+            // 检查数据是否有效
+            if (!data || data.length === 0) {
+                html += '<div class="empty-data" style="display: block; text-align: center; padding: 50px;">';
+                html += '<i class="layui-icon layui-icon-face-surprised"></i> 暂无团队数据';
+                html += '</div>';
+                $('#tableContent').html(html);
+                return;
+            }
+
+            var teamColors = generateColors(data.length);
+
+            // 遍历每个团队
+            data.forEach(function (team, teamIndex) {
+                var color = teamColors[teamIndex];
+                var totalStyle = ' style="background-color: ' + color.border + ';"';
+                // 为每个团队创建独立的表格容器
+                html += '<div class="team-table">';
+                html += '<div class="team-table-header" style="background-color: ' + color.header + ';">' + team.name + '</div>';
+                html += '<table class="cross-table">';
+
+                // 表头
+                html += '<thead><tr>';
+                // 横向表头（运营人员）
+                if (team.headers && team.headers.length > 0) {
+                    for (var i = 0; i < team.headers.length; i++) { // 跳过第一列空格
+                        if (i === 0) html += '<th style="width: 120px;">' + team.headers[i] + '</th>';
+                        else html += '<th>' + (team.headers[i] || '未匹配') + '</th>';
+                    }
+                }
+
+                html += '<th class="total-col" '+ totalStyle +'>总计</th>';
+                html += '</tr></thead>';
+
+                // 表体
+                html += '<tbody>';
+
+               
+
+                // 团队内的业务数据
+                if (team.rows && team.rows.length > 0) {
+                    team.rows.forEach(function (row, rowIndex) {
+                        var rowStyle = rowIndex % 2 === 0 ? 'background-color: ' + color.light + ';' : 'background-color: ' + color.medium + ';';
+
+                        html += '<tr style="border-color: ' + color.border + ';">';
+                        // 业务人员名称
+                        html += '<td class="row-header">' + (row[0] || '未匹配') + '</td>';
+
+                        // 数据单元格 - 跳过第一列（业务人员名称），显示与运营人员的交叉数据
+                        for (var i = 1; i < row.length; i++) {
+                            html += '<td>' + (row[i] || 0) + '</td>';
+                        }
+
+                        // 行总计
+                        var rowTotal = 0;
+                        for (var i = 1; i < row.length; i++) {
+                            rowTotal += (row[i] || 0);
+                        }
+                        html += '<td class="total-col"' + totalStyle + '>' + rowTotal + '</td>';
+                        html += '</tr>';
+                    });
+                }
+
+                // 团队汇总行（列总计）
+                html += '<tr class="team-total-row" style="border-color: ' + color.border + '; background-color: ' + color.border + ';">';
+                html += '<td class="row-header"' + totalStyle + '>' + team.name + ' 汇总</td>';
+
+                // 列总计数据
+                if (team.totals && team.totals.length > 0 && team.totals[0]) {
+                    for (var i = 1; i < team.totals[0].length; i++) { // 跳过第一列0
+                        html += '<td class="total-col"' + totalStyle + '>' + (team.totals[0][i] || 0) + '</td>';
+                    }
+                }
+
+                html += '<td class="total-col"' + totalStyle + '>' + (team.grandTotal || 0) + '</td>';
+                html += '</tr>';
+
+                html += '</tbody>';
+                html += '</table>';
+                html += '</div>';
+            });
+
+            // 添加所有团队总计表格
+            var grandTotalAll = data.reduce(function (sum, team) {
+                return sum + (team.grandTotal || 0);
+            }, 0);
+
+            html += '<div class="team-table">';
+            html += '<div class="team-table-header" style="background-color: #6c757d;">所有团队总计</div>';
+            html += '<table class="cross-table">';
+
+            html += '<thead><tr>';
+            html += '<th style="width: 120px;">总计</th>';
+            html += '<th class="total-col">总数量</th>';
+            html += '</tr></thead>';
+
+            html += '<tbody>';
+            html += '<tr class="total-row">';
+            html += '<td class="row-header">所有团队总计</td>';
+            html += '<td class="total-col">' + grandTotalAll + '</td>';
+            html += '</tr>';
+            html += '</tbody>';
+            html += '</table>';
+            html += '</div>';
+
+            $('#tableContent').html(html);
+        }
+        // 导出Excel
+        // function exportToExcel() {
+        //     var table = document.querySelector('.cross-table');
+        //     if (!table) {
+        //         layer.msg('没有可导出的数据');
+        //         return;
+        //     }
+
+        //     var wb = XLSX.utils.table_to_book(table, { sheet: "运营业务交叉分析表" });
+        //     var fileName = '运营业务交叉分析表_' + new Date().toLocaleDateString() + '.xlsx';
+        //     XLSX.writeFile(wb, fileName);
+        // }
+        // $('#exportBtn').on('click', exportToExcel);
+
+        $('#exportBtn').on('click', function () {
+            // 导出所有表格，保留样式
+            tableExporter.exportToSingleSheet('.cross-table', {
+                fileName: '运营业务交叉分析表_' + new Date().toLocaleDateString(),
+                includeStyles: true
+            });
+        });
+        // 日期控件
+        laydate.render({
+            elem: '#at_time',
+            range: true, // 开启范围选择
+            trigger: 'click',
+        });
+        // 事件绑定
+
+        // 控制日期范围选择框的显示与隐藏
+        form.on('select(dateRange)', function (data) {
+            const isCustom = data.value === '';
+            $('#at_time').toggle(isCustom);
+            if (!isCustom) {
+                $('#at_time').val('');
+            }
+
+        });
+
+        $('#searchBtn').on('click', loadData);
+
+        $('#resetBtn').on('click', function () {
+            $('#analysisType').val('yw-total');
+            $('#dateRange').val('today');
+            form.render('select');
+            loadData();
+        });
+
+       
+
+        // 分析类型变化时重新加载数据
+        // form.on('select(analysisType)', function (data) {
+        //     loadData();
+        // });
+
+        // 时间范围变化时重新加载数据
+        form.on('select(timebucket)', function (data) {
+            loadData();
+        });
+
+    });
+</script>

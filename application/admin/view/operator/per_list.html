@@ -86,6 +86,17 @@
                             </div>
 
                             <div class="layui-inline">
+                                <label class="layui-form-label">客户状态：</label>
+                                <div class="layui-input-inline">
+                                    <select name="status" id="kh_status">
+                                        <option value="">请选择客户状态</option>
+                                        <option value="1">有效</option>
+                                        <option value="2">公海</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="layui-inline">
                                 <label class="layui-form-label">联系方式：</label>
                                 <div class="layui-input-inline">
                                     <input type="text" id="contact" name="contact" placeholder="联系方式："
@@ -191,6 +202,28 @@
                 },
                 { field: 'kh_rank', title: '客户级别', sort: true },
                 { field: 'kh_status', title: '客户来源' },
+                              { 
+                    field: 'customer_status', 
+                    title: '客户状态', 
+                    width: 100,
+                    templet: function (res) {
+                        var status = parseInt(res.status);
+                        var toKhTime = res.to_kh_time;
+                        
+                        if (status === 1) {
+                            if (toKhTime && toKhTime.trim() !== '') {
+                                // status = 1 且 to_kh_time 存在 - 公海提取 - 黄色标签
+                                return '<span style="background-color: #FFB800; color: white; padding: 2px 8px; border-radius: 3px; font-size: 12px;">公海提取</span>';
+                            } else {
+                                // status = 1 - 有效状态 - 绿色标签
+                                return '<span style="background-color: #5FB878; color: white; padding: 2px 8px; border-radius: 3px; font-size: 12px;">正常</span>';
+                            }
+                        } else {
+                            // status != 1 - 公海中 - 红色标签
+                            return '<span style="background-color: #FF5722; color: white; padding: 2px 8px; border-radius: 3px; font-size: 12px;">在公海</span>';
+                        }
+                    }
+                },
                 { field: 'issuccess', title: '成交状态', templet: function (res) { return res.issuccess == 1 ? '已成交' : '未成交'; } },
                 { field: 'last_up_records', title: '最新跟进记录' },
                 { field: 'pr_user', title: '负责人' },
@@ -208,7 +241,7 @@
                 method: 'post',
                 toolbar: '#topBtn',
                 defaultToolbar: ['filter'],
-                where: { keyword: { "timebucket": "today" } },
+                where: { keyword: { "timebucket": "today"} },
                 page: true,
                 limit: 10,
                 cols: cols,

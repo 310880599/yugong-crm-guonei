@@ -1,0 +1,156 @@
+body {
+    /* background-color: #f5f7fa; */
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* 卡片样式 */
+.layui-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    background: #fff;
+}
+
+.layui-card-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    background: #fafafa;
+    border-bottom: 1px solid #eee;
+    padding: 12px 16px;
+}
+
+/* 统计数字 */
+.layuiadmin-big-font {
+    font-size: 30px;
+    font-weight: 700;
+    color: #009688;
+    text-align: center;
+    padding: 15px 0;
+}
+
+/* 表格美化 */
+.layui-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #444;
+    text-align: center;
+}
+
+.layui-table td {
+    text-align: center;
+    padding: 10px 6px;
+}
+
+.layui-table tbody tr:hover {
+    background: #f1fdfb;
+    transition: background 0.2s;
+}
+
+/* 折叠卡片 */
+.fold-card {
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.table-scroll {
+    max-height: 250px;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+}
+
+.table-scroll.expanded {
+    max-height: 1000px;
+    overflow: auto;
+    padding-bottom: 10px;
+}
+
+/* 折叠按钮 */
+.toggle-table {
+    float: right;
+    border: none;
+    background: none;
+    color: #009688;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.toggle-table:hover {
+    text-decoration: underline;
+    color:#04ddc4;
+}
+
+/* 筛选栏 */
+.filter-bar {
+    padding: 10px 15px;
+    background: linear-gradient(to right, #f9fafb, #eef1f5);
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filter-bar label {
+    margin-right: 8px;
+    color: #555;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.filter-bar select {
+    min-width: 150px;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-right: 10px;
+    height: 34px;
+    padding: 0 10px;
+}
+
+/* 合计 */
+.filter-bar .total {
+    margin-left: auto;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+.filter-bar .total span {
+    color: #ff5722;
+    font-weight: bold;
+    font-size: 18px;
+    margin-left: 8px;
+}
+
+
+/* 最近动态 */
+.layuiadmin-card-status dd {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    border-bottom: 1px dashed #eee;
+    padding-bottom: 10px;
+}
+
+.layuiadmin-card-status dd:last-child {
+    border-bottom: none;
+}
+
+.layui-status-img img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+
+.msg {
+    color: #555;
+    font-size: 13px;
+}
+.tongji {
+   background: linear-gradient(to right, #f9fafb, #eef1f5);
+}
+
+

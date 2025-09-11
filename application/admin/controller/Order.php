@@ -55,7 +55,11 @@ class Order extends Common
         $this->assign('teamList', $teamList);
 
         //查询所有公司
+        $user = \app\admin\model\Admin::getMyInfo();
         $orgList = self::ORG;
+        if($user['org']){
+            $orgList = $this->getOrg($user['org']);
+        }
         $this->assign('orgList', $orgList);
         
         //查询所有客户来源
@@ -330,9 +334,9 @@ class Order extends Common
         $where = [];
         $client_where = [];
         //判断权限
-        $team_name = session('team_name') ?? '';
+        $user = \app\admin\model\Admin::getMyInfo();
+        $team_name = $user['team_name'] ?? '';
         if ($team_name) $where[] = ['team_name', '=', $team_name];
-
         $page = input('page') ?? 1;
         $limit = input('limit') ?? config('pageSize');
         $keyword = Request::param('keyword');
@@ -375,6 +379,9 @@ class Order extends Common
             $team_name = $keyword['team_name'];
         }
         $org_where = [];
+        if($user['org']){
+            $org_where[] =  $this->getOrgWhere($user['org']);
+        }
         if(!empty($keyword['org'])){
             $org_where[] =  $this->getOrgWhere($keyword['org']);
         }
@@ -407,7 +414,7 @@ class Order extends Common
 
         $list = Db::table('crm_client_order')
             ->where($where)
-            ->order('create_time desc')
+            ->order('order_time desc')
             ->paginate([
                 'list_rows' => $limit,
                 'page' => $page
@@ -558,7 +565,7 @@ class Order extends Common
         }
         $list = Db::table('crm_client_order')
             ->where($where)
-            ->order('create_time desc')
+            ->order('order_time desc')
             ->paginate([
                 'list_rows' => $limit,
                 'page' => $page
