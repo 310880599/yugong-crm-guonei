@@ -136,11 +136,11 @@ class Order extends Common
             $result = Db::table('crm_client_order')->insert($data);
             if ($result) {
            //新增商品
-                $product_name = Request::param('product_name');
-                $product = $this->checkProduct($product_name);
-                if(!$product){
-                    $this->addProduct($product_name);
-                }
+                // $product_name = Request::param('product_name');
+                // $product = $this->checkProduct($product_name);
+                // if(!$product){
+                //     $this->addProduct($product_name);
+                // }
 
                 $msg = ['code' => 0, 'msg' => '添加成功！', 'data' => []];
                 return json($msg);
@@ -232,11 +232,11 @@ class Order extends Common
             $result = Db::table('crm_client_order')->where(['id' => $data['id']])->update($data);
             if ($result) {
                 //新增商品
-                $product_name = Request::param('product_name');
-                $product = $this->checkProduct($product_name);
-                if(!$product){
-                    $this->addProduct($product_name);
-                }
+                // $product_name = Request::param('product_name');
+                // $product = $this->checkProduct($product_name);
+                // if(!$product){
+                //     $this->addProduct($product_name);
+                // }
 
                 $msg = ['code' => 0, 'msg' => '编辑成功！', 'data' => []];
                 return json($msg);
@@ -398,6 +398,8 @@ class Order extends Common
                     $where[]=['pr_user', '=', time()];
                 }else{
                     $client_where[] = ['pr_user', 'in', $usernames];
+                    $client_where[] = ['oper_user', 'in', $usernames];
+
                     $where[] = ['pr_user', 'in', $usernames];
                 }
         }

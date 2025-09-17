@@ -65,6 +65,9 @@ class Index extends Common
         if($curget['org'] !='admin' && in_array($curget['group_id'],[ $this->yygid,1])){
              $main ='Operator/main';
         }
+        if($curget['org'] !='admin' && in_array($curget['group_id'],[ $this->pdgid])){
+            $main ='Products/main';
+        }
         $this->assign('organizations', json_encode($organizations));
         $this->assign('admin_id', $curget['admin_id']);
         $this->assign('main', $main);

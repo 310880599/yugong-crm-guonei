@@ -14,7 +14,11 @@ class EditableSelect {
     this.options = options.map(opt => typeof opt === 'string' ? { id: opt, name: opt } : opt);
     this.filteredOptions = this.options.slice();
     this.selectedIndex = -1;
-    this.defaultText = '请选择/输入' + defaultText;
+    if(!freeInput){
+      this.defaultText = '请选择' + defaultText;
+    }else{
+      this.defaultText = '请选择/输入' + defaultText;
+    }
     this.defaultValue = defaultValue;
     this.fieldName = fieldName;
     this.freeInput = freeInput;

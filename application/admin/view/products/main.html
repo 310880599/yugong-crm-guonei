@@ -1,0 +1,262 @@
+{include file="common/head"/}
+<link rel="stylesheet" type="text/css" href="/static/admin/css/admin.css" />
+<link rel="stylesheet" type="text/css" href="/static/admin/css/panel.css" />
+<div class="admin-main layui-anim layui-anim-upbit">
+
+    <!--  核心指标 -->
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-sm3 layui-col-md6">
+            <form class="layui-form" id="searchForm">
+                <fieldset class="layui-elem-field " style="padding:18px 0;">
+                    <legend>时间范围查询</legend>
+                    <div class="layui-row">
+                        <div class="layui-col-md8">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">时间范围：</label>
+                                <div class="layui-input-inline">
+                                    <div class="layui-col-sm3  layui-col-md8">
+                                        <select id="dateRange" lay-filter="dateRange" name="timebucket"
+                                            class="layui-input">
+                                            <option value="">自定义</option>
+                                            <option value="today" selected>今天</option>
+                                            <option value="yesterday">昨天</option>
+                                            <option value="week">本周</option>
+                                            <option value="month">本月</option>
+                                            <option value="last month">上月</option>
+                                            <option value="year">今年</option>
+                                        </select>
+                                    </div>
+                                    <div class="layui-col-sm3 layui-col-md4">
+                                        <div class="layui-input-inline">
+                                            <input type="text" class="layui-input" id="at_time" name="at_time"
+                                                placeholder="选择日期范围">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="layui-col-md4">
+                            <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-search">
+                                <i class="layui-icon layui-icon-search layuiadmin-button-btn"
+                                    style="vertical-align: sub;"></i>查询数据
+                            </button>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card-header tongji"
+                style="font-size:18px; font-weight:bold; color:#333; display:flex; align-items:center;">
+                <i class="layui-icon layui-icon-data" style="margin-right:8px; color:#009688;"></i>
+                {$data['org']} 数据统计
+                <button style="margin-left: 20px;" class="layui-btn layuiadmin-btn-list"
+                    onclick="ExportSelectTables.exportSelected('运营数据导出')">导出选中表格</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 主体部分：左边统计，右边待办 -->
+    <div class="layui-row layui-col-space15" id="search-con">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md6">
+                <div class="layui-card export">
+
+                    <div class="layui-card-header">销售产品排行</div>
+                    <div class="layui-card-body">
+                        <table id="sp_list_table" class="layui-table layui-table-sm">
+
+                            <thead>
+                                <tr>
+                                    <th>产品</th>
+                                    <th>销售数量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {volist name="$data['product_data']['order_prod']" id='vo'}
+                                <tr>
+                                    <td>{$vo['product_name']}</td>
+                                    <td>{$vo['count']}</td>
+                                </tr>
+                                {/volist}
+                                {if !$data['product_data']['order_prod']}<tr>
+                                    <td colspan="2">暂无数据</td>
+                                </tr>{/if}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="layui-col-md6">
+                <div class="layui-card export">
+
+                    <div class="layui-card-header">询盘产品排行</div>
+                    <div class="layui-card-body">
+                        <table id="pd_list_table" class="layui-table layui-table-sm">
+                            <thead>
+                                <tr>
+                                    <th>产品</th>
+                                    <th>询盘数量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                {volist name="$data['product_data']['oper_prod']" id='vo'}
+                                <tr>
+                                    <td>{$vo['product_name']}</td>
+                                    <td>{$vo['count']}</td>
+                                </tr>
+                                {/volist}
+                                {if !$data['product_data']['oper_prod']}<tr>
+                                    <td colspan="2">暂无数据</td>
+                                </tr>{/if}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+{include file="common/foot"/}
+<script src="/js/xlsx.full.min.js"></script>
+<script src="/static/admin/js/export.js"></script>
+
+
+<script>
+
+    layui.use(['table', 'laydate', 'form'], function () {
+
+        var table = layui.table,
+            laydate = layui.laydate,
+            form = layui.form,
+            $ = layui.jquery;
+
+
+        function loadData(searchData) {
+           $.ajax({
+                url: "{:url('Products/main')}",
+                type: "POST",
+                data: { keyword: searchData },
+                success: function (res) {
+                    if (res.code == 0) {
+                        // 重新渲染销售产品排行表
+                        var orderProdHtml = '';
+                        if (res.data.product_data.order_prod && res.data.product_data.order_prod.length > 0) {
+                            res.data.product_data.order_prod.forEach(function (item) {
+                                orderProdHtml += '<tr><td>' + item.product_name + '</td><td>' + item.count + '</td></tr>';
+                            });
+                        } else {
+                            orderProdHtml = '<tr><td colspan="2">暂无数据</td></tr>';
+                        }
+                        $('#sp_list_table tbody').html(orderProdHtml);
+
+                        // 重新渲染询盘产品排行表
+                        var operProdHtml = '';
+                        if (res.data.product_data.oper_prod && res.data.product_data.oper_prod.length > 0) {
+                            res.data.product_data.oper_prod.forEach(function (item) {
+                                operProdHtml += '<tr><td>' + item.product_name + '</td><td>' + item.count + '</td></tr>';
+                            });
+                        } else {
+                            operProdHtml = '<tr><td colspan="2">暂无数据</td></tr>';
+                        }
+                        $('#pd_list_table tbody').html(operProdHtml);
+
+                        // 重新渲染表单
+                        form.render();
+                    } else {
+                        layer.msg(res.msg || '获取数据失败');
+                    }
+                },
+                error: function () {
+                    layer.msg('网络错误，请重试');
+                }
+            });
+        }
+
+        // 页面初始化时自动查询一次
+        $(document).ready(function () {
+            // 获取表单数据并查询
+            var formData = {
+                timebucket: $('#dateRange').val() || 'today',
+                at_time: $('#at_time').val()
+            };
+            loadData(formData);
+        });
+        // 搜索表单
+        form.on('submit(LAY-search)', function (data) {
+            loadData(data.field);
+            return false;
+        });
+        // 日期控件
+        laydate.render({
+            elem: '#at_time',
+            range: true, // 开启范围选择
+            trigger: 'click',
+        });
+
+        // 控制日期范围选择框的显示与隐藏
+        form.on('select(dateRange)', function (data) {
+            const isCustom = data.value === '';
+            $('#at_time').toggle(isCustom);
+            if (!isCustom) {
+                $('#at_time').val('');
+            }
+
+        });
+
+        // 初始隐藏日期范围选择框
+        $('#at_time').hide();
+        // 委托绑定
+        $(document).on('click', '.toggle-table', function () {
+            var $btn = $(this);
+            var $scroll = $btn.closest('.fold-card').find('.table-scroll');
+
+            if ($scroll.length === 0) {
+                console.warn("未找到 table-scroll 容器");
+                return;
+            }
+            $scroll.toggleClass('expanded');
+            if ($scroll.hasClass('expanded')) {
+                $btn.text('折叠');
+            } else {
+                $btn.text('展开');
+            }
+        });
+
+    })
+
+
+    function initFoldCard() {
+        $('.fold-card').each(function () {
+            var $card = $(this);
+            var $header = $card.find('.layui-card-header');
+            var $scroll = $card.find('.table-scroll');
+            if ($scroll.length && $scroll[0].scrollHeight > $scroll.height() + 20) {
+                if ($header.find('.toggle-table').length === 0) {
+                    $header.append('<button class="layui-btn layui-btn-xs toggle-table">展开</button>');
+                }
+            } else {
+                $header.find('.toggle-table').remove();
+            }
+        });
+    }
+    // 页面初始化时运行一次
+    $(document).ready(init);
+
+    function init() {
+        initFoldCard();
+        ExportSelectTables.addCheckboxes();
+    }
+</script>
+</body>
+
+</html>

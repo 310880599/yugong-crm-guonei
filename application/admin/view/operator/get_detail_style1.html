@@ -8,6 +8,14 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
+    .team-table-header {
+        padding: 12px;
+        font-weight: bold;
+        font-size: 16px;
+        color: white;
+        text-align: center;
+    }
+
     .cross-table {
         border-collapse: collapse;
         width: 100%;
@@ -22,11 +30,12 @@
     }
 
     .cross-table th {
-        background-color: #1E9FFF;
+        background-color: #f2f2f2;
         font-weight: bold;
     }
 
     .cross-table .row-header {
+        background-color: #f8f9fa;
         font-weight: bold;
     }
 
@@ -36,30 +45,7 @@
     }
 
     .team-total-row {
-        font-weight: bold;
-    }
-
-    .summary-info {
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-        border-left: 4px solid #007bff;
-    }
-
-    .summary-info h3 {
-        margin-top: 0;
-        color: #007bff;
-    }
-
-    .summary-info p {
-        margin-bottom: 0;
-        font-size: 16px;
-    }
-
-    /* 为表格每行最后一列添加背景色 */
-    .last_col {
-        background-color: #6c757d !important;
+        background-color: #f8f9fa !important;
         font-weight: bold;
     }
 </style>
@@ -175,8 +161,23 @@
         function renderTable(data) {
             var html = '';
 
+            // 生成颜色数组 - 使用HSL色彩空间生成不同色调
+            function generateColors(count) {
+                var colors = [];
+                for (var i = 0; i < count; i++) {
+                    var hue = (i * 360 / count) % 360;
+                    colors.push({
+                        header: 'hsl(' + hue + ', 80%, 45%)',
+                        light: 'hsl(' + hue + ', 60%, 95%)',
+                        medium: 'hsl(' + hue + ', 50%, 85%)',
+                        border: 'hsl(' + hue + ', 60%, 65%)'
+                    });
+                }
+                return colors;
+            }
+
             // 检查数据是否有效
-            if (!data || !data.teams || data.teams.length === 0) {
+            if (!data || data.length === 0) {
                 html += '<div class="empty-data" style="display: block; text-align: center; padding: 50px;">';
                 html += '<i class="layui-icon layui-icon-face-surprised"></i> 暂无团队数据';
                 html += '</div>';
@@ -184,85 +185,101 @@
                 return;
             }
 
-            // 创建统一的表格容器
-            html += '<div class="main-table-container">';
-            html += '<table class="cross-table">';
+            var teamColors = generateColors(data.length);
 
-            // 表头（所有运营人员）
-            html += '<thead><tr>';
-            if (data.teams[0].headers && data.teams[0].headers.length > 0) {
-                data.teams[0].headers.forEach(function (header, index) {
-                    if (index === 0) {
-                        html += '<th style="width: 120px;">' + header + '</th>';
-                    } else {
-                        html += '<th>' + header + '</th>';
+            // 遍历每个团队
+            data.forEach(function (team, teamIndex) {
+                var color = teamColors[teamIndex];
+                var totalStyle = ' style="background-color: ' + color.border + ';"';
+                // 为每个团队创建独立的表格容器
+                html += '<div class="team-table">';
+                html += '<div class="team-table-header" style="background-color: ' + color.header + ';">' + team.name + '</div>';
+                html += '<table class="cross-table">';
+
+                // 表头
+                html += '<thead><tr>';
+                // 横向表头（运营人员）
+                if (team.headers && team.headers.length > 0) {
+                    for (var i = 0; i < team.headers.length; i++) { // 跳过第一列空格
+                        if (i === 0) html += '<th style="width: 120px;">' + team.headers[i] + '</th>';
+                        else html += '<th>' + (team.headers[i] || '未匹配') + '</th>';
                     }
-                });
-            }
-            html += '</tr></thead>';
+                }
 
-            html += '<tbody>';
+                html += '<th class="total-col" '+ totalStyle +'>总计</th>';
+                html += '</tr></thead>';
 
-            // 遍历每个团队的数据
-            data.teams.forEach(function (team, teamIndex) {
+                // 表体
+                html += '<tbody>';
+
+               
+
                 // 团队内的业务数据
                 if (team.rows && team.rows.length > 0) {
                     team.rows.forEach(function (row, rowIndex) {
-                        html += '<tr>';
+                        var rowStyle = rowIndex % 2 === 0 ? 'background-color: ' + color.light + ';' : 'background-color: ' + color.medium + ';';
+
+                        html += '<tr style="border-color: ' + color.border + ';">';
                         // 业务人员名称
-                        html += '<td class="row-header" style="background-color: ' + team.color + ' !important;  font-weight: bold;">' + (row[0] || '未匹配') + '</td>';
+                        html += '<td class="row-header">' + (row[0] || '未匹配') + '</td>';
 
-                        // 数据单元格 - 显示与运营人员的交叉数据
+                        // 数据单元格 - 跳过第一列（业务人员名称），显示与运营人员的交叉数据
                         for (var i = 1; i < row.length; i++) {
-                            //最后一列
-                            if (i === team.totals.length - 1) {
-                                html += '<td class="last_col">' + (row[i] || 0) + '</td>';
-                            } else {
-                                html += '<td>' + (row[i] || '') + '</td>';
-                            }
-
+                            html += '<td>' + (row[i] || 0) + '</td>';
                         }
+
+                        // 行总计
+                        var rowTotal = 0;
+                        for (var i = 1; i < row.length; i++) {
+                            rowTotal += (row[i] || 0);
+                        }
+                        html += '<td class="total-col"' + totalStyle + '>' + rowTotal + '</td>';
                         html += '</tr>';
                     });
                 }
 
-                // 团队汇总行（使用不同颜色）
-                html += '<tr class="team-total-row">';
-                html += '<td class="row-header"  style="background-color: ' + team.color + ' !important; font-weight: bold;">' + team.name + ' 汇总</td>';
+                // 团队汇总行（列总计）
+                html += '<tr class="team-total-row" style="border-color: ' + color.border + '; background-color: ' + color.border + ';">';
+                html += '<td class="row-header"' + totalStyle + '>' + team.name + ' 汇总</td>';
 
                 // 列总计数据
-                if (team.totals && team.totals.length > 0) {
-                    for (var i = 1; i < team.totals.length; i++) { // 跳过第一列（姓名）
-                        html += '<td class="total-col" style="background-color: ' + team.color + ' !important;  font-weight: bold;">' + (team.totals[i] || 0) + '</td>';
+                if (team.totals && team.totals.length > 0 && team.totals[0]) {
+                    for (var i = 1; i < team.totals[0].length; i++) { // 跳过第一列0
+                        html += '<td class="total-col"' + totalStyle + '>' + (team.totals[0][i] || 0) + '</td>';
                     }
                 }
+
+                html += '<td class="total-col"' + totalStyle + '>' + (team.grandTotal || 0) + '</td>';
                 html += '</tr>';
+
+                html += '</tbody>';
+                html += '</table>';
+                html += '</div>';
             });
 
             // 添加所有团队总计表格
-            if (data.grandTotals) {
+            var grandTotalAll = data.reduce(function (sum, team) {
+                return sum + (team.grandTotal || 0);
+            }, 0);
 
-                html += '<tbody>';
-                html += '<tr class="team-total-row">';
-                html += '<td class="row-header" style="background-color: #6c757d !important; font-weight: bold;">合计</td>';
+            html += '<div class="team-table">';
+            html += '<div class="team-table-header" style="background-color: #6c757d;">所有团队总计</div>';
+            html += '<table class="cross-table">';
 
-                // 总计数据
-                if (data.grandTotals.totals && data.grandTotals.totals.length > 0) {
-                    for (var i = 1; i < data.grandTotals.totals.length; i++) { // 跳过第一列（姓名）
-                        html += '<td class="total-col" style="background-color: #6c757d !important;  font-weight: bold;">' + (data.grandTotals.totals[i] || 0) + '</td>';
-                    }
-                }
-                html += '</tr>';
+            html += '<thead><tr>';
+            html += '<th style="width: 120px;">总计</th>';
+            html += '<th class="total-col">总数量</th>';
+            html += '</tr></thead>';
 
-                // 添加总统计信息
-                html += '<div class="summary-info" style="margin-top: 20px; text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">';
-                html += '<h3>询盘分配</h3>';
-                html += '<p>所有团队总数量: <strong>' + (data.grandTotals.grandTotal || 0) + '</strong></p>';
-                html += '</div>';
-            }
+            html += '<tbody>';
+            html += '<tr class="total-row">';
+            html += '<td class="row-header">所有团队总计</td>';
+            html += '<td class="total-col">' + grandTotalAll + '</td>';
+            html += '</tr>';
             html += '</tbody>';
             html += '</table>';
             html += '</div>';
+
             $('#tableContent').html(html);
         }
         // 导出Excel

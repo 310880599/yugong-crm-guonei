@@ -89,7 +89,7 @@ class Client extends Common
     public function index()
     {
         if (request()->isPost()) {
-            return $this->personClientSearch();
+            return $this->clientSearch();
             $page = input('page', 1);
             $pageSize = input('limit', config('pageSize'));
             $adminId = Session::get('aid');
@@ -1001,11 +1001,11 @@ class Client extends Common
                 Db::table('crm_contacts')->insertAll($contactData);
 
                 //新增商品
-                $product_name = Request::param('product_name');
-                $product = $this->checkProduct($product_name);
-                if (!$product) {
-                    $this->addProduct($product_name);
-                }
+                // $product_name = Request::param('product_name');
+                // $product = $this->checkProduct($product_name);
+                // if (!$product) {
+                //     $this->addProduct($product_name);
+                // }
                 // 提交事务
                 Db::commit();
                 $this->redisUnLock();
@@ -1064,11 +1064,11 @@ class Client extends Common
                 //客户信息保存
                 Db::table('crm_leads')->where(['id' => $data['id']])->where('status', 1)->update($data);
                 //新增商品
-                $product_name = Request::param('product_name');
-                $product = $this->checkProduct($product_name);
-                if (!$product) {
-                    $this->addProduct($product_name);
-                }
+                // $product_name = Request::param('product_name');
+                // $product = $this->checkProduct($product_name);
+                // if (!$product) {
+                //     $this->addProduct($product_name);
+                // }
                 // 提交事务
                 Db::commit();
                 // $this->redisUnLock();

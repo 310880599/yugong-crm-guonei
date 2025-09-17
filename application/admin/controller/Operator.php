@@ -15,10 +15,13 @@ class Operator extends Common
             return $this->perSearch();
         }
 
+        $current_admin = Admin::getMyInfo();
         $khRankList = Db::table('crm_client_rank')->select();
         $this->assign('khRankList', $khRankList);
         $productList = $this->getProductList();
         $this->assign('productList', $productList);
+        $adminResult = Db::name('admin')->where('group_id', '<>', 1)->where($this->getOrgWhere($current_admin['org']))->field('admin_id,username')->select();
+        $this->assign('adminResult', $adminResult);
 
         return $this->fetch();
     }
@@ -55,6 +58,9 @@ class Operator extends Common
             }
             if (!empty($keyword['kh_name'])) {
                 $query->where('kh_name', 'like', '%' . $keyword['kh_name'] . '%');
+            }
+            if (!empty($keyword['pr_user'])) {
+                $query->where('pr_user', '=', $keyword['pr_user']);
             }
             if (!empty($keyword['product_name'])) {
                 $query->where('product_name', 'like', '%' . $keyword['product_name'] . '%');
@@ -350,8 +356,11 @@ class Operator extends Common
 
     private function getLeadsSubQuery($where, $field = 'pr_user')
     {
+        $op_field = $field == 'pr_user'?'oper_user': 'pr_user';
+        $current_admin = Admin::getMyInfo();
+        $users = Db::table('admin')->where($this->getOrgWhere($current_admin['org']))->column('username');
         $subQuery = Db::table('crm_leads')
-            ->where($where)
+            ->where($where)->where($op_field,'in',$users)
             ->buildSql();
         return Db::table('admin')->alias('a')
             ->leftJoin([$subQuery => 'l'], 'a.username = l.' . $field);
@@ -423,7 +432,116 @@ class Operator extends Common
     {
         $current_admin = Admin::getMyInfo();
         $a_where = [$this->getOrgWhere($current_admin['org']), ['is_open', '=', 1], ['group_id', 'in', [$this->ywgid, $this->ywzgid, $this->yygid]]];
-        $l_where = [['status', '=', 1],$this->getClientimeWhere($timebucket)];
+        $l_where = [['status', '=', 1], $this->getClientimeWhere($timebucket)];
+        // 时间条件
+        if (!empty($timebucket)) {
+            $l_where[] = $this->getClientimeWhere($timebucket);
+        }
+        //时间段内所有客户
+        $leads = Db::table('crm_leads')->where($l_where)->fetchCollection()->select();
+
+        //所有业务和运营
+        $admins = Db::table('admin')
+            ->where($a_where)
+            ->where('username', '<>', '')
+            ->order('team_name,channel,username')->fetchCollection()
+            ->select();
+
+        //所有运营
+        $yy_admins = $admins->where('group_id', $this->yygid)->toArray();
+        //所有业务
+        $yw_admins = $admins->where('group_id', 'in', [$this->ywgid, $this->ywzgid])->toArray();
+        // $cross=[['姓名',...$yy_admins,'总计']];
+        // 构建交叉数据
+        $cross = [];
+        foreach ($leads as $lead) {
+            if (!isset($cross[$lead['pr_user']])) {
+                $cross[$lead['pr_user']] = [];
+            }
+            if (!isset($cross[$lead['pr_user']][$lead['oper_user']])) {
+                $cross[$lead['pr_user']][$lead['oper_user']] = 1;
+            } else {
+                $cross[$lead['pr_user']][$lead['oper_user']]++;
+            }
+        }
+
+        // 按团队分组业务人员
+        $team_colors = ['#db7070','#c6db70','#70db9b','#709bdb','#c670db',  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#cf1717', '#aacf17', '#17cf60', '#1760cf', '#aa17cf']; // 每个组的颜色
+        $color_index = 0;
+
+        // 构建横向表头（所有运营）
+        $headers = ['姓名'];
+        foreach ($yy_admins as $yy_admin) {
+            $headers[] = $yy_admin['username'];
+        }
+        $headers[] = '合计';
+
+        // 按团队处理业务人员
+        $teams = [];
+        foreach ($yw_admins as $yw_admin) {
+            $team_name = $yw_admin['team_name'];
+            if (!isset($teams[$team_name])) {
+                $teams[$team_name] = [
+                    'name' => $team_name,
+                    'color' => $team_colors[$color_index % count($team_colors)],
+                    'headers' => $headers,
+                    'rows' => [],
+                    'totals' => array_fill(0, count($headers), 0),
+                    'grandTotal' => 0
+                ];
+                $color_index++;
+            }
+
+            // 构建行数据
+            $row_data = [$yw_admin['username']];
+            $row_total = 0;
+
+            foreach ($yy_admins as $yy_admin) {
+                $count = isset($cross[$yw_admin['username']][$yy_admin['username']]) ? $cross[$yw_admin['username']][$yy_admin['username']] : 0;
+                $row_data[] = $count;
+                $row_total += $count;
+            }
+            $row_data[] = $row_total; // 小计
+
+            $teams[$team_name]['rows'][] = $row_data;
+            $teams[$team_name]['grandTotal'] += $row_total;
+
+            // 更新团队列总计
+            foreach ($row_data as $col_index => $value) {
+                if ($col_index > 0) { // 跳过姓名列
+                    $teams[$team_name]['totals'][$col_index] += $value;
+                }
+            }
+        }
+
+        // 计算总统计
+        $grand_totals = array_fill(0, count($headers), 0);
+        $grand_grand_total = 0;
+
+        foreach ($teams as $team) {
+            foreach ($team['totals'] as $index => $total) {
+                $grand_totals[$index] += $total;
+            }
+            $grand_grand_total += $team['grandTotal'];
+        }
+
+        // 构建最终数据结构
+        $result = [
+            'teams' => array_values($teams),
+            'grandTotals' => [
+                'headers' => $headers,
+                'totals' => $grand_totals,
+                'grandTotal' => $grand_grand_total
+            ]
+        ];
+        return $result;
+    }
+
+    private function getCrossData_style1($timebucket)
+    {
+        $current_admin = Admin::getMyInfo();
+        $a_where = [$this->getOrgWhere($current_admin['org']), ['is_open', '=', 1], ['group_id', 'in', [$this->ywgid, $this->ywzgid, $this->yygid]]];
+        $l_where = [['status', '=', 1], $this->getClientimeWhere($timebucket)];
         // 时间条件
         if (!empty($timebucket)) {
             $l_where[] = $this->getClientimeWhere($timebucket);

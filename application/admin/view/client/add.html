@@ -348,11 +348,11 @@
                 }
             });
 
-            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称');
+            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称','','id',false);
 
        
             // 监听客户来源变化
-            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name');
+            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name',false);
 
 
             form.on('select(kh_status)', function(data) {

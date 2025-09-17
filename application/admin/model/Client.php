@@ -43,7 +43,7 @@ class Client extends Model
         $mapPrUser = []; //业务员/负责人
 
         if (!empty($keyword['timebucket'])) {
-            $mapAtTime[]= $keyword['timebucket'];
+            $mapAtTime[] = $keyword['timebucket'];
         }
         if ($keyword['kh_rank'] != '') {
 
@@ -71,17 +71,23 @@ class Client extends Model
         if ($keyword['pr_user'] != '') {
             $mapPrUser = [['pr_user', 'like', '%' . $keyword['pr_user'] . '%']];
         }
-
-        $adminId = session('aid');
-        $team_name = session('team_name') ?? '';
-
-        $usernames  = [session('username')];
-        if ($adminId == 1) {
+        $current_admin = Admin::getMyInfo();
+        $team_name = $current_admin['team_name'] ?? '';
+        $a_where = [];
+        if (strpos($current_admin['org'], 'admin') === false) {
+            $a_where = [(new ControllerClient())->getorgWhere($current_admin['org'])];
+        }
+        $usernames  = [$current_admin['username']];
+        if ($current_admin['group_id'] == 1) {
             $usernames = [];
+            if($a_where){
+                 $usernames = Db::name('admin')->where($a_where)->column('username');
+            }
         } else if ($team_name) {
             // 主管查看直属下属及自己的客户
-            $usernames = Db::name('admin')->where('team_name', $team_name)->column('username');
+            $usernames = Db::name('admin')->where('team_name', $team_name)->where($a_where)->column('username');
         }
+
         $result  = Db::table('crm_leads')
             ->where(function ($query) use ($usernames) {
                 if ($usernames) {
@@ -154,8 +160,8 @@ class Client extends Model
             $mapPhone = $this->getContactSearch($keyword['phone']);
         }
 
-        if (!empty($keyword['oper_user'] )) {
-            $where[] =['oper_user', 'like', '%' . $keyword['oper_user'] . '%'];
+        if (!empty($keyword['oper_user'])) {
+            $where[] = ['oper_user', 'like', '%' . $keyword['oper_user'] . '%'];
         }
 
         if ($keyword['kh_name'] != '') {

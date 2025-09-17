@@ -1,0 +1,51 @@
+{include file="common/head"/}
+<div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
+
+    <form class="layui-form layui-form-pane">
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">产品名称</label>
+            <div class="layui-input-4">
+                <input type="text" id="product_name" name="product_name" lay-verify="required" placeholder="请输入产品名称" class="layui-input">
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn"  lay-submit="" lay-filter="submit">提交保存</button>
+
+            </div>
+        </div>
+    </form>
+</div>
+{include file="common/foot"/}
+
+<script>
+
+
+        layui.use(['form', 'layer'], function () {
+            var form = layui.form, layer = layui.layer,$= layui.jquery;
+
+
+            //监听提交
+            form.on('submit(submit)', function(data){
+                //新增商品
+                $.post("{:url('Products/add')}",data.field,function (res) {
+                    if (res.code == 200){
+                        layer.msg(res.msg,{time:1000});
+                        setTimeout(function () {
+                            layer.close(layer.index);
+                            window.parent.location.reload();
+                        }, 2000);
+                    }else {
+                        layer.msg(res.msg,{time:2000});
+                    }
+
+                },'json')
+
+                return false;
+            });
+        });
+</script>
+</body>
+</html>

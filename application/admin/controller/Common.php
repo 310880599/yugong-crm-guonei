@@ -37,6 +37,7 @@ class Common extends Controller
     public $yygid = 12; //运营id
     public $ywzgid = 11; //业务主管
     public $ywgid = 10; //业务员
+    public $pdgid = 13; //产品总监
     public $org_fgx = ',';
 
 
@@ -170,7 +171,7 @@ class Common extends Controller
         $data['org'] = $current_admin['org'];
         $data['product_name'] = $product_name;
         $res = Db::name('crm_products')->insert($data);
-        cache($current_admin['org'] . '_product_list', null);
+        // cache($current_admin['org'] . '_product_list', null);
         return $res;
     }
 
@@ -180,7 +181,7 @@ class Common extends Controller
         if (!$product_name) return true;
         $current_admin = Admin::getMyInfo();
         $where = [['product_name', '=', $product_name]];
-        if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = ['org', '=', $current_admin['org']];
+        if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = $this->getOrgWhere($current_admin['org']);
         $res = Db::name('crm_products')->where($where)->find();
         return $res;
     }
@@ -191,7 +192,7 @@ class Common extends Controller
     {
         $current_admin = Admin::getMyInfo();
         $where = [];
-        if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = ['org', '=', $current_admin['org']];
+        if ($current_admin['org'] && strpos($current_admin['org'],'admin') === false) $where[] = $this->getOrgWhere($current_admin['org']);
         $list = Db::name('crm_products')->where($where)->group('product_name')->field('product_name')->select();
         $list = array_column($list, 'product_name');
         return json_encode($list);

@@ -337,11 +337,11 @@
                     fields.phones.some(v => v)
                 );
             }
-            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称',"{$result.product_name}");
+            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称',"{$result.product_name}",'id',false);
                    
             // 监听客户来源变化
             var users = yyList["{$result.kh_status}"] || [];
-            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),users,'运营人员',"{$result.oper_user}",'name');
+            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),users,'运营人员',"{$result.oper_user}",'name',false);
 
 
             form.on('select(kh_status)', function(data) {

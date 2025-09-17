@@ -173,7 +173,7 @@
                 <label class="layui-form-label">产品名称</label>
                 <div class="layui-input-4">
                     <input type="text" id="product_name" name="product_name" value="{$orderInfo.product_name}"
-                        placeholder="请输入产品名称" class="layui-input">
+                        placeholder="请输入产品名称" class="layui-input" lay-verify="required">
                 </div>
             </div>
             <div class="layui-form-item">
@@ -238,12 +238,12 @@
                     }
                 }
             });
-            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称',"{$orderInfo.product_name}");
+            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称',"{$orderInfo.product_name}",'id',false);
 
              // 监听客户来源变化
             var yyList={$yyList|raw};
-            var users = yyList["{$orderInfo.kh_status}"] || [];
-            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),users,'运营人员',"{$orderInfo.oper_user}",'name');
+            var users = yyList["{$orderInfo.source}"] || [];
+            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),users,'运营人员',"{$orderInfo.oper_user}",'name',false);
 
 
             form.on('select(kh_status)', function(data) {
