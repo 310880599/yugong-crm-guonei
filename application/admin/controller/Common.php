@@ -32,6 +32,7 @@ class Common extends Controller
         'SMT' => 'SMT',
         'AM' => 'AM',
         'YMX' => 'YMX',
+        '中国制造' => 'MIC',
     ];
 
     public $yygid = 12; //运营id
