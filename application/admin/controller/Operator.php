@@ -26,66 +26,206 @@ class Operator extends Common
         return $this->fetch();
     }
 
-    public function perSearch()
-    {
-        $params  = Request::param();
-        $keyword = $params['keyword'] ?? [];
-        $model   = model('client');
-
-        // 如果有联系人搜索条件
-        if (!empty($keyword['contact'])) {
-            $con     = $keyword['contact'];
-            $cleaned = preg_replace('/[^\w@._#]/', '', $con);
-            $cfun =  function ($q) use ($con, $cleaned) {
-                $q->where('contact_value', 'like', '%' . $con . '%')
-                    ->whereOrRaw("CONCAT(contact_extra, contact_value) like '%{$con}%'")
-                    ->whereOrRaw("CONCAT(contact_extra, vdigits) like '%{$cleaned}%'");
-            };
-            $model = $model->hasWhere('contacts', $cfun)->with(['contacts' => $cfun]);
-        } else {
-            $model = $model->with('contacts');
-        }
-
-        $list = $this->_search($params, $model, function ($query, $p) {
-            $keyword = $p['keyword'] ?? [];
-            $query->append(['contact'])->hidden(['contacts']);
-
-            if (!empty($keyword['kh_rank'])) {
-                $query->where('kh_rank', '=', $keyword['kh_rank']);
-            }
-            if (!empty($keyword['status'])) {
-                $query->where('status', '=', $keyword['status']);
-            }
-            if (!empty($keyword['kh_name'])) {
-                $query->where('kh_name', 'like', '%' . $keyword['kh_name'] . '%');
-            }
-            if (!empty($keyword['pr_user'])) {
-                $query->where('pr_user', '=', $keyword['pr_user']);
-            }
-            if (!empty($keyword['product_name'])) {
-                $query->where('product_name', 'like', '%' . $keyword['product_name'] . '%');
-            }
-            if (!empty($keyword['timebucket'])) {
-                $where[] = $this->getClientimeWhere($keyword['timebucket']);
-                $query->where($where);
-            }
-            if (!empty($keyword['at_time'])) {
-                $where[] = $this->getClientimeWhere($keyword['at_time']);
-                $query->where($where);
-            }
-            // 限制当前用户
-            $query->where(['oper_user' => Session::get('username')]);
-            return $query;
-        });
-
-        return [
-            'code'  => 0,
-            'msg'   => '获取成功!',
-            'data'  => $list['data'],
-            'count' => $list['total'],
-            'rel'   => 1
-        ];
+  public function perSearch($params = null)
+{
+    // 如果没有传入参数，从请求获取
+    if ($params === null) {
+        $params = Request::param();
     }
+    
+    $keyword = $params['keyword'] ?? [];
+    $model   = model('client');
+
+    // 如果有联系人搜索条件
+    if (!empty($keyword['contact'])) {
+        $con     = $keyword['contact'];
+        $cleaned = preg_replace('/[^\w@._#]/', '', $con);
+        $cfun =  function ($q) use ($con, $cleaned) {
+            $q->where('contact_value', 'like', '%' . $con . '%')
+                ->whereOrRaw("CONCAT(contact_extra, contact_value) like '%{$con}%'")
+                ->whereOrRaw("CONCAT(contact_extra, vdigits) like '%{$cleaned}%'");
+        };
+        $model = $model->hasWhere('contacts', $cfun)->with(['contacts' => $cfun]);
+    } else {
+        $model = $model->with('contacts');
+    }
+
+    // 确保获取分页参数
+    $page = $params['page'] ?? input('page', 1);
+    $limit = $params['limit'] ?? input('limit', 15); // 恢复默认分页值
+
+    $list = $this->_search($params, $model, function ($query, $p) {
+        $keyword = $p['keyword'] ?? [];
+        $query->append(['contact'])->hidden(['contacts']);
+
+        if (!empty($keyword['kh_rank'])) {
+            $query->where('kh_rank', '=', $keyword['kh_rank']);
+        }
+        if (!empty($keyword['status'])) {
+            $query->where('status', '=', $keyword['status']);
+        }
+        if (!empty($keyword['kh_name'])) {
+            $query->where('kh_name', 'like', '%' . $keyword['kh_name'] . '%');
+        }
+        if (!empty($keyword['pr_user'])) {
+            $query->where('pr_user', '=', $keyword['pr_user']);
+        }
+        if (!empty($keyword['product_name'])) {
+            $query->where('product_name', 'like', '%' . $keyword['product_name'] . '%');
+        }
+        if (!empty($keyword['timebucket'])) {
+            $where = $this->getClientimeWhere($keyword['timebucket']);
+            $query->where($where);
+        }
+        if (!empty($keyword['at_time'])) {
+            $where = $this->getClientimeWhere($keyword['at_time']);
+            $query->where($where);
+        }
+        // 限制当前用户
+        $query->where(['oper_user' => Session::get('username')]);
+        return $query;
+    }, $page, $limit);
+
+    return [
+        'code'  => 0,
+        'msg'   => '获取成功!',
+        'data'  => $list['data'],
+        'count' => $list['total'],
+        'rel'   => 1
+    ];
+}
+
+/**
+ * 导出全部客户数据
+ */
+public function exportAll()
+{
+    // 1. 直接获取所有请求参数
+    $allParams = Request::param();
+    
+    // 2. 提取 keyword 参数（处理可能的嵌套结构）
+    $keyword = [];
+    if (isset($allParams['keyword']) && is_array($allParams['keyword'])) {
+        $keyword = $allParams['keyword'];
+    } else {
+        // 处理扁平化参数（如 keyword[kh_rank]=xxx）
+        foreach ($allParams as $key => $value) {
+            if (strpos($key, 'keyword[') === 0) {
+                $field = substr($key, 8, -1); // 提取字段名
+                $keyword[$field] = $value;
+            }
+        }
+    }
+    
+    // 3. 确保时间参数一致性
+    if (!empty($keyword['timebucket']) && $keyword['timebucket'] !== '') {
+        $keyword['at_time'] = ''; // 清空自定义时间范围
+    }
+    
+    // 4. 创建查询参数
+    $params = [
+        'keyword' => $keyword,
+        'page' => 1,
+        'limit' => PHP_INT_MAX
+    ];
+    
+    // 5. 记录调试信息（关键！）
+    \think\facade\Log::info('ExportAll received params: ' . json_encode($allParams));
+    \think\facade\Log::info('ExportAll processed keyword: ' . json_encode($keyword));
+    
+    // 6. 直接调用 perSearch，传入参数
+    $result = $this->perSearch($params);
+    
+    // 7. 检查是否有数据
+    if (empty($result['data'])) {
+        $this->error('没有可导出的数据');
+    }
+    
+    // 8. 记录导出数量
+    \think\facade\Log::info('Exporting ' . count($result['data']) . ' records');
+    
+    // 9. 导出Excel
+    $this->exportToExcel($result['data']);
+}
+
+/**
+ * 导出数据到Excel
+ * @param array $data 要导出的数据
+ */
+private function exportToExcel($data)
+{
+    // 检查是否安装了必要的扩展
+    if (!class_exists('\PhpOffice\PhpSpreadsheet\Spreadsheet')) {
+        $this->error('请先安装PhpSpreadsheet库');
+    }
+    
+    // 1. 创建Excel对象
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    
+    // 2. 设置标题行
+    $headers = [
+        '客户名称', '产品', '地区', '联系方式', '客户级别', 
+        '客户来源', '客户状态', '成交状态', '最新跟进记录', 
+        '负责人', '创建时间'
+    ];
+    
+    // 填充标题
+    foreach ($headers as $index => $header) {
+        $sheet->setCellValueByColumnAndRow($index + 1, 1, $header);
+    }
+    
+    // 3. 填充数据
+    $row = 2;
+    foreach ($data as $item) {
+          $col = 1;
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['kh_name']);
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['product_name']);
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['xs_area']);
+        
+        // 安全处理 contact 字段 - 关键修复
+        $contact = is_array($item['contact']) ? 
+                   implode(',', $item['contact']) : 
+                   (string)($item['contact'] ?? '');
+        $sheet->setCellValueByColumnAndRow($col++, $row, $contact);
+        
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['kh_rank']);
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['kh_status']);
+        
+        
+        // 客户状态特殊处理
+        $status = '';
+        if (isset($item['status']) && $item['status'] == 1) {
+            $status = $item['to_kh_time'] ? '公海提取' : '正常';
+        } else {
+            $status = '在公海';
+        }
+        $sheet->setCellValueByColumnAndRow($col++, $row, $status);
+        
+        // 成交状态
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['issuccess'] == 1 ? '已成交' : '未成交');
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['last_up_records']);
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['pr_user']);
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['at_time']);
+        
+        $row++;
+    }
+    
+    // 4. 设置自动列宽
+    foreach (range('A', $sheet->getHighestColumn()) as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+    
+    // 5. 设置HTTP头
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="客户列表_' . date('Ymd') . '.xlsx"');
+    header('Cache-Control: max-age=0');
+    
+    // 6. 输出Excel
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
 
     //跟进
     public function dialogue()

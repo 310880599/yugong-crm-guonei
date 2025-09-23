@@ -179,6 +179,9 @@
     <a class="layui-btn layui-btn-info layui-btn-xs"  href="{:url('dialogue')}?id={{d.id}}"><i class="layui-icon">&#xe649;</i>查看跟进</a>
 </script>
     <script type="text/html" id="topBtn">
+         <div class="layui-btn-container">
+    <button class="layui-btn layui-btn-sm" lay-event="exportAll">导出全部数据</button>
+  </div>
 </script>
 
 
@@ -252,14 +255,37 @@
                 url: '{:url("perList")}',
                 method: 'post',
                 toolbar: '#topBtn',
-                defaultToolbar: ['filter', 'print', 'exports'],
+                defaultToolbar: ['filter', 'print'],
                 where: { keyword: { "timebucket": "today"} },
                 page: true,
                 limit: 10,
                 cols: cols,
                 done: bindResizeSave     // 表格完成后绑定监听
             });
-
+           table.on('toolbar(table-list)', function(obj) {
+  if(obj.event === 'exportAll') {
+    // 获取当前查询条件（正确处理嵌套对象）
+    var formData = {
+      'keyword[kh_rank]': $('#kh_rank').val(),
+      'keyword[status]': $('#kh_status').val(),
+      'keyword[contact]': $('#contact').val(),
+      'keyword[product_name]': $('#product_name').val(),
+      'keyword[kh_name]': $('#kh_name').val(),
+      'keyword[pr_user]': $('#pr_user').val(),
+      'keyword[timebucket]': $('#dateRange').val(),
+      'keyword[at_time]': $('#at_time').val()
+    };
+    
+    // 手动构建查询字符串（确保正确处理嵌套参数）
+    var queryString = $.param(formData);
+    
+    // 添加调试信息（可选，用于确认参数）
+    console.log('Export parameters:', queryString);
+    
+    // 调用后端导出接口
+    window.location.href = '{:url("Operator/exportAll")}' + '?' + queryString;
+  }
+});
             /* ===== 4. 监听拖拽结束并保存 ===== */
             function bindResizeSave() {
                 // 把之前的事件解绑，避免重复
