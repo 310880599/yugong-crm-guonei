@@ -77,7 +77,7 @@ $this->assign('adminResult', $adminResult);
               ->field('c.*, a.team_name')
               ->append(['contact'])
               ->hidden(['contacts']);
-
+        
         if (!empty($keyword['kh_rank'])) {
             $query->where('kh_rank', '=', $keyword['kh_rank']);
         }
@@ -199,7 +199,7 @@ private function exportToExcel($data)
     
     // 2. 设置标题行
     $headers = [
-        '客户名称', '产品', '地区', '联系方式', '客户级别', 
+        '团队名称','客户名称', '产品', '地区', '联系方式', '客户级别', 
         '客户来源', '客户状态', '成交状态', '最新跟进记录', 
         '负责人', '创建时间'
     ];
@@ -209,15 +209,21 @@ private function exportToExcel($data)
         $sheet->setCellValueByColumnAndRow($index + 1, 1, $header);
     }
     
-    // 3. 填充数据
+     // 3. 填充数据
     $row = 2;
     foreach ($data as $item) {
-          $col = 1;
+        $col = 1;
+        // ✅ 1. 先填充团队名称 (第一列)
+        $sheet->setCellValueByColumnAndRow($col++, $row, $item['team_name'] ?? '');
+        
+        // ✅ 2. 再填充客户名称 (第二列)
         $sheet->setCellValueByColumnAndRow($col++, $row, $item['kh_name']);
+        
+        // ✅ 3. 其他字段保持不变
         $sheet->setCellValueByColumnAndRow($col++, $row, $item['product_name']);
         $sheet->setCellValueByColumnAndRow($col++, $row, $item['xs_area']);
         
-        // 安全处理 contact 字段 - 关键修复
+        // 安全处理 contact 字段
         $contact = is_array($item['contact']) ? 
                    implode(',', $item['contact']) : 
                    (string)($item['contact'] ?? '');
@@ -225,7 +231,6 @@ private function exportToExcel($data)
         
         $sheet->setCellValueByColumnAndRow($col++, $row, $item['kh_rank']);
         $sheet->setCellValueByColumnAndRow($col++, $row, $item['kh_status']);
-        
         
         // 客户状态特殊处理
         $status = '';
