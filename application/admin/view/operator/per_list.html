@@ -131,7 +131,17 @@
                                         </select>
                                     </div>
                            </div>
-                            
+                            <div class="layui-inline">
+                                    <label class="layui-form-label">业务团队：</label>
+                                    <div class="layui-input-inline">
+                                        <select name="team_name" id="team_name" lay-search="">
+                                            <option value="">请选择业务团队</option>
+                                             {volist name='teamResult' id='vo'}
+            <option value="{$vo.team_name}">{$vo.team_name}</option>
+            {/volist}
+                                        </select>
+                                    </div>
+                           </div>
                             <div class="layui-inline">
                                 <label class="layui-form-label">日期查询：</label>
                                 <div class="layui-input-inline">
@@ -203,6 +213,7 @@
             /* ===== 2. 列配置，先喂宽度 ===== */
             var cols = [[
                 { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
+                { field: 'team_name', title: '团队' },
                 {
                     field: 'kh_name', title: '客户名称', sort: true, templet: function (res) {
                         return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + res.kh_name + "</a>";
@@ -266,6 +277,7 @@
   if(obj.event === 'exportAll') {
     // 获取当前查询条件（正确处理嵌套对象）
     var formData = {
+        'keyword[team_name]': $('#team_name').val(),
       'keyword[kh_rank]': $('#kh_rank').val(),
       'keyword[status]': $('#kh_status').val(),
       'keyword[contact]': $('#contact').val(),

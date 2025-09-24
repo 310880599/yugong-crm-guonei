@@ -20,9 +20,25 @@ class Operator extends Common
         $this->assign('khRankList', $khRankList);
         $productList = $this->getProductList();
         $this->assign('productList', $productList);
-        $adminResult = Db::name('admin')->where('group_id', '<>', 1)->where($this->getOrgWhere($current_admin['org']))->field('admin_id,username')->select();
-        $this->assign('adminResult', $adminResult);
-
+      $adminResult = Db::name('admin')
+    ->where('group_id', '<>', 1)
+    ->where($this->getOrgWhere($current_admin['org']))
+    ->field('admin_id,username,team_name') // 添加 team_name
+    ->select();
+$this->assign('adminResult', $adminResult);
+         $teamNames = Db::name('admin')
+        ->where('group_id', '<>', 1)
+        ->where($this->getOrgWhere($current_admin['org']))
+        ->where('team_name', '<>', '') // 排除空团队
+        ->distinct(true)
+        ->column('team_name');
+    
+    // 转换为模板需要的格式
+    $teamResult = [];
+    foreach ($teamNames as $teamName) {
+        $teamResult[] = ['team_name' => $teamName];
+    }
+    $this->assign('teamResult', $teamResult);
         return $this->fetch();
     }
 
@@ -56,7 +72,11 @@ class Operator extends Common
 
     $list = $this->_search($params, $model, function ($query, $p) {
         $keyword = $p['keyword'] ?? [];
-        $query->append(['contact'])->hidden(['contacts']);
+         $query->alias('c')
+              ->join('admin a', 'c.pr_user = a.username', 'LEFT')
+              ->field('c.*, a.team_name')
+              ->append(['contact'])
+              ->hidden(['contacts']);
 
         if (!empty($keyword['kh_rank'])) {
             $query->where('kh_rank', '=', $keyword['kh_rank']);
@@ -80,6 +100,20 @@ class Operator extends Common
         if (!empty($keyword['at_time'])) {
             $where = $this->getClientimeWhere($keyword['at_time']);
             $query->where($where);
+        }
+        if (!empty($keyword['team_name'])) {
+            $current_admin = Admin::getMyInfo();
+            $usernames = Db::name('admin')
+                ->where('team_name', $keyword['team_name'])
+                ->where($this->getOrgWhere($current_admin['org']))
+                ->column('username');
+            
+            if (!empty($usernames)) {
+                $query->whereIn('pr_user', $usernames);
+            } else {
+                // 没有匹配的用户，返回空结果
+                $query->where('1=0');
+            }
         }
         // 限制当前用户
         $query->where(['oper_user' => Session::get('username')]);
