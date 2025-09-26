@@ -61,21 +61,10 @@
                     style="border-bottom: transparent;height: auto">
                     <div class="layui-form-item" style="text-align: left;padding-left: 20px;">
                         <div class="layui-inline">
-                            <label class="layui-form-label" style="margin-left: 5px">产品名称：</label>
+                            <label class="layui-form-label" style="margin-left: 5px">产品分类：</label>
                             <div class="layui-input-inline">
-                                <input type="text" id="product_name" name="product_name" placeholder="请输入产品名称："
+                                <input type="text" id="category_name" name="category_name" placeholder="请输入产品分类："
                                     class="layui-input">
-                            </div>
-                        </div>
-                        <div class="layui-inline">
-                            <label class="layui-form-label" style="margin-left: 5px">产品分类</label>
-                            <div class="layui-input-inline">
-                                <select id="category_id" name="category_id" lay-filter="category_id" class="layui-select" lay-search>
-                                    <option value="">请选择产品分类</option>
-                                    {foreach $category_list as $vo}
-                                    <option value="{$vo.id}">{$vo.category_name}</option>
-                                    {/foreach}
-                                </select>
                             </div>
                         </div>
                     </div>
@@ -85,7 +74,6 @@
                                 style="vertical-align: sub;"></i>查询数据
                         </button>
                     </div>
-
                 </div>
             </div>
         </fieldset>
@@ -97,13 +85,13 @@
     </script>
 
     <script type="text/html" id="topBtn">
-        <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加产品</button>
+        <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加分类</button>
     </script>
 
 
     {include file="common/foot"/}
     <script>
-        layui.use(['table', 'form', 'upload', 'util', 'laydate'], function () {
+        layui.use(['table', 'form'], function () {
             var table = layui.table, form = layui.form, laydate = layui.laydate, $ = layui.jquery, upload = layui.upload, util = layui.util;
 
             var tableIn = table.render({
@@ -114,12 +102,10 @@
                 cols: [[
                     { checkbox: true, fixed: true },
                     { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
-                    { field: 'product_name', title: '产品名称' },
                     { field: 'category_name', title: '产品分类' },
                     { width: 200, align: 'center', toolbar: '#action' }
                 ]],
                 limit: 50, //每页默认显示的数量
-
                 page: { limits: [10, 20, 30, 40, 50, 100, 9999999] },
             });
 
@@ -128,9 +114,9 @@
                 var data = obj.data;
 
                 if (obj.event === 'del') {
-                    layer.confirm('您确定要删除这个产品吗？', function (index) {
+                    layer.confirm('您确定要删除这个分类吗？', function (index) {
                         var loading = layer.load(1, { shade: [0.1, '#fff'] });
-                        $.post("{:url('Products/del')}", { id: data.id }, function (res) {
+                        $.post("{:url('ProductCategory/del')}", { id: data.id }, function (res) {
                             layer.close(loading);
                             if (res.code === 200) {
                                 layer.msg(res.msg, { time: 1000, icon: 1 });
@@ -143,7 +129,7 @@
                     });
                 }
                 else if (obj.event === 'edit') {
-                    layer_add("编辑客户", "{:url('Products/edit')}?id=" + data.id);
+                    layer_add("编辑产品分类", "{:url('ProductCategory/edit')}?id=" + data.id);
                 }
             });
 
@@ -151,13 +137,13 @@
             $('body').on('click', '#add', function () {
                 var indexOpen = layer.open({
                     type: 2,
-                    title: '添加产品',
+                    title: '添加产品分类',
                     closeBtn: 1, //是否显示关闭按钮
                     area: ['100%', '86%'],
                     anim: 2,  //动画
                     shadeClose: false,  //点击空白处是否关闭
                     maxmin: false, //开启最大化最小化按钮
-                    content: ["{:url('Products/add')}"]
+                    content: ["{:url('ProductCategory/add')}"]
                 });
             })
 
@@ -165,7 +151,7 @@
             //监听搜索
             form.on('submit(LAY-app-contlist-search)', function (data) {
                 table.reload('table-list', {
-                    url: "{:url('Products/productSearch')}",
+                    url: "{:url('ProductCategory/categorySearch')}",
                     where: data.field,
                     page: {
                         curr: 1
@@ -173,10 +159,6 @@
                 });
 
 
-            });
-
-            laydate.render({
-                elem: '#at_time'
             });
         });
     </script>

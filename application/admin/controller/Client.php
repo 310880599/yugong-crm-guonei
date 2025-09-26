@@ -44,7 +44,7 @@ class Client extends Common
     // 添加公共日志
     static function addOperLog($leads_id, $type, $description)
     {
-        $description = is_string($description) ? $description : json_encode($description, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $description = is_string($description) ? $description : json_encode($description, JSON_UNESCAPED_SLASHES |JSON_UNESCAPED_UNICODE);
         Db::table('crm_operation_log')->insert([
             'user_id' => Session::get('aid'),
             'leads_id' => $leads_id,
@@ -1006,6 +1006,14 @@ class Client extends Common
                 // if (!$product) {
                 //     $this->addProduct($product_name);
                 // }
+
+                // 添加日志记录
+                $this->addOperLog(
+                    $id,
+                    '新增客户',
+                    ['运营人员'=>$data['oper_user'],'联系方式'=>$contact]
+                );
+                
                 // 提交事务
                 Db::commit();
                 $this->redisUnLock();
@@ -1069,6 +1077,14 @@ class Client extends Common
                 // if (!$product) {
                 //     $this->addProduct($product_name);
                 // }
+
+
+                // 添加日志记录
+                $this->addOperLog(
+                    $data['id'],
+                    '编辑客户',
+                    ['运营人员'=>$data['oper_user'],'联系方式'=>$contact]
+                );
                 // 提交事务
                 Db::commit();
                 // $this->redisUnLock();

@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
     <link rel="stylesheet" href="/static/admin/css/login.css" />
     <link rel="stylesheet" href="/static/common/css/font.css" />
+    <style>
+        .remember-password-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+        .remember-password-container .layui-form-checkbox[lay-skin="primary"] {
+            margin-top: 0;
+        }
+    </style>
 </head>
 <body class="beg-login-bg">
 <div class="container login">
@@ -33,6 +43,12 @@
                                 </label>
                                 <input type="password" name="password" lay-verify="required" placeholder="这里输入密码" class="layui-input">
                             </div>
+                            <div class="layui-form-item">
+                                <div class="remember-password-container">
+                                    <input type="checkbox" name="remember" lay-filter="remember"  title="记住密码" id="remember" lay-skin="primary">
+                                </div>
+                                
+                            </div>
                             <!-- 验证码部分已移除 -->
                             <div class="layui-form-item">
                                 <button type="submit" class="layui-btn btn-submit btn-blog" lay-submit lay-filter="login">登录</button>
@@ -53,6 +69,24 @@
 <script>
     layui.use('form',function(){
         var form = layui.form,$ = layui.jquery;
+        // 页面加载时检查是否有记住的登录信息
+        $(document).ready(function(){
+            var savedUsername = localStorage.getItem('remembered_username');
+            var savedPassword = localStorage.getItem('remembered_password');
+            var rememberChecked = localStorage.getItem('remember_checked') === 'true';
+            if (savedUsername && savedPassword && rememberChecked) {
+                $('input[name="username"]').val(savedUsername); 
+                $('input[name="password"]').val(savedPassword);
+                $('#remember').prop('checked', true);
+                form.render('checkbox'); // 重新渲染复选框
+            }
+        });
+
+        // // 监听记住密码复选框变化
+        // form.on('checkbox(remember)', function(data){
+        //     localStorage.setItem('remember_checked', data.elem.checked);
+        // });
+
         //监听提交
         form.on('submit(login)', function(data){
             loading =layer.load(1, {shade: [0.1,'#fff'] });//0.1透明度的白色背景
@@ -60,6 +94,16 @@
                 layer.close(loading);
                 if(res.code == 1){
                     layer.msg(res.msg, {icon: 1, time: 1000}, function(){
+                        // 登录成功后，根据复选框状态保存登录信息
+                        if ($('#remember').prop('checked')) {
+                            localStorage.setItem('remembered_username', data.field.username);
+                            localStorage.setItem('remembered_password', data.field.password);
+                            localStorage.setItem('remember_checked', 'true');
+                        } else {
+                            localStorage.removeItem('remembered_username');
+                            localStorage.removeItem('remembered_password');
+                            localStorage.removeItem('remember_checked');
+                        }
                         location.href = "{:url('admin/index/index')}";
                     });
                 }else{

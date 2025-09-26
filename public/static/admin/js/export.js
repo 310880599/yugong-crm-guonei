@@ -130,11 +130,11 @@ var ExportSelectTables = (function () {
                         ws = XLSX.utils.aoa_to_sheet(sheetData);
                     } else {
                         // 如果没有表头，使用原表格
-                        ws = XLSX.utils.table_to_sheet(table);
+                        ws = createWorksheetFromVisibleRows(table);
                     }
                 } else {
                     // 如果没有数据或数据格式不对，使用原表格
-                    ws = XLSX.utils.table_to_sheet(table);
+                    ws = createWorksheetFromVisibleRows(table);
                 }
 
                 XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -149,6 +149,29 @@ var ExportSelectTables = (function () {
         }
     }
 
+    // 从可见行创建工作表（忽略隐藏行）
+    function createWorksheetFromVisibleRows(table) {
+        // 创建表格的副本
+        var tableClone = table.cloneNode(true);
+
+        // 移除包含隐藏td的行
+        var rowsWithHiddenTd = tableClone.querySelectorAll('tbody tr');
+        rowsWithHiddenTd.forEach(function (row) {
+            var tds = row.querySelectorAll('td');
+
+            // 检查该行是否有任何td是隐藏的
+            tds.forEach(function (td) {
+                var style = td.getAttribute('style') || '';
+                if (style.includes('display: none') || style.includes('display:none')) {
+                    td.remove();
+                }
+            });
+
+        });
+
+        // 从处理后的表格创建工作表
+        return XLSX.utils.table_to_sheet(tableClone);
+    }
     return {
         addCheckboxes: addCheckboxes,
         exportSelected: exportSelected

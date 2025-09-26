@@ -140,3 +140,18 @@ CREATE TABLE `crm_products` (
   INDEX `idx_product_name` (`product_name`),
   INDEX `idx_org` (`org`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '产品表';
+
+
+-- 产品分类
+CREATE TABLE `crm_product_category` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `category_name` varchar(100) DEFAULT '' COMMENT '产品分类名称',
+  `org` varchar(10) DEFAULT '' COMMENT '所属组织(admin,1s,2s,3s)',
+  PRIMARY KEY (`id`),
+  INDEX `idx_category_name` (`category_name`),
+  INDEX `idx_org` (`org`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '产品分类表';
+
+-- 产品加分类id
+ALTER TABLE `crm_products`
+ADD COLUMN `category_id` int(11) DEFAULT 0 COMMENT '产品分类id';

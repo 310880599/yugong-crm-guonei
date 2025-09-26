@@ -193,7 +193,7 @@ class Common extends Controller
     {
         $current_admin = Admin::getMyInfo();
         $where = [];
-        if ($current_admin['org'] && strpos($current_admin['org'],'admin') === false) $where[] = $this->getOrgWhere($current_admin['org']);
+        if ($current_admin['org'] && strpos($current_admin['org'], 'admin') === false) $where[] = $this->getOrgWhere($current_admin['org']);
         $list = Db::name('crm_products')->where($where)->group('product_name')->field('product_name')->select();
         $list = array_column($list, 'product_name');
         return json_encode($list);
@@ -220,7 +220,7 @@ class Common extends Controller
     public function buildTimeWhere($timebucket, $field = 'create_time')
     {
         if (!$timebucket) {
-            return [];
+            return ['1','=','1'];
         }
         $timeRanges = [
             'today' => ['today', 'today'],
@@ -257,23 +257,35 @@ class Common extends Controller
         return explode($this->org_fgx, trim($org, $this->org_fgx));
     }
 
-    public function getOrgWhere($org)
+    public function getOrgWhere($org, $alias = '')
     {
-        return function ($query) use ($org) {
+        return function ($query) use ($org, $alias) {
             $org_list = $this->getOrg($org);
-            $query->where('org', 'in', $org_list);
+            $alias = $alias ? $alias . '.' : '';
+            $query->where($alias . 'org', 'in', $org_list);
             foreach ($org_list as $v) {
-                $query->whereOr('org', 'like', '%' . $this->org_fgx . $v . $this->org_fgx . '%');
+                $query->whereOr($alias . 'org', 'like', '%' . $this->org_fgx . $v . $this->org_fgx . '%');
             }
         };
     }
 
     //每个月的询盘数=当月录入询盘数-当月录入的询盘丢入公海数（仅当月）+当月从公海拾取数
-    public function getClientimeWhere($timebucket)
+    public function getClientimeWhere($timebucket, $alias = '')
     {
-        return function ($query) use ($timebucket) {
-            $query->where([$this->buildTimeWhere($timebucket, 'at_time')])
-                ->whereOr([$this->buildTimeWhere($timebucket, 'to_kh_time')]);
+        $alias = $alias ? $alias . '.' : '';
+        return function ($query) use ($timebucket, $alias) {
+            $query->where([$this->buildTimeWhere($timebucket, $alias . 'at_time')])
+                ->whereOr([$this->buildTimeWhere($timebucket, $alias . 'to_kh_time')]);
         };
+    }
+
+    //产品分类列表
+    public function getCategoryList()
+    {
+        $current_admin = Admin::getMyInfo();
+        $where = [];
+        if ($current_admin['org'] && strpos($current_admin['org'], 'admin') === false) $where[] = $this->getOrgWhere($current_admin['org']);
+        $list = Db::name('crm_product_category')->where($where)->select();
+        return $list;
     }
 }

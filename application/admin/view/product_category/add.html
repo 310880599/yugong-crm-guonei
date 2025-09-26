@@ -2,23 +2,14 @@
 <div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
 
     <form class="layui-form layui-form-pane">
+
         <div class="layui-form-item">
-            <label class="layui-form-label">所属分类</label>
+            <label class="layui-form-label">产品分类</label>
             <div class="layui-input-4">
-                <select id="category_id" name="category_id" lay-verify="required" lay-filter="category_id" class="layui-select">
-                    <option value="">请选择产品分类</option>
-                    {foreach $category_list as $vo}
-                    <option value="{$vo.id}">{$vo.category_name}</option>
-                    {/foreach}
-                </select>
+                <input type="text" id="category_name" name="category_name" lay-verify="required" placeholder="请输入产品分类" class="layui-input">
             </div>
         </div>
-        <div class="layui-form-item">
-            <label class="layui-form-label">产品名称</label>
-            <div class="layui-input-4">
-                <input type="text" id="product_name" name="product_name" lay-verify="required" placeholder="请输入产品名称" class="layui-input">
-            </div>
-        </div>   
+
         <div class="layui-form-item">
             <div class="layui-input-block">
                 <button type="button" class="layui-btn"  lay-submit="" lay-filter="submit">提交保存</button>
@@ -39,7 +30,7 @@
             //监听提交
             form.on('submit(submit)', function(data){
                 //新增商品
-                $.post("{:url('Products/add')}",data.field,function (res) {
+                $.post("{:url('ProductCategory/add')}",data.field,function (res) {
                     if (res.code == 200){
                         layer.msg(res.msg,{time:1000});
                         setTimeout(function () {
