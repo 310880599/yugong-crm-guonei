@@ -199,6 +199,35 @@ class Common extends Controller
         return json_encode($list);
     }
 
+
+    //产品列表(我的客户使用)
+    public function getProductListClient()
+    {
+        $current_admin = Admin::getMyInfo();
+        $where = [];
+        if ($current_admin['org'] && strpos($current_admin['org'], 'admin') === false) {
+            $where[] = $this->getOrgWhere($current_admin['org'], 'p');
+        }
+
+        $rows = Db::name('crm_products')->alias('p')
+            ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+            ->where($where)
+            ->group('p.product_name, c.category_name')
+            ->field('p.product_name, c.category_name')
+            ->order('p.product_name', 'asc')
+            ->select();
+
+        $result = [];
+        foreach ($rows as $r) {
+            $cat = $r['category_name'] ?: '无';
+            $result[] = $r['product_name'].' --('.$cat.')';
+        }
+        return json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
+
+
+
     public function _search($params, $model, $callback = null)
     {
         $size = $params['limit'] ?? config('pageSize');

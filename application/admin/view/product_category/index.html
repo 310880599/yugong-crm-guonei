@@ -61,9 +61,9 @@
                     style="border-bottom: transparent;height: auto">
                     <div class="layui-form-item" style="text-align: left;padding-left: 20px;">
                         <div class="layui-inline">
-                            <label class="layui-form-label" style="margin-left: 5px">产品分类：</label>
+                            <label class="layui-form-label" style="margin-left: 5px">供应商：</label>
                             <div class="layui-input-inline">
-                                <input type="text" id="category_name" name="category_name" placeholder="请输入产品分类："
+                                <input type="text" id="category_name" name="category_name" placeholder="请输入供应商："
                                     class="layui-input">
                             </div>
                         </div>
@@ -85,7 +85,7 @@
     </script>
 
     <script type="text/html" id="topBtn">
-        <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加分类</button>
+        <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加供应商</button>
     </script>
 
 
@@ -102,7 +102,7 @@
                 cols: [[
                     { checkbox: true, fixed: true },
                     { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
-                    { field: 'category_name', title: '产品分类' },
+                    { field: 'category_name', title: '供应商' },
                     { width: 200, align: 'center', toolbar: '#action' }
                 ]],
                 limit: 50, //每页默认显示的数量
@@ -114,7 +114,7 @@
                 var data = obj.data;
 
                 if (obj.event === 'del') {
-                    layer.confirm('您确定要删除这个分类吗？', function (index) {
+                    layer.confirm('您确定要删除这个供应商吗？', function (index) {
                         var loading = layer.load(1, { shade: [0.1, '#fff'] });
                         $.post("{:url('ProductCategory/del')}", { id: data.id }, function (res) {
                             layer.close(loading);
@@ -129,7 +129,7 @@
                     });
                 }
                 else if (obj.event === 'edit') {
-                    layer_add("编辑产品分类", "{:url('ProductCategory/edit')}?id=" + data.id);
+                    layer_add("编辑供应商", "{:url('ProductCategory/edit')}?id=" + data.id);
                 }
             });
 
@@ -137,7 +137,7 @@
             $('body').on('click', '#add', function () {
                 var indexOpen = layer.open({
                     type: 2,
-                    title: '添加产品分类',
+                    title: '添加供应商',
                     closeBtn: 1, //是否显示关闭按钮
                     area: ['100%', '86%'],
                     anim: 2,  //动画

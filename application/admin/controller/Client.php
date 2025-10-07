@@ -1043,8 +1043,9 @@ class Client extends Common
         $countries = $this->getCountries();
         $this->assign('countries', $countries);
         //新增商品
-        $productList = $this->getProductList();
+        $productList = $this->getProductListClient();
         $this->assign('productList', $productList);
+        //var_dump($productList);
         return $this->fetch('client/add');
     }
 
@@ -1140,7 +1141,7 @@ class Client extends Common
         $this->assign('yyList', json_encode($yyList['yyList']));
         $this->assign('_yyList', json_encode($yyList['_yyList']));
         //新增商品
-        $productList = $this->getProductList();
+        $productList = $this->getProductListClient();
         $this->assign('productList', $productList);
         return $this->fetch('client/edit');
     }

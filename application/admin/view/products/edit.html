@@ -5,10 +5,10 @@
 
         <input type="hidden" name="id" value="{$result.id}">
         <div class="layui-form-item">
-            <label class="layui-form-label">所属分类</label>
+            <label class="layui-form-label">供应商</label>
             <div class="layui-input-4">
                 <select id="category_id" name="category_id" lay-verify="required" lay-filter="category_id" class="layui-select">
-                    <option value="">请选择产品分类</option>
+                    <option value="">请选择供应商</option>
                     {foreach $category_list as $vo}
                     <option value="{$vo.id}" {if $vo.id == $result.category_id}selected{/if}>{$vo.category_name}</option>
                     {/foreach}

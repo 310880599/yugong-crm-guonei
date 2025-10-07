@@ -47,7 +47,7 @@ class ProductCategory extends Common
         if (request()->isPost()) {
             $category_name = Request::param('category_name');
             if (empty($category_name)) {
-                return $this->result([], 500, '分类名称不能为空');
+                return $this->result([], 500, '供应商不能为空');
             }
             
             $current_admin = Admin::getMyInfo();
@@ -85,7 +85,7 @@ class ProductCategory extends Common
         if (request()->isPost()) {
             $category_name = Request::param('category_name');
             if (empty($category_name)) {
-                return $this->result([], 500, '分类名称不能为空');
+                return $this->result([], 500, '供应商不能为空');
             }
             
             $current_admin = Admin::getMyInfo();
@@ -99,7 +99,7 @@ class ProductCategory extends Common
                 Db::name('crm_product_category')->where('id', $id)->update(['category_name' => $category_name]);
                 return $this->result([], 200, '操作成功');
             } else {
-                return $this->result([], 500, '分类名称已存在');
+                return $this->result([], 500, '供应商已存在');
             }
         }
 
@@ -114,7 +114,7 @@ class ProductCategory extends Common
         // 检查是否有产品使用了该分类
         $has_products = Db::name('crm_products')->where('category_id', $id)->find();
         if ($has_products) {
-            return $this->result([], 500, '该分类下有产品，无法删除');
+            return $this->result([], 500, '该供应商下有产品，无法删除');
         }
         
         $result = Db::name('crm_product_category')->where('id', $id)->delete();

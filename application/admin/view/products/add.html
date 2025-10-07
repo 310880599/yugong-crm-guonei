@@ -3,14 +3,9 @@
 
     <form class="layui-form layui-form-pane">
         <div class="layui-form-item">
-            <label class="layui-form-label">所属分类</label>
+            <label class="layui-form-label">供应商</label>
             <div class="layui-input-4">
-                <select id="category_id" name="category_id" lay-verify="required" lay-filter="category_id" class="layui-select">
-                    <option value="">请选择产品分类</option>
-                    {foreach $category_list as $vo}
-                    <option value="{$vo.id}">{$vo.category_name}</option>
-                    {/foreach}
-                </select>
+                <input type="text" id="category_name" name="category_name" lay-verify="required" placeholder="请输入供应商" class="layui-input">
             </div>
         </div>
         <div class="layui-form-item">
@@ -31,6 +26,9 @@
 
 <script>
 
+
+            
+        const categoryNamesNew = new EditableSelect(document.getElementById('category_name'),  {$category_list|raw},'供应商','','id',false);    
 
         layui.use(['form', 'layer'], function () {
             var form = layui.form, layer = layui.layer,$= layui.jquery;

@@ -68,6 +68,9 @@ class Products extends Common
             }
         }
         $category_list = $this->getCategoryList();
+        $category_list = array_column($category_list, 'category_name');
+        $category_list = json_encode($category_list);
+        //var_dump($category_list);
         $this->assign('category_list', $category_list);
         return $this->fetch();
     }

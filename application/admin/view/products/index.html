@@ -68,10 +68,10 @@
                             </div>
                         </div>
                         <div class="layui-inline">
-                            <label class="layui-form-label" style="margin-left: 5px">产品分类</label>
+                            <label class="layui-form-label" style="margin-left: 5px">供应商</label>
                             <div class="layui-input-inline">
                                 <select id="category_id" name="category_id" lay-filter="category_id" class="layui-select" lay-search>
-                                    <option value="">请选择产品分类</option>
+                                    <option value="">请选择供应商</option>
                                     {foreach $category_list as $vo}
                                     <option value="{$vo.id}">{$vo.category_name}</option>
                                     {/foreach}
@@ -115,7 +115,7 @@
                     { checkbox: true, fixed: true },
                     { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
                     { field: 'product_name', title: '产品名称' },
-                    { field: 'category_name', title: '产品分类' },
+                    { field: 'category_name', title: '供应商' },
                     { width: 200, align: 'center', toolbar: '#action' }
                 ]],
                 limit: 50, //每页默认显示的数量

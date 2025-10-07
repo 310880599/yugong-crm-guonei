@@ -15,8 +15,10 @@
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
     <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
     <script src="/static/admin/js/select.js"></script>
-
-
+    <style>
+        /* 只影响下拉面板里的分类名 */
+        .layui-form-select dl dd .cat-bold { font-weight: 700; }
+    </style>
     <style>
         .layui-form-pane .layui-form-label {
             width: 110px;
@@ -217,6 +219,35 @@
         </form>
     </div>
     {include file="common/foot"/}
+    <script>
+            
+            layui.use(['form'], function () {
+                var form = layui.form;
+
+                function boldCategoryInDropdown($select) {
+                    // $select 是原生 <select>，Layui 会在其后生成一个 .layui-form-select 的自定义下拉
+                    var $wrap = $select.next('.layui-form-select');
+                    $wrap.find('dl dd').each(function () {
+                    var txt = $(this).text();                // 例如：B产品 (产品厂家)
+                    var m = txt.match(/^(.*)\s*\((.+)\)\s*$/);
+                    if (m) {
+                        // 用 html 重写 dd 的展示，把分类名包一层 span
+                        $(this).html(m[1] + ' (<span class="cat-bold">' + m[2] + '</span>)');
+                    }
+                    });
+                }
+
+                // 1）先把后端返回的数组填充到 <select> 的 <option> 里（纯文本）
+                // 2）再渲染
+                form.render('select');
+
+                // 3）渲染完成后调用加粗函数（根据你的 select 的选择器调整）
+                boldCategoryInDropdown($('select[name="product_name"]'));
+
+                // 如果你会动态更新选项或调用 form.render('select') 重新渲染，记得再调用一次上面的 boldCategoryInDropdown
+            });
+        
+    </script>
     <script>
         document.getElementById('whatsapp').addEventListener('keypress', function (event) {
             // 阻止空格键输入 (keyCode 32)

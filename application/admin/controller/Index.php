@@ -18,10 +18,10 @@ class Index extends Common
     {
         //导航
         // 获取缓存数据
-        $authRule = cache('authRule');
+        $authRule = cache('authRuleGuoNei');
         if (!$authRule) {
             $authRule = db('auth_rule')->where('menustatus=1')->order('sort')->select();
-            cache('authRule', $authRule, 3600);
+            cache('authRuleGuoNei', $authRule, 3600);
         }
         //声明数组
         $menus = array();
