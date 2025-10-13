@@ -100,10 +100,31 @@
                 method: 'post',
                 toolbar: '#topBtn',
                 cols: [[
-                    { checkbox: true, fixed: true },
-                    { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
-                    { field: 'category_name', title: '供应商' },
-                    { width: 200, align: 'center', toolbar: '#action' }
+                    { checkbox: true, fixed: true , hide: false },
+                    { field: 'id', title: 'ID', width: '10%', fixed: true, hide: false },
+                    { field: 'category_name', title: '供应商',width: '20%', fixed: true, hide: false},
+                    { field: 'submit_person', title: '提交人', width: '10%', fixed: true, hide: false },
+                    { field: 'add_time', title: '添加时间', width: '18%', fixed: true, hide: false, 
+                        templet: function(d){
+                        var v = d.add_time;
+                        if (!v) return '';
+                        // 如果是纯数字（秒级时间戳）
+                        if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                        // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                        return v;
+                        }
+                     },
+                    { field: 'edit_time', title: '修改时间', width: '18%', fixed: true, hide: false,
+                        templet: function(d){
+                        var v = d.edit_time;
+                        if (!v) return '';
+                        // 如果是纯数字（秒级时间戳）
+                        if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                        // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                        return v;
+                        }
+                    },
+                    { align: 'center', toolbar: '#action',width: '20%',fixed: true, hide: false}
                 ]],
                 limit: 50, //每页默认显示的数量
                 page: { limits: [10, 20, 30, 40, 50, 100, 9999999] },

@@ -187,6 +187,17 @@ class Common extends Controller
         return $res;
     }
 
+    //判断是否存在商品,条件是指定的分类
+    public function checkProductCategory($product_name,$category_id)
+    {
+        if (!$product_name) return true;
+        $current_admin = Admin::getMyInfo();
+        $where = [['product_name', '=', $product_name]];
+        if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = $this->getOrgWhere($current_admin['org']);
+        $res = Db::name('crm_products')->where($where)->where('category_id','=',$category_id)->find();
+        return $res;
+    }
+
 
     //产品列表
     public function getProductList()

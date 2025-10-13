@@ -98,6 +98,10 @@
 
     <script type="text/html" id="topBtn">
         <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加产品</button>
+        <button class="layui-btn layui-btn-danger layui-btn-sm" lay-event="batchDel"><i class="layui-icon">&#xe640;</i> 批量删除</button>
+        <button class="layui-btn layui-btn-warm layui-btn-sm" lay-event="importExcel"><i class="layui-icon">&#xe67c;</i> 导入Excel</button>
+        <!-- ★ 新增：下载模板 -->
+        <button class="layui-btn layui-btn-normal layui-btn-sm" lay-event="downloadTpl"><i class="layui-icon">&#xe601;</i> 下载模板</button>
     </script>
 
 
@@ -113,10 +117,31 @@
                 toolbar: '#topBtn',
                 cols: [[
                     { checkbox: true, fixed: true },
-                    { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
-                    { field: 'product_name', title: '产品名称' },
-                    { field: 'category_name', title: '供应商' },
-                    { width: 200, align: 'center', toolbar: '#action' }
+                    { field: 'id', title: 'ID', width: '10%', fixed: true, hide: false },
+                    { field: 'product_name', title: '产品名称' ,width: '23%', fixed: true, hide: false },
+                    { field: 'category_name', title: '供应商' ,width: '23%', fixed: true, hide: false },
+                    { field: 'submit_person', title: '提交人', width: '10%', fixed: true, hide: false },
+                    { field: 'add_time', title: '添加时间', width: '10%', fixed: true, hide: false, 
+                        templet: function(d){
+                        var v = d.add_time;
+                        if (!v) return '';
+                        // 如果是纯数字（秒级时间戳）
+                        if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                        // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                        return v;
+                        }
+                    },
+                    { field: 'edit_time', title: '修改时间', width: '10%', fixed: true, hide: false,
+                        templet: function(d){
+                        var v = d.edit_time;
+                        if (!v) return '';
+                        // 如果是纯数字（秒级时间戳）
+                        if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                        // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                        return v;
+                        }
+                    },
+                    { align: 'center', toolbar: '#action' ,width: '10%',}
                 ]],
                 limit: 50, //每页默认显示的数量
 
@@ -143,7 +168,49 @@
                     });
                 }
                 else if (obj.event === 'edit') {
-                    layer_add("编辑客户", "{:url('Products/edit')}?id=" + data.id);
+                    layer_add("编辑产品", "{:url('Products/edit')}?id=" + data.id);
+                }
+            });
+
+
+
+            table.on('toolbar(table-list)', function(obj){
+                if (obj.event === 'batchDel') {
+                    var rows = table.checkStatus('table-list').data || [];
+                    if (!rows.length) return layer.msg('请先勾选要删除的记录', {icon:0});
+                    var ids = rows.map(function(r){return r.id;});
+                    layer.confirm('确认删除选中的 '+ ids.length +' 条记录吗？', function(index){
+                        var loading = layer.load(1, { shade: [0.1, '#fff'] });
+                        $.post("{:url('Products/batchDel')}", {ids: ids}, function(res){
+                            layer.close(loading);
+                            if (res.code === 0) {
+                                layer.msg('删除成功', {icon:1, time:800}, function(){
+                                    // 方式A：仅刷新表格（推荐，快）
+                                    tableIn.reload({ page: { curr: 1 } });
+
+                                    // 方式B：刷新当前 iframe 页面（如需整页刷新，取消下一行注释）
+                                    // window.location.reload();
+                                });
+                            } else {
+                                layer.msg(res.msg || '删除失败', {icon:2});
+                            }
+                        }, 'json');
+                        layer.close(index);
+                    });
+                }else if (obj.event === 'importExcel') {
+                    layer.open({
+                    type: 2,
+                    title: '批量导入（Excel/CSV）',
+                    area: ['600px','360px'],
+                    shadeClose: true,
+                    content: ["{:url('Products/import')}", 'no']
+                    });
+                }else if (obj.event === 'downloadTpl') {
+                    // 方式一：当前窗口直接下载
+                    window.location.href = "{:url('Products/tpl')}";
+                
+                    // （可选）方式二：新标签下载
+                    // window.open("{:url('InquirySource/tpl')}", "_blank");
                 }
             });
 
