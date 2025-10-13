@@ -93,13 +93,20 @@ class Products extends Common
         if (empty($result)) {
             return $this->result([], 500, '参数错误');
         }
+
+        // 权限判定
+        $current_admin = Admin::getMyInfo();
+        $isSuper = (session('aid') == 1) || ($current_admin['username'] === 'admin');
+
         if (request()->isPost()) {
             $product_name = Request::param('product_name');
-            $category_id = (int)Request::param('category_id');
+            $category_id  = (int)Request::param('category_id');
+
             if (empty($product_name)) {
                 return $this->result([], 500, '商品名称不能为空');
             }
-            $current_admin = Admin::getMyInfo();
+
+            // 同组织 + 同供应商 下产品名不可重复（排除当前ID）
             $exists = Db::name('crm_products')
                 ->where('product_name', $product_name)
                 ->where('category_id', '=', $category_id)
@@ -109,15 +116,37 @@ class Products extends Common
             if ($exists) {
                 return $this->result([], 500, '商品已存在');
             }
-            $category_id = (int)Request::param('category_id');
+
             $current_time = time();
-            $result = Db::name('crm_products')->where('id', $id)->update(['product_name' => $product_name, 'category_id' => $category_id, 'edit_time' => $current_time]);
-            if ($result) {
+
+            // 非超管：限制只能修改自己提交的记录
+            $updateQuery = Db::name('crm_products')->where('id', $id);
+            if (!$isSuper) {
+                $updateQuery->where('submit_person', $current_admin['username']);
+            }
+
+            $aff = $updateQuery->update([
+                'product_name' => $product_name,
+                'category_id'  => $category_id,
+                'edit_time'    => $current_time
+            ]);
+
+            if ($aff) {
                 return $this->result([], 200, '操作成功');
             } else {
+                // 可能是无权限或未变更
+                if (!$isSuper && $result['submit_person'] !== $current_admin['username']) {
+                    return $this->result([], 500, '无权限操作他人记录');
+                }
                 return $this->result([], 500, '操作失败');
             }
         }
+
+        // GET：非超管禁止打开他人记录编辑页
+        if (!$isSuper && ($result['submit_person'] ?? '') !== ($current_admin['username'] ?? '')) {
+            return $this->error('无权限编辑他人记录');
+        }
+
         // 非提交：准备下拉数据为 {id,name} + 默认ID
         $defaultCategoryId = (int)$result['category_id'];
         $category_rows = $this->getCategoryList();
@@ -137,11 +166,24 @@ class Products extends Common
     public function del()
     {
         $id = Request::param('id');
-        $result = Db::name('crm_products')->where('id', $id)->delete();
-        if ($result) {
+        if (empty($id)) {
+            return $this->result([], 500, '参数错误');
+        }
+
+        $current_admin = Admin::getMyInfo();
+        $isSuper = (session('aid') == 1) || ($current_admin['username'] === 'admin');
+
+        $query = Db::name('crm_products')->where('id', $id);
+        if (!$isSuper) {
+            $query->where('submit_person', $current_admin['username']);
+        }
+
+        $aff = $query->delete();
+        if ($aff) {
             return $this->result([], 200, '删除成功');
         } else {
-            return $this->result([], 500, '删除失败');
+            // 可能是记录不存在或无权限
+            return $this->result([], 500, '无权限或记录不存在');
         }
     }
 
@@ -152,28 +194,47 @@ class Products extends Common
         if (!request()->isPost()) {
             return json(['code' => -200, 'msg' => '非法请求']);
         }
-        // ids 既可为数组也可为逗号串
-        $ids = input('post.ids/a', []); // /a 过滤为数组
+        $ids = input('post.ids/a', []);
         if (empty($ids)) {
             return json(['code' => -200, 'msg' => '未选择任何记录']);
         }
 
-        // 建议再做一次超管校验（双保险）
-        // if (session('aid') != 1) return json(['code'=>-200,'msg'=>'无权限']);
+        $current_admin = Admin::getMyInfo();
+        $isSuper = (session('aid') == 1) || ($current_admin['username'] === 'admin');
 
         try {
-            // 方式1：模型批量删除
-            // $res = InquirySourceModel::destroy($ids);
-            // 方式2：DB 批量删除（更直观）
-            $res = \think\Db::name('crm_products')->whereIn('id', $ids)->delete();
-            if ($res > 0) {
-                return json(['code' => 0, 'msg' => '删除成功', 'data' => ['count' => $res]]);
+            if ($isSuper) {
+                $delCount = Db::name('crm_products')->whereIn('id', $ids)->delete();
+                if ($delCount > 0) {
+                    return json(['code' => 0, 'msg' => '删除成功', 'data' => ['count' => $delCount]]);
+                }
+                return json(['code' => -200, 'msg' => '删除失败或记录不存在']);
+            } else {
+                // 仅允许删除本人提交的记录
+                $ownIds = Db::name('crm_products')
+                    ->whereIn('id', $ids)
+                    ->where('submit_person', $current_admin['username'])
+                    ->column('id');
+
+                if (empty($ownIds)) {
+                    return json(['code' => -200, 'msg' => '无可删除的记录（仅能删除本人提交的记录）']);
+                }
+
+                $delCount = Db::name('crm_products')->whereIn('id', $ownIds)->delete();
+                $skipped  = count($ids) - $delCount;
+
+                if ($delCount > 0) {
+                    $msg = '删除成功：' . $delCount . ' 条';
+                    if ($skipped > 0) $msg .= '，跳过(非本人记录)：' . $skipped . ' 条';
+                    return json(['code' => 0, 'msg' => $msg, 'data' => ['count' => $delCount, 'skipped' => $skipped]]);
+                }
+                return json(['code' => -200, 'msg' => '删除失败或记录不存在（或无权限）']);
             }
-            return json(['code' => -200, 'msg' => '删除失败或记录不存在']);
         } catch (\Throwable $e) {
             return json(['code' => -200, 'msg' => '删除异常：' . $e->getMessage()]);
         }
     }
+
 
 
     // 导入页（弹窗）
