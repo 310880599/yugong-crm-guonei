@@ -77,6 +77,12 @@
             width: 80px;
             margin-right: 10px;
         }
+        /* 让电话行像“客户名称”一样铺满 */
+        .input-row { display: flex; align-items: center; width: 101%; }
+        .input-row > .phone { flex: 1 1 auto; min-width: 0; }   /* 关键：占满剩余空间 */
+        .input-row > .phone .layui-input { width: 101%; }       /* 输入框跟随容器铺满 */
+
+
     </style>
 </head>
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
@@ -86,126 +92,79 @@
 
         <form class="layui-form layui-form-pane">
             <div class="layui-form-item">
-                <label class="layui-form-label">客户名称</label>
+                <label class="layui-form-label">客户名称<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
                     <input type="text" id="kh_name" name="kh_name" lay-verify="required" placeholder="请输入客户名称"
                         class="layui-input">
                 </div>
             </div>
             <div class="layui-form-item">
-                <label class="layui-form-label">地区</label>
-                <div class="layui-input-4">
-                    <!-- <input type="text" id="xs_area" name="xs_area" lay-verify="required" placeholder="请输入地区"
-                        class="layui-input"> -->
-                    <select name="xs_area" lay-filter="xs_area" lay-search lay-verify="required">
-                        <option value="">请选择地区</option>
-                        {foreach $countries as $key=>$vo }
-                        <option value="{$key}" data-code="{$vo}">{$key}</option>
-                        {/foreach}
-                    </select>
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">联系人姓名</label>
-                <div class="layui-input-4">
-                    <input type="text" id="kh_contact" name="kh_contact" placeholder="请输入联系人姓名" class="layui-input">
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">邮箱</label>
-                <div class="layui-input-4">
-                    <div class="input-row">
-                        <input type="text" name="email[]" lay-verify="email" placeholder="请输入邮箱"
-                            class="layui-input emails">
-                        <button class="add-btn">+</button>
-                    </div>
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">Whatsapp</label>
-                <div class="layui-input-4">
-                    <input type="text" id="whatsapp" name="whatsapp" placeholder="请输入Whatsapp" class="layui-input">
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">联系号码</label>
+                <label class="layui-form-label">电话<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
                     <div class="input-row">
                         <div class="phone">
-                            <input type="number" name="phone_code[]" min="1" max="99999" step="1" placeholder="国家号"
-                                class="layui-input phone_code" value="">
-                            <input type="text" id="phone" name="phone[]" lay-verify="phone" placeholder="号码"
+                            <input type="text" id="phone" name="phone" lay-verify="phone" placeholder="电话"
                                 class="layui-input phones">
                         </div>
-                        <button class="add-btn">+</button>
                     </div>
-
                 </div>
             </div>
             <div class="layui-form-item">
-                <label class="layui-form-label">阿里id</label>
+                <label class="layui-form-label">辅助电话<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" id="alipay_id" name="ali_id" placeholder="请输入阿里id" class="layui-input">
+                    <div class="input-row">
+                        <div class="phone">
+                            <input type="text" id="phone2" name="phone2" lay-verify="phone" placeholder="辅助电话"
+                                class="layui-input phones">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="layui-form-item">
-                <label class="layui-form-label">微信</label>
-                <div class="layui-input-4">
-                    <input type="text" id="wechat" name="wechat" placeholder="请输入微信" class="layui-input">
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">产品名称</label>
+                <label class="layui-form-label">产品名称<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
                     <input type="text" id="product_name" name="product_name" placeholder="请输入产品名称" class="layui-input" lay-verify="required">
-
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">客户级别</label>
-                <div class="layui-input-4">
-                    <select name="kh_rank" id="kh_rank" lay-verify="required">
-                        <option value="">请选择客户级别</option>
-
-                        {volist name='khRankList' id='vo'}
-                        <option value="{$vo.rank_name}">{$vo.rank_name}</option>
-                        {/volist}
-
-                    </select>
                 </div>
             </div>
 
             <div class="layui-form-item">
-                <label class="layui-form-label">客户来源</label>
+                <label class="layui-form-label">询盘来源<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
-                    <select name="kh_status" id="kh_status" lay-filter="kh_status" lay-verify="required">
+                    <!-- <select name="kh_status" id="kh_status" lay-filter="kh_status" lay-verify="required">
 
-                        <option value="">请选择客户来源</option>
+                        <option value="">请选择询盘来源</option>
 
                         {volist name='khStatusList' id='vo'}
                         <option value="{$vo.status_name}">{$vo.status_name}</option>
                         {/volist}
 
-                    </select>
+                    </select> -->
+                    <input type="text" id="kh_status" name="kh_status" placeholder="询盘来源" class="layui-input" lay-verify="required">
                 </div>
             </div>
 
             <div class="layui-form-item">
-                <label class="layui-form-label">运营人员</label>
+                <label class="layui-form-label">运营人员<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
                     <input type="text" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" class="layui-input" lay-verify="required" >
                 </div>
             </div>
-            <!-- <div class="layui-form-item">
-            <label class="layui-form-label">用户名</label>
-            <div class="layui-input-4">
-                <input type="text" id="kh_username" name="kh_username" lay-verify="required" placeholder="请输入用户名" class="layui-input">
-            </div>
-            </div> -->
+
+
             <div class="layui-form-item">
-                <label class="layui-form-label">备注</label>
+                <label class="layui-form-label">协同人<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
-                    <textarea placeholder="请输入备注信息" class="layui-textarea" name="remark"></textarea>
+                    <input type="text" id="oper_user_input" name="joint_person" placeholder="请选协同人员" class="layui-input" lay-verify="required" >
+                </div>
+            </div>
+
+
+
+
+            <div class="layui-form-item">
+                <label class="layui-form-label">其他信息</label>
+                <div class="layui-input-4">
+                    <textarea placeholder="请输入其他信息" class="layui-textarea" name="remark"></textarea>
                 </div>
             </div>
 
@@ -249,135 +208,24 @@
         
     </script>
     <script>
-        document.getElementById('whatsapp').addEventListener('keypress', function (event) {
-            // 阻止空格键输入 (keyCode 32)
-            if (event.keyCode === 32) {
-                event.preventDefault();
-            }
-        });
-
-        document.getElementById('whatsapp').addEventListener('paste', function (event) {
-            // 获取剪贴板内容
-            const clipboardData = event.clipboardData || window.clipboardData;
-            const pastedText = clipboardData.getData('text');
-
-            if (!pastedText) return;
-
-            // 清除所有空格
-            const cleanedText = pastedText.replace(/\s/g, '');
-
-            // 阻止默认粘贴行为
-            event.preventDefault();
-
-            // 获取当前光标位置
-            const startPos = this.selectionStart;
-            const endPos = this.selectionEnd;
-
-            // 插入处理后的文本
-            this.value = this.value.substring(0, startPos)
-                + cleanedText
-                + this.value.substring(endPos);
-
-            // 恢复光标位置
-            const newPos = startPos + cleanedText.length;
-            this.setSelectionRange(newPos, newPos);
-        });
-    </script>
-    <script>
 
         var yyList = {$yyList| raw};
+
         layui.use(['form', 'layer'], function () {
             var form = layui.form, layer = layui.layer, $ = layui.jquery;
             //验证
             form.verify({
-                email: function (value) {
-                    if (value.trim()) { // 仅当输入值非空时校验格式
-                        if (!/^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,6}$/.test(value)) {
-                            return '邮箱格式不正确 (例: example@domain.com)';
-                        }
-                    }
-                },
-                // phone_code: function (value) {
-                //     if (!/^(\+?\d{1,5})$/.test(value)) {
-                //         return '国家码格式错误 (例: +86 或 0086)';
-                //     }
-                // },
                 phone: function (value) {
                     if (value.trim()) {
-                        if (!/^\d{6,15}$/.test(value)) {
-                            return '号码应为6-15位纯数字';
+                        if (!/^\d{11}$/.test(value)) {
+                            return '号码应为11位纯数字';
                         }
                     }
                 }
             });
-            //多行
-            $(document).on('click', '.add-btn', function () {
-                var $newRow = $('<div class="input-row">');
-                var $clone = $(this).prev().clone();
-                $clone.find('.phone').val('');
-                $newRow.append($clone);
-                $newRow.append('<button class="remove-btn">-</button>');
-                $(this).parent().parent().append($newRow);
-                return false;
-            });
-            // 删除行
-            $(document).on('click', '.remove-btn', function () {
-                $(this).parent().remove();
-                // 如果删除后只剩一行，显示添加按钮
-                if ($('.input-row').length === 1) {
-                    $('.add-btn').show();
-                }
-                return false;
-            });
-            // 新增地区选择监听
-            form.on('select(xs_area)', function (data) {
-                var code = $(data.elem).find('option:selected').data('code');
-                $('.phone_code').val(code || 1);
-            })
-            // 新增：国家号输入联动地区选择
-            $(document).on('input', '.phone_code', function () {
-                var inputCode = $(this).val().trim();
-                if (!inputCode) return; // 输入为空时不处理
 
-                var $regionSelect = $('select[name="xs_area"]');
-                // 查找所有data-code与输入国家号匹配的地区选项（支持多匹配）
-                var $matchedOptions = $regionSelect.find('option[data-code="' + inputCode + '"]');
 
-                if ($matchedOptions.length === 0) {
-                    $regionSelect.val('');
-                    form.render('select');
-                    return; // 无匹配地区
-                } else if ($matchedOptions.length === 1) {
-                    // 唯一匹配，自动选中
-                    $regionSelect.val($matchedOptions.val());
-                    form.render('select');
-                } else {
-                    // 多个匹配，弹窗让用户选择
-                    var optionsHtml = '';
-                    $matchedOptions.each(function (index, option) {
-                        var regionName = $(option).text(); // 地区名称（如"美国"）
-                        var regionValue = $(option).val(); // 地区值（option的value）
-                        optionsHtml += '<div style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;" data-value="' + regionValue + '">' + regionName + '</div>';
-                    });
-
-                    // 显示选择弹窗
-                    layer.open({
-                        title: '检测到多个地区，请选择',
-                        content: optionsHtml,
-                        area: ['300px', 'auto'], // 弹窗宽度和自适应高度
-                        shadeClose: true, // 点击外部关闭弹窗
-                        success: function (layero) {
-                            // 绑定选项点击事件
-                            layero.find('div[data-value]').on('click', function () {
-                                var selectedValue = $(this).data('value');
-                                $regionSelect.val(selectedValue); // 设置选中值
-                                form.render('select'); // 刷新下拉框UI
-                                layer.closeAll(); // 关闭弹窗
-                            });
-                        }
-                    });
-                }
-            });
+            // const khstatusnew = new EditableSelect(document.getElementById('kh_status'),  {$khStatusList|raw},'询盘来源','','id',false);
 
             const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称','','id',false);
 
@@ -393,55 +241,10 @@
                 khSelect.setOptions(users);
             });
 
-            function checkContactRequired() {
-                const fields = {
-                    whatsapp: $('input[name="whatsapp"]').val().trim(),
-                    ali_id: $('input[name="ali_id"]').val().trim(),
-                    wechat: $('input[name="wechat"]').val().trim(),
-                    emails: $('.emails').map(function () { return $(this).val().trim(); }).get(),
-                    phones: $('.phones').map(function () { return $(this).val().trim(); }).get()
-                };
-                // 检查是否有至少一个联系方式有值
-                return !!(
-                    fields.whatsapp ||
-                    fields.ali_id ||
-                    fields.wechat ||
-                    fields.emails.some(v => v) ||
-                    fields.phones.some(v => v)
-                );
-            }
+
 
             //监听提交
             form.on('submit(submit)', function (data) {
-                //验证重复
-                let phones = [];
-                let emails = [];
-                $('input[name="phone[]"]').each(function () {
-                    const val = $(this).val().trim();
-                    if (val) {
-                        if (phones.includes(val)) {
-                            layer.msg(`手机号 ${val} 重复输入`);
-                            return false;
-                        }
-                        phones.push(val);
-                    }
-                })
-                $('input[name="email[]"]').each(function () {
-                    const val = $(this).val().trim();
-                    if (val) {
-                        if (emails.includes(val)) {
-                            layer.msg(`邮箱 ${val} 重复输入`);
-                            return false;
-                        }
-                        emails.push(val);
-                    }
-                });
-                // 新增：检查联系方式是否至少填1个
-                if (!checkContactRequired()) {
-                    layer.msg('请至少填写WhatsApp、阿里id、微信、邮箱或号码中的一个', { icon: 5 });
-                    return false;
-                }
-
                 $.post("{:url('Client/add')}", data.field, function (res) {
 
 

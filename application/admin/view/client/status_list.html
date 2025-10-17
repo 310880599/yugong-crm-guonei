@@ -67,7 +67,7 @@
 
 
 <script type="text/html" id="topBtn">
-    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加客户来源</button>
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加询盘来源</button>
 
 </script>
 
@@ -84,12 +84,30 @@
             page: true,
             cols: [[
                 {checkbox:true,fixed: true},
-                {field: 'id', title: 'ID', width: 120, fixed: true},
-                {field: 'status_name', title: '客户来源', },
-                {field: 'add_time', title:'创建时间',templet:function (res) {
-                        return util.toDateString(res.add_time = (res.add_time * 1000));
-                    }},
-                {title:'操作',width: 260, align: 'center', toolbar: '#action'}
+                {field: 'id', title: 'ID', width: '10%', fixed: true, hide: false},
+                {field: 'status_name', title: '询盘来源', width: '18%', fixed: true, hide: false },
+                { field: 'submit_person', title: '提交人', width: '18%', fixed: true, hide: false },
+                { field: 'add_time', title: '添加时间', width: '15%', fixed: true, hide: false, 
+                        templet: function(d){
+                            var v = d.add_time;
+                            if (!v) return '';
+                            // 如果是纯数字（秒级时间戳）
+                            if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                            // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                            return v;
+                        }
+                },
+                { field: 'edit_time', title: '修改时间', width: '15%', fixed: true, hide: false,
+                        templet: function(d){
+                            var v = d.edit_time;
+                            if (!v) return '';
+                            // 如果是纯数字（秒级时间戳）
+                            if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                            // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                            return v;
+                        }
+                    },
+                {title:'操作', align: 'center', toolbar: '#action', width: '18%'}
             ]],
             limit: 10 //每页默认显示的数量
         });
@@ -97,7 +115,7 @@
         $('body').on('click','#add',function() {
             var indexOpen = layer.open({
                 type: 2,
-                title: '添加客户来源',
+                title: '添加询盘来源',
                 closeBtn: 1, //是否显示关闭按钮
                 area: ['500px','260px'],
                 anim: 2,  //动画
@@ -126,7 +144,7 @@
                     layer.close(index);
                 });
             }else if(obj.event === 'edit'){
-                layer_add("编辑客户来源","{:url('Client/statusEdit')}?id="+data.id);
+                layer_add("编辑询盘来源","{:url('Client/statusEdit')}?id="+data.id);
             }
         });
 

@@ -4,8 +4,10 @@ namespace app\admin\controller;
 
 use think\Db;
 use think\facade\Request;
+use think\Queue; 
 use think\facade\Session;
 use app\admin\model\Admin;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class Products extends Common
 {
@@ -245,6 +247,210 @@ class Products extends Common
 
 
     // 执行导入
+    // public function importDo()
+    // {
+    //     if (!request()->isPost()) {
+    //         return json(['code' => -200, 'msg' => '非法请求']);
+    //     }
+
+    //     $file = request()->file('file');
+    //     if (!$file) {
+    //         return json(['code' => -200, 'msg' => '请上传Excel或CSV文件']);
+    //     }
+
+    //     // 获取上传临时信息
+    //     $info = $file->getInfo(); // ['name'=>..., 'tmp_name'=>...]
+    //     $tmpPath = $info['tmp_name'];
+    //     $ext = strtolower(pathinfo($info['name'], PATHINFO_EXTENSION));
+
+    //     // 解析为二维数组 rows：每行是 [产品名称, 供应商名称, 供应商ID(可选), 状态(可选)]
+    //     $rows = [];
+    //     try {
+    //         if ($ext === 'csv') {
+    //             $fp = fopen($tmpPath, 'r');
+    //             if (!$fp) throw new \Exception('CSV文件读取失败');
+
+    //             // 尝试去除UTF-8 BOM
+    //             $first = fgets($fp);
+    //             if ($first === false) {
+    //                 fclose($fp);
+    //                 throw new \Exception('CSV空文件');
+    //             }
+    //             if (substr($first, 0, 3) === "\xEF\xBB\xBF") $first = substr($first, 3);
+    //             $buffer = $first . stream_get_contents($fp);
+    //             fclose($fp);
+
+    //             $tmp = tmpfile();
+    //             fwrite($tmp, $buffer);
+    //             fseek($tmp, 0);
+
+    //             $lineNo = 0;
+    //             while (($data = fgetcsv($tmp)) !== false) {
+    //                 $lineNo++;
+    //                 // 识别并跳过表头（含“产品”或“供应”字样即视为表头）
+    //                 $joined = implode('', $data);
+    //                 if ($lineNo === 1 && (mb_strpos($joined, '产品') !== false || mb_strpos($joined, '供应') !== false)) {
+    //                     continue;
+    //                 }
+    //                 $data = array_pad($data, 4, '');
+    //                 $rows[] = [
+    //                     trim((string)$data[0]), // product_name
+    //                     trim((string)$data[1]), // category_name
+    //                     trim((string)$data[2]), // category_id (optional)
+    //                     trim((string)$data[3]), // status (optional)
+    //                 ];
+    //             }
+    //             fclose($tmp);
+    //         } else {
+    //             // xlsx/xls：存在 PhpSpreadsheet 时使用；否则提示改用 CSV
+    //             if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+    //                 return json([
+    //                     'code' => -200,
+    //                     'msg' => '服务器未安装 phpoffice/phpspreadsheet，暂不支持 .xlsx/.xls，请使用 CSV 导入或安装依赖后再试'
+    //                 ]);
+    //             }
+    //             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
+    //             $sheet      = $spreadsheet->getActiveSheet();
+    //             $highestRow = $sheet->getHighestRow();
+
+    //             // 判断首行是否表头（含“产品”或“供应”）
+    //             $firstRow = [
+    //                 (string)$sheet->getCell('A1')->getValue(),
+    //                 (string)$sheet->getCell('B1')->getValue(),
+    //                 (string)$sheet->getCell('C1')->getValue(),
+    //                 (string)$sheet->getCell('D1')->getValue(),
+    //             ];
+    //             $hasHeader = (mb_strpos(implode('', $firstRow), '产品') !== false) || (mb_strpos(implode('', $firstRow), '供应') !== false);
+    //             $start = $hasHeader ? 2 : 1;
+
+    //             for ($r = $start; $r <= $highestRow; $r++) {
+    //                 $a = trim((string)$sheet->getCell("A{$r}")->getValue());
+    //                 $b = trim((string)$sheet->getCell("B{$r}")->getValue());
+    //                 $c = trim((string)$sheet->getCell("C{$r}")->getValue());
+    //                 $d = trim((string)$sheet->getCell("D{$r}")->getValue());
+    //                 if ($a === '' && $b === '' && $c === '' && $d === '') continue;
+    //                 $rows[] = [$a, $b, $c, $d];
+    //             }
+    //         }
+    //     } catch (\Throwable $e) {
+    //         return json(['code' => -200, 'msg' => '解析失败：' . $e->getMessage()]);
+    //     }
+
+    //     if (empty($rows)) {
+    //         return json(['code' => -200, 'msg' => '没有可导入的数据']);
+    //     }
+
+    //     // 入库
+    //     $now = time();
+    //     $inserted = 0;
+    //     $skippedExist = 0;
+    //     $skippedEmpty = 0;
+    //     $createdCats = 0;
+    //     $seenKeys = []; // 防止同一批次文件内重复
+
+    //     $current_admin = \app\admin\model\Admin::getMyInfo();
+    //     $org = $current_admin['org'] ?? '';
+    //     $user = $current_admin['username'] ?? '';
+
+    //     foreach ($rows as $row) {
+    //         list($product_name, $category_name, $category_id_raw, $status_raw) = $row;
+
+    //         if ($product_name === '' && $category_name === '' && $category_id_raw === '') {
+    //             $skippedEmpty++;
+    //             continue;
+    //         }
+
+    //         // 解析 status（可选，默认0）
+    //         $status = ($status_raw === '' ? 0 : (int)$status_raw);
+
+    //         // 解析 category_id：优先C列ID，否则用B列名称在当前组织下查找/创建
+    //         $category_id = 0;
+    //         if ($category_id_raw !== '' && is_numeric($category_id_raw)) {
+    //             $category_id = (int)$category_id_raw;
+    //         } elseif ($category_name !== '') {
+    //             $cat = \think\Db::name('crm_product_category')
+    //                 ->where('category_name', $category_name)
+    //                 ->where([$this->getOrgWhere($org)])
+    //                 ->find();
+
+    //             if (!$cat) {
+    //                 // 自动创建该供应商（分类）
+    //                 $cid = \think\Db::name('crm_product_category')->insertGetId([
+    //                     'category_name' => $category_name,
+    //                     'org'           => $org,
+    //                     'add_time'      => $now,
+    //                     'edit_time'     => $now,
+    //                     'submit_person' => $user,
+    //                 ]);
+    //                 if ($cid) {
+    //                     $category_id = (int)$cid;
+    //                     $createdCats++;
+    //                 }
+    //             } else {
+    //                 $category_id = (int)$cat['id'];
+    //             }
+    //         }
+
+    //         // 产品名必填
+    //         if ($product_name === '') {
+    //             $skippedEmpty++;
+    //             continue;
+    //         }
+    //         // 仍未拿到供应商ID，跳过
+    //         if ($category_id <= 0) {
+    //             $skippedEmpty++;
+    //             continue;
+    //         }
+
+    //         // 组合唯一键（同组织+同供应商+同产品名 视为同一条）
+    //         $key = md5($org . '|' . $category_id . '|' . $product_name);
+    //         if (isset($seenKeys[$key])) {
+    //             $skippedExist++;
+    //             continue;
+    //         }
+
+    //         // DB去重：同 org 范围 + category_id + product_name
+    //         $exists = \think\Db::name('crm_products')
+    //             ->where('product_name', $product_name)
+    //             ->where('category_id', $category_id)
+    //             ->where([$this->getOrgWhere($org)])
+    //             ->find();
+    //         if ($exists) {
+    //             $skippedExist++;
+    //             continue;
+    //         }
+
+    //         // 插入
+    //         $ok = \think\Db::name('crm_products')->insert([
+    //             'product_name'  => $product_name,
+    //             'org'           => $org,
+    //             'category_id'   => $category_id,
+    //             'status'        => $status,
+    //             'add_time'      => $now,
+    //             'edit_time'     => $now,
+    //             'submit_person' => $user,
+    //         ]);
+    //         if ($ok) {
+    //             $inserted++;
+    //             $seenKeys[$key] = 1;
+    //         }
+    //     }
+
+    //     return json([
+    //         'code' => 0,
+    //         'msg' => '导入完成',
+    //         'data' => [
+    //             'inserted' => $inserted,
+    //             'skipped_exist' => $skippedExist,
+    //             'skipped_empty' => $skippedEmpty,
+    //             'created_cats' => $createdCats,
+    //         ],
+    //     ]);
+    // }
+
+
+
+
     public function importDo()
     {
         if (!request()->isPost()) {
@@ -256,19 +462,19 @@ class Products extends Common
             return json(['code' => -200, 'msg' => '请上传Excel或CSV文件']);
         }
 
-        // 获取上传临时信息
-        $info = $file->getInfo(); // ['name'=>..., 'tmp_name'=>...]
+        // 上传文件基本信息（注意：这里直接从临时文件解析，不落盘）
+        $info    = $file->getInfo(); // ['name'=>..., 'tmp_name'=>...]
         $tmpPath = $info['tmp_name'];
-        $ext = strtolower(pathinfo($info['name'], PATHINFO_EXTENSION));
+        $ext     = strtolower(pathinfo($info['name'], PATHINFO_EXTENSION));
 
-        // 解析为二维数组 rows：每行是 [产品名称, 供应商名称, 供应商ID(可选), 状态(可选)]
+        // 解析为二维数组 rows：每行是 [产品名称, 分类名称, 分类ID(可选), 状态(可选)]
         $rows = [];
         try {
             if ($ext === 'csv') {
                 $fp = fopen($tmpPath, 'r');
                 if (!$fp) throw new \Exception('CSV文件读取失败');
 
-                // 尝试去除UTF-8 BOM
+                // 处理 UTF-8 BOM
                 $first = fgets($fp);
                 if ($first === false) {
                     fclose($fp);
@@ -285,7 +491,7 @@ class Products extends Common
                 $lineNo = 0;
                 while (($data = fgetcsv($tmp)) !== false) {
                     $lineNo++;
-                    // 识别并跳过表头（含“产品”或“供应”字样即视为表头）
+                    // 第一行包含“产品/供应”视为表头，跳过
                     $joined = implode('', $data);
                     if ($lineNo === 1 && (mb_strpos($joined, '产品') !== false || mb_strpos($joined, '供应') !== false)) {
                         continue;
@@ -300,25 +506,25 @@ class Products extends Common
                 }
                 fclose($tmp);
             } else {
-                // xlsx/xls：存在 PhpSpreadsheet 时使用；否则提示改用 CSV
+                // xlsx/xls
                 if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
                     return json([
                         'code' => -200,
-                        'msg' => '服务器未安装 phpoffice/phpspreadsheet，暂不支持 .xlsx/.xls，请使用 CSV 导入或安装依赖后再试'
+                        'msg'  => '服务器未安装 phpoffice/phpspreadsheet，暂不支持 .xlsx/.xls，请改用 CSV 或安装依赖后重试'
                     ]);
                 }
-                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
-                $sheet      = $spreadsheet->getActiveSheet();
-                $highestRow = $sheet->getHighestRow();
+                $spreadsheet = IOFactory::load($tmpPath);
+                $sheet       = $spreadsheet->getActiveSheet();
+                $highestRow  = $sheet->getHighestRow();
 
-                // 判断首行是否表头（含“产品”或“供应”）
                 $firstRow = [
                     (string)$sheet->getCell('A1')->getValue(),
                     (string)$sheet->getCell('B1')->getValue(),
                     (string)$sheet->getCell('C1')->getValue(),
                     (string)$sheet->getCell('D1')->getValue(),
                 ];
-                $hasHeader = (mb_strpos(implode('', $firstRow), '产品') !== false) || (mb_strpos(implode('', $firstRow), '供应') !== false);
+                $hasHeader = (mb_strpos(implode('', $firstRow), '产品') !== false)
+                    || (mb_strpos(implode('', $firstRow), '供应') !== false);
                 $start = $hasHeader ? 2 : 1;
 
                 for ($r = $start; $r <= $highestRow; $r++) {
@@ -338,114 +544,38 @@ class Products extends Common
             return json(['code' => -200, 'msg' => '没有可导入的数据']);
         }
 
-        // 入库
-        $now = time();
-        $inserted = 0;
-        $skippedExist = 0;
-        $skippedEmpty = 0;
-        $createdCats = 0;
-        $seenKeys = []; // 防止同一批次文件内重复
+        // 准备分块入队
+        $currentAdmin = Admin::getMyInfo();
+        $org      = $currentAdmin['org'] ?? '';
+        $username = $currentAdmin['username'] ?? '';
+        $userId   = Session::get('aid');
+        $fileName = $info['name'];
+        $batchId  = 'prodimp_' . date('Ymd_His') . '_' . substr(md5(uniqid('', true)), 0, 8); // 批次ID，便于日志聚合
 
-        $current_admin = \app\admin\model\Admin::getMyInfo();
-        $org = $current_admin['org'] ?? '';
-        $user = $current_admin['username'] ?? '';
+        $chunkSize = 100; // 推荐每块100条（平衡单任务耗时与队列切换开销）
+        $total     = count($rows);
+        $chunks    = array_chunk($rows, $chunkSize);
 
-        foreach ($rows as $row) {
-            list($product_name, $category_name, $category_id_raw, $status_raw) = $row;
-
-            if ($product_name === '' && $category_name === '' && $category_id_raw === '') {
-                $skippedEmpty++;
-                continue;
-            }
-
-            // 解析 status（可选，默认0）
-            $status = ($status_raw === '' ? 0 : (int)$status_raw);
-
-            // 解析 category_id：优先C列ID，否则用B列名称在当前组织下查找/创建
-            $category_id = 0;
-            if ($category_id_raw !== '' && is_numeric($category_id_raw)) {
-                $category_id = (int)$category_id_raw;
-            } elseif ($category_name !== '') {
-                $cat = \think\Db::name('crm_product_category')
-                    ->where('category_name', $category_name)
-                    ->where([$this->getOrgWhere($org)])
-                    ->find();
-
-                if (!$cat) {
-                    // 自动创建该供应商（分类）
-                    $cid = \think\Db::name('crm_product_category')->insertGetId([
-                        'category_name' => $category_name,
-                        'org'           => $org,
-                        'add_time'      => $now,
-                        'edit_time'     => $now,
-                        'submit_person' => $user,
-                    ]);
-                    if ($cid) {
-                        $category_id = (int)$cid;
-                        $createdCats++;
-                    }
-                } else {
-                    $category_id = (int)$cat['id'];
-                }
-            }
-
-            // 产品名必填
-            if ($product_name === '') {
-                $skippedEmpty++;
-                continue;
-            }
-            // 仍未拿到供应商ID，跳过
-            if ($category_id <= 0) {
-                $skippedEmpty++;
-                continue;
-            }
-
-            // 组合唯一键（同组织+同供应商+同产品名 视为同一条）
-            $key = md5($org . '|' . $category_id . '|' . $product_name);
-            if (isset($seenKeys[$key])) {
-                $skippedExist++;
-                continue;
-            }
-
-            // DB去重：同 org 范围 + category_id + product_name
-            $exists = \think\Db::name('crm_products')
-                ->where('product_name', $product_name)
-                ->where('category_id', $category_id)
-                ->where([$this->getOrgWhere($org)])
-                ->find();
-            if ($exists) {
-                $skippedExist++;
-                continue;
-            }
-
-            // 插入
-            $ok = \think\Db::name('crm_products')->insert([
-                'product_name'  => $product_name,
-                'org'           => $org,
-                'category_id'   => $category_id,
-                'status'        => $status,
-                'add_time'      => $now,
-                'edit_time'     => $now,
-                'submit_person' => $user,
-            ]);
-            if ($ok) {
-                $inserted++;
-                $seenKeys[$key] = 1;
-            }
+        foreach ($chunks as $i => $chunkRows) {
+            $baseRowNumber = $i * $chunkSize + 1; // 记录本块第一条在“数据区”的行号（便于日志展示）
+            $jobData = [
+                'batch_id'       => $batchId,
+                'file_name'      => $fileName,
+                'org'            => $org,
+                'user_id'        => $userId,
+                'username'       => $username,
+                'chunk_index'    => $i + 1,
+                'chunk_size'     => $chunkSize,
+                'base_row'       => $baseRowNumber,
+                'rows'           => $chunkRows,
+                'total_in_file'  => $total,
+            ];
+            // 使用自定义方法名 process（避免 fire 冲突）
+            Queue::push('app\\admin\\job\\product\\ProductImportJobV2@process', $jobData, 'product_import');
         }
 
-        return json([
-            'code' => 0,
-            'msg' => '导入完成',
-            'data' => [
-                'inserted' => $inserted,
-                'skipped_exist' => $skippedExist,
-                'skipped_empty' => $skippedEmpty,
-                'created_cats' => $createdCats,
-            ],
-        ]);
+        return json(['code' => 0, 'msg' => '文件已上传，导入任务已分发到队列后台执行', 'data' => ['batch_id' => $batchId]]);
     }
-
 
 
     // 下载导入模板（CSV）

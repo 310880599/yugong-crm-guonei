@@ -8,6 +8,7 @@ use think\facade\Session;
 use think\facade\Env;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use think\facade\Cache;
+use app\admin\model\Admin;
 
 class Client extends Common
 {
@@ -1282,6 +1283,8 @@ class Client extends Common
             $page = input('page') ? input('page') : 1;
             $pageSize = input('limit') ? input('limit') : config('pageSize');
             $list = db('crm_client_status')
+                ->where('is_active', '=', 1)
+                ->order('id desc')
                 ->paginate(array('list_rows' => $pageSize, 'page' => $page))
                 ->toArray();
             return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
@@ -1292,8 +1295,13 @@ class Client extends Common
     public function statusAdd()
     {
         if (request()->isPost()) {
+            $current_admin = Admin::getMyInfo();
             $data['status_name'] = Request::param('status_name');
+            $data['submit_person'] = $current_admin['username'];
+            $data['is_active'] = 1;
             $data['add_time'] = time();
+            $data['edit_time'] = time();
+            $data['delete_time'] = null;
             $result = Db::table('crm_client_status')->insert($data);
             if ($result) {
                 cache('sourceList', null);
