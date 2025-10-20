@@ -1028,26 +1028,7 @@ class Client extends Common
         }
 
 
-        // // $xsSourceList = Db::table('crm_clues_source')->select();
-        // $khRankList = Db::table('crm_client_rank')->select();
-        // $khStatusList = Db::table('crm_client_status')->select();
-        // $xsAreaList = Db::table('crm_clues_area')->select();
-        // $xsHangyeList = Db::table('crm_client_hangye')->select();
-        // $this->assign('xsHangyeList', $xsHangyeList);
-        // // $this->assign('xsAreaList', $xsAreaList);
-        // $this->assign('khRankList', $khRankList);
-        // $this->assign('khStatusList', $khStatusList);
-        // $yyList = $this->getYyList();
-        // $this->assign('yyList', json_encode($yyList['yyList']));
-        // $this->assign('_yyList', json_encode($yyList['_yyList']));
-        // //新增地区联动
-        // $countries = $this->getCountries();
-        // $this->assign('countries', $countries);
-        // //新增商品
-        // $productList = $this->getProductListClient();
-        // $this->assign('productList', $productList);
-        // //var_dump($productList);
-        // return $this->fetch('client/add');
+
         // 1. 加载产品列表（产品ID、名称、分类），用于产品名称下拉
         $currentAdmin = \app\admin\model\Admin::getMyInfo();
         $where = [];
