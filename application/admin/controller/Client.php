@@ -1028,25 +1028,73 @@ class Client extends Common
         }
 
 
-        // $xsSourceList = Db::table('crm_clues_source')->select();
-        $khRankList = Db::table('crm_client_rank')->select();
+        // // $xsSourceList = Db::table('crm_clues_source')->select();
+        // $khRankList = Db::table('crm_client_rank')->select();
+        // $khStatusList = Db::table('crm_client_status')->select();
+        // $xsAreaList = Db::table('crm_clues_area')->select();
+        // $xsHangyeList = Db::table('crm_client_hangye')->select();
+        // $this->assign('xsHangyeList', $xsHangyeList);
+        // // $this->assign('xsAreaList', $xsAreaList);
+        // $this->assign('khRankList', $khRankList);
+        // $this->assign('khStatusList', $khStatusList);
+        // $yyList = $this->getYyList();
+        // $this->assign('yyList', json_encode($yyList['yyList']));
+        // $this->assign('_yyList', json_encode($yyList['_yyList']));
+        // //新增地区联动
+        // $countries = $this->getCountries();
+        // $this->assign('countries', $countries);
+        // //新增商品
+        // $productList = $this->getProductListClient();
+        // $this->assign('productList', $productList);
+        // //var_dump($productList);
+        // return $this->fetch('client/add');
+        // 1. 加载产品列表（产品ID、名称、分类），用于产品名称下拉
+        $currentAdmin = \app\admin\model\Admin::getMyInfo();
+        $where = [];
+        if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
+            $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
+        }
+        // 查询产品表和分类表，获取产品名称及所属分类，并选择一个产品ID（使用 MIN(id) 保证唯一）
+        $productRows = Db::name('crm_products')->alias('p')
+            ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+            ->where($where)
+            ->group('p.product_name, c.category_name')
+            ->field('MIN(p.id) as id, p.product_name, c.category_name')
+            ->order('p.product_name', 'asc')
+            ->select();
+        $this->assign('productList', $productRows);
+
+        // 2. 加载询盘来源列表（客户状态列表），用于询盘来源下拉
         $khStatusList = Db::table('crm_client_status')->select();
-        $xsAreaList = Db::table('crm_clues_area')->select();
-        $xsHangyeList = Db::table('crm_client_hangye')->select();
-        $this->assign('xsHangyeList', $xsHangyeList);
-        // $this->assign('xsAreaList', $xsAreaList);
-        $this->assign('khRankList', $khRankList);
         $this->assign('khStatusList', $khStatusList);
-        $yyList = $this->getYyList();
-        $this->assign('yyList', json_encode($yyList['yyList']));
-        $this->assign('_yyList', json_encode($yyList['_yyList']));
-        //新增地区联动
-        $countries = $this->getCountries();
-        $this->assign('countries', $countries);
-        //新增商品
-        $productList = $this->getProductListClient();
-        $this->assign('productList', $productList);
-        //var_dump($productList);
+
+        // 3. 加载运营人员列表，并按来源分组用于联动（使用 Common 控制器的 getYyList）
+        $yyData = $this->getYyList();
+        // 所有运营人员选项（id和名称）列表，用于运营人员下拉初始选项
+        $operUserList = $yyData['_yyList'];   // 例如：[ ['id'=>用户ID, 'name'=>用户名], ... ]
+        $this->assign('operUserList', $operUserList);
+        // 运营人员按来源分组的映射，用于前端JS联动（JSON格式）
+        $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
+
+        // 4. 加载协同人列表（所有管理员中非超级管理员），用于协同人多选
+        $teamName = session('team_name') ?: '';
+        $adminList = Db::name('admin')
+            ->where('group_id', '<>', 1)  // 排除超级管理员
+            ->where(function($query) use($teamName) {
+                if ($teamName) {
+                    $query->where('team_name', $teamName);
+                }
+            })
+            ->field('admin_id, username')
+            ->select();
+        // 格式化协同人数据供前端 xmSelect 使用（name/value 键）
+        $collaboratorData = [];
+        foreach ($adminList as $admin) {
+            $collaboratorData[] = ['name' => $admin['username'], 'value' => $admin['admin_id']];
+        }
+        $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
+
+        // 渲染模板
         return $this->fetch('client/add');
     }
 

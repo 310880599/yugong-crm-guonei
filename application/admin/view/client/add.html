@@ -15,9 +15,13 @@
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
     <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
     <script src="/static/admin/js/select.js"></script>
+    <script src="/static/admin/js/xm-select.js"></script>
+    <script src="/static/plugins/layui/layui.js"></script>
     <style>
         /* 只影响下拉面板里的分类名 */
-        .layui-form-select dl dd .cat-bold { font-weight: 700; }
+        .layui-form-select dl dd .cat-bold {
+            font-weight: 700;
+        }
     </style>
     <style>
         .layui-form-pane .layui-form-label {
@@ -77,20 +81,34 @@
             width: 80px;
             margin-right: 10px;
         }
+
         /* 让电话行像“客户名称”一样铺满 */
-        .input-row { display: flex; align-items: center; width: 101%; }
-        .input-row > .phone { flex: 1 1 auto; min-width: 0; }   /* 关键：占满剩余空间 */
-        .input-row > .phone .layui-input { width: 101%; }       /* 输入框跟随容器铺满 */
+        .input-row {
+            display: flex;
+            align-items: center;
+            width: 101%;
+        }
 
+        .input-row>.phone {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
 
+        /* 关键：占满剩余空间 */
+        .input-row>.phone .layui-input {
+            width: 101%;
+        }
+
+        /* 输入框跟随容器铺满 */
     </style>
 </head>
+
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 
     <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户来源、用户名、备注 -->
     <div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
 
-        <form class="layui-form layui-form-pane">
+        <!-- <form class="layui-form layui-form-pane">
             <div class="layui-form-item">
                 <label class="layui-form-label">客户名称<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
@@ -130,16 +148,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">询盘来源<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
-                    <!-- <select name="kh_status" id="kh_status" lay-filter="kh_status" lay-verify="required">
-
-                        <option value="">请选择询盘来源</option>
-
-                        {volist name='khStatusList' id='vo'}
-                        <option value="{$vo.status_name}">{$vo.status_name}</option>
-                        {/volist}
-
-                    </select> -->
-                    <input type="text" id="kh_status" name="kh_status" placeholder="询盘来源" class="layui-input" lay-verify="required">
+                    <input type="text" id="kh_status" name="kh_status" placeholder="请输入询盘来源" class="layui-input" lay-verify="required">
                 </div>
             </div>
 
@@ -154,7 +163,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">协同人<span style="color: red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" id="oper_user_input" name="joint_person" placeholder="请选协同人员" class="layui-input" lay-verify="required" >
+                    <input type="text" id="joint_person_input" name="joint_person" placeholder="请选协同人员" class="layui-input" lay-verify="required" >
                 </div>
             </div>
 
@@ -175,94 +184,267 @@
                 </div>
             </div>
 
+        </form> -->
+
+        <form class="layui-form layui-form-pane" action="" method="post">
+            <!-- 客户名称 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户名称<span style="color: red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" name="kh_name" lay-verify="required" placeholder="请输入客户名称" class="layui-input">
+                </div>
+            </div>
+
+            <!-- 电话 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">电话<span style="color: red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" name="phone" lay-verify="phone" placeholder="电话" class="layui-input">
+                </div>
+            </div>
+
+            <!-- 辅助电话 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">辅助电话<span style="color: red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" name="phone2" lay-verify="phone" placeholder="辅助电话" class="layui-input">
+                </div>
+            </div>
+
+            <!-- 产品名称：可搜索单选下拉，提交产品ID -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">产品名称<span style="color: red;">*</span></label>
+                <div class="layui-input-4">
+                    <select name="product_name" lay-search lay-verify="required">
+                        <option value="">请选择产品名称</option>
+                        {volist name="productList" id="vo"}
+                        <!-- 显示“产品名称 (分类)”文本，提交隐藏的产品ID -->
+                        <option value="{$vo.id}">{$vo.product_name} ({$vo.category_name|default='无'})</option>
+                        {/volist}
+                    </select>
+                </div>
+            </div>
+
+            <!-- 询盘来源：可搜索单选下拉，提交来源/状态ID -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">询盘来源<span style="color: red;">*</span></label>
+                <div class="layui-input-4">
+                    <select name="kh_status" lay-search lay-filter="kh_status" lay-verify="required">
+                        <option value="">请选择询盘来源</option>
+                        {volist name="khStatusList" id="vo"}
+                        <option value="{$vo.id}">{$vo.status_name}</option>
+                        {/volist}
+                    </select>
+                </div>
+            </div>
+
+            <!-- 运营人员：可搜索单选下拉，提交用户ID -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">运营人员<span style="color: red;">*</span></label>
+                <div class="layui-input-4">
+                    <select name="oper_user" lay-search lay-verify="required">
+                        <option value="">请选择运营人员</option>
+                        {volist name="operUserList" id="user"}
+                        <option value="{$user.id}">{$user.name}</option>
+                        {/volist}
+                    </select>
+                </div>
+            </div>
+
+            <!-- 协同人：多选下拉，提交ID数组（使用 xmSelect 渲染） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">协同人<span style="color: red;">*</span></label>
+                <div class="layui-input-4">
+                    <!-- xmSelect 多选容器，插件会在此处渲染多选下拉框，并生成隐藏的输入字段 -->
+                    <div id="collaboratorSelect"></div>
+                </div>
+            </div>
+
+            <!-- 其他信息 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">其他信息</label>
+                <div class="layui-input-4">
+                    <textarea name="remark" class="layui-textarea" placeholder="请输入其他信息"></textarea>
+                </div>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button type="button" class="layui-btn" lay-submit lay-filter="submit">提交保存</button>
+                </div>
+            </div>
         </form>
+
     </div>
     {include file="common/foot"/}
     <script>
-            
-            layui.use(['form'], function () {
-                var form = layui.form;
 
-                function boldCategoryInDropdown($select) {
-                    // $select 是原生 <select>，Layui 会在其后生成一个 .layui-form-select 的自定义下拉
-                    var $wrap = $select.next('.layui-form-select');
-                    $wrap.find('dl dd').each(function () {
-                    var txt = $(this).text();                // 例如：B产品 (产品厂家)
-                    var m = txt.match(/^(.*)\s*\((.+)\)\s*$/);
-                    if (m) {
-                        // 用 html 重写 dd 的展示，把分类名包一层 span
-                        $(this).html(m[1] + ' (<span class="cat-bold">' + m[2] + '</span>)');
-                    }
-                    });
-                }
+        // layui.use(['form'], function () {
+        //     var form = layui.form;
 
-                // 1）先把后端返回的数组填充到 <select> 的 <option> 里（纯文本）
-                // 2）再渲染
-                form.render('select');
+        //     function boldCategoryInDropdown($select) {
+        //         // $select 是原生 <select>，Layui 会在其后生成一个 .layui-form-select 的自定义下拉
+        //         var $wrap = $select.next('.layui-form-select');
+        //         $wrap.find('dl dd').each(function () {
+        //             var txt = $(this).text();                // 例如：B产品 (产品厂家)
+        //             var m = txt.match(/^(.*)\s*\((.+)\)\s*$/);
+        //             if (m) {
+        //                 // 用 html 重写 dd 的展示，把分类名包一层 span
+        //                 $(this).html(m[1] + ' (<span class="cat-bold">' + m[2] + '</span>)');
+        //             }
+        //         });
+        //     }
 
-                // 3）渲染完成后调用加粗函数（根据你的 select 的选择器调整）
-                boldCategoryInDropdown($('select[name="product_name"]'));
+        //     // 1）先把后端返回的数组填充到 <select> 的 <option> 里（纯文本）
+        //     // 2）再渲染
+        //     form.render('select');
 
-                // 如果你会动态更新选项或调用 form.render('select') 重新渲染，记得再调用一次上面的 boldCategoryInDropdown
-            });
-        
+        //     // 3）渲染完成后调用加粗函数（根据你的 select 的选择器调整）
+        //     boldCategoryInDropdown($('select[name="product_name"]'));
+
+        //     // 如果你会动态更新选项或调用 form.render('select') 重新渲染，记得再调用一次上面的 boldCategoryInDropdown
+        // });
+
     </script>
     <script>
 
-        var yyList = {$yyList| raw};
+        // var yyList = { $yyList| raw};
 
-        layui.use(['form', 'layer'], function () {
-            var form = layui.form, layer = layui.layer, $ = layui.jquery;
-            //验证
+        // layui.use(['form', 'layer'], function () {
+        //     var form = layui.form, layer = layui.layer, $ = layui.jquery;
+        //     //验证
+        //     form.verify({
+        //         phone: function (value) {
+        //             if (value.trim()) {
+        //                 if (!/^\d{11}$/.test(value)) {
+        //                     return '号码应为11位纯数字';
+        //                 }
+        //             }
+        //         }
+        //     });
+
+        //     const products = new EditableSelect(document.getElementById('product_name'), { $productList| raw}, '产品名称', '', 'id', false);
+
+
+        // // 监听客户来源变化
+        // const khSelect = new EditableSelect(document.getElementById('oper_user_input'), { $_yyList| raw}, '运营人员', '', 'name', false);
+
+
+        // form.on('select(kh_status)', function (data) {
+        //     khSelect.clear();
+        //     var source = data.value;
+        //     var users = yyList[source] || [];
+        //     khSelect.setOptions(users);
+        // });
+
+
+
+        // //监听提交
+        // form.on('submit(submit)', function (data) {
+        //     $.post("{:url('Client/add')}", data.field, function (res) {
+
+
+        //         if (res.code == 0) {
+        //             layer.msg(res.msg, { time: 2000 }, function () {
+        //                 layer.close(layer.index);
+        //                 window.parent.location.reload();
+        //             });
+        //         } else {
+        //             layer.msg(res.msg, { time: 2000 });
+        //         }
+
+        //     }, 'json')
+
+        //     return false;
+        // });
+        // });
+    </script>
+
+
+    <script>
+        layui.use(['form', 'layer', 'xmSelect', 'jquery'], function() {
+            var form = layui.form
+            , layer = layui.layer
+            , $ = layui.jquery
+            , xmSelect = layui.xmSelect;
+
+            // 将后端传入的运营人员分组数据(JSON)赋给JS变量，用于联动筛选
+            var yyList = {$yyList|raw};  // 格式：{ 来源名称: [ {id: 用户ID, name: 用户名}, ... ], ... }
+
+            // 初始化“协同人”多选下拉框
+            var collaboratorSelect = xmSelect.render({
+                el: '#collaboratorSelect',       // 容器元素
+                name: 'joint_person',            // 提交表单的字段名，对应协同人 ID 数组
+                layVerify: 'required',           // 验证规则：必填
+                tips: '请选择协同人员',            // 默认提示
+                filterable: true,               // 支持搜索过滤
+                data: {$collaboratorList|raw}    // 协同人候选数据（来自 admin 表），格式：[ {name: '用户名', value: 用户ID}, ... ]
+            });
+
+            // 自定义表单校验规则：手机号码11位数字
             form.verify({
-                phone: function (value) {
-                    if (value.trim()) {
-                        if (!/^\d{11}$/.test(value)) {
-                            return '号码应为11位纯数字';
-                        }
+                phone: function(value) {
+                    if (value.trim() && !/^\d{11}$/.test(value)) {
+                        return '号码应为11位纯数字';
                     }
                 }
             });
 
+            // 渲染下拉框（将 <select> 转换为 Layui 样式）
+            form.render('select');
 
-            // const khstatusnew = new EditableSelect(document.getElementById('kh_status'),  {$khStatusList|raw},'询盘来源','','id',false);
+            // 加粗产品下拉中类别部分的文字（分类名加粗显示）
+            function boldCategoryInDropdown($select) {
+                var $wrap = $select.next('.layui-form-select');
+                $wrap.find('dl dd').each(function() {
+                    var txt = $(this).text();
+                    var m = txt.match(/^(.*)\s*\((.+)\)\s*$/);  // 匹配形如 “产品名称 (分类)” 的文本
+                    if (m) {
+                        // 将括号内的分类名称部分包裹加粗样式
+                        $(this).html(m[1] + ' (<span class="cat-bold">' + m[2] + '</span>)');
+                    }
+                });
+            }
+            // 调用加粗函数针对产品名称下拉框选项
+            boldCategoryInDropdown($('select[name="product_name"]'));
 
-            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称','','id',false);
-
-       
-            // 监听客户来源变化
-            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name',false);
-
-
+            // 监听“询盘来源”下拉选择变化，实现运营人员选项的联动过滤
             form.on('select(kh_status)', function(data) {
-                khSelect.clear();
-                var source = data.value;
-                var users = yyList[source] || [];
-                khSelect.setOptions(users);
+                var sourceId = data.value;  
+                // 获取选中来源对应的中文名称（选项文本）
+                var sourceName = $(data.elem).find("option:selected").text();
+                // 根据来源名称，从 yyList 获取对应的运营人员列表
+                var users = yyList[sourceName] || [];
+                // 更新 “运营人员” 下拉选项
+                var $operSelect = $('select[name="oper_user"]');
+                $operSelect.empty();  // 清空原有选项
+                $operSelect.append('<option value="">请选择运营人员</option>');
+                $.each(users, function(index, user) {
+                    $operSelect.append('<option value="'+ user.id +'">'+ user.name +'</option>');
+                });
+                form.render('select', '');  // 重新渲染所有下拉框（更新 UI）
             });
 
-
-
-            //监听提交
-            form.on('submit(submit)', function (data) {
-                $.post("{:url('Client/add')}", data.field, function (res) {
-
-
+            // 监听提交按钮
+            form.on('submit(submit)', function(data) {
+                $.post("{:url('Client/add')}", data.field, function(res) {
                     if (res.code == 0) {
-                        layer.msg(res.msg, { time: 2000 }, function () {
+                        layer.msg(res.msg, {time: 2000}, function() {
                             layer.close(layer.index);
-                            window.parent.location.reload();
+                            window.parent.location.reload();  // 刷新父窗口列表
                         });
                     } else {
-                        layer.msg(res.msg, { time: 2000 });
+                        layer.msg(res.msg, {time: 2000});
                     }
-
-                }, 'json')
-
-                return false;
+                }, 'json');
+                return false;  // 阻止表单默认提交
             });
         });
     </script>
+
+
+
 
 </body>
 
