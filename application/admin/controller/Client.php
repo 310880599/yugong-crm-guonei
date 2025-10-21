@@ -45,7 +45,7 @@ class Client extends Common
     // 添加公共日志
     static function addOperLog($leads_id, $type, $description)
     {
-        $description = is_string($description) ? $description : json_encode($description, JSON_UNESCAPED_SLASHES |JSON_UNESCAPED_UNICODE);
+        $description = is_string($description) ? $description : json_encode($description, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         Db::table('crm_operation_log')->insert([
             'user_id' => Session::get('aid'),
             'leads_id' => $leads_id,
@@ -172,25 +172,100 @@ class Client extends Common
         return $this->fetch();
     }
 
+
     //（我的客户）列表
     public function perCliList()
     {
-     if (request()->isPost()) {
-            return $this->personClientSearch();
-            $key = input('post.key');
+        if (request()->isPost()) {
             $page = input('page') ? input('page') : 1;
             $pageSize = input('limit') ? input('limit') : config('pageSize');
-            $list = db('crm_leads')
+
+            // 基础列表（我的客户）
+            $list = Db::table('crm_leads')
                 ->where(['status' => 1, 'issuccess' => -1])
                 ->where(['pr_user' => Session::get('username')])
                 ->order('at_time desc')
-                ->paginate(array('list_rows' => $pageSize, 'page' => $page))
+                ->paginate(['list_rows' => $pageSize, 'page' => $page])
                 ->toArray();
-            return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
+
+            if (empty($list) || empty($list['data'])) {
+                return ['code' => 0, 'msg' => '获取成功!', 'data' => [], 'count' => 0, 'rel' => 1];
+            }
+
+            $rows = &$list['data'];
+            $leadIds = array_column($rows, 'id');
+
+            // 询盘来源映射（id -> 中文名），若 kh_status 已是中文则回退自身
+            $statusMap = Db::table('crm_client_status')->column('status_name', 'id');
+
+            // 一次性取出所有客户的主/辅电话：1=主电话，3=辅助电话
+            $phoneMap = []; // leads_id => ['main'=>'', 'aux'=>'']
+            if (!empty($leadIds)) {
+                $contacts = Db::table('crm_contacts')
+                    ->where('is_delete', 0)
+                    ->whereIn('leads_id', $leadIds)
+                    ->whereIn('contact_type', [1, 3])
+                    ->order('id', 'asc')
+                    ->field('leads_id, contact_type, contact_value')
+                    ->select();
+                foreach ($contacts as $c) {
+                    $lid = $c['leads_id'];
+                    if (!isset($phoneMap[$lid])) $phoneMap[$lid] = ['main' => '', 'aux' => ''];
+                    if ($c['contact_type'] == 1 && $phoneMap[$lid]['main'] === '') {
+                        $phoneMap[$lid]['main'] = $c['contact_value'];
+                    } elseif ($c['contact_type'] == 3 && $phoneMap[$lid]['aux'] === '') {
+                        $phoneMap[$lid]['aux'] = $c['contact_value'];
+                    }
+                }
+            }
+
+            // 收集协同人ID，后续统一查用户名
+            $uidSet = [];
+            foreach ($rows as &$row) {
+                // 询盘来源中文
+                $row['kh_status_name'] = isset($statusMap[$row['kh_status']]) ? $statusMap[$row['kh_status']] : (string)$row['kh_status'];
+
+                // 主/辅电话
+                $row['main_phone'] = $phoneMap[$row['id']]['main'] ?? '';
+                $row['aux_phone']  = $phoneMap[$row['id']]['aux'] ?? '';
+
+                // 协同人ID解析（支持 JSON 数组或逗号分隔）
+                $idsArr = [];
+                if (!empty($row['joint_person'])) {
+                    $jp = $row['joint_person'];
+                    if (preg_match('/^\\s*\\[.*\\]\\s*$/', $jp)) {
+                        $tmp = json_decode($jp, true);
+                        if (is_array($tmp)) $idsArr = $tmp;
+                    } else {
+                        $idsArr = array_values(array_filter(explode(',', $jp)));
+                    }
+                }
+                $row['_joint_ids'] = $idsArr;
+                foreach ($idsArr as $uid) $uidSet[$uid] = true;
+            }
+            unset($row);
+
+            // 协同人ID -> 用户名
+            $adminMap = [];
+            if (!empty($uidSet)) {
+                $adminMap = Db::table('admin')
+                    ->whereIn('admin_id', array_keys($uidSet))
+                    ->column('username', 'admin_id');
+            }
+            foreach ($rows as &$row) {
+                $names = [];
+                foreach ($row['_joint_ids'] as $uid) {
+                    $names[] = $adminMap[$uid] ?? (string)$uid;
+                }
+                $row['joint_person_names'] = $names ? implode('、', $names) : '';
+                unset($row['_joint_ids']);
+            }
+            unset($row);
+
+            return ['code' => 0, 'msg' => '获取成功!', 'data' => $rows, 'count' => $list['total'], 'rel' => 1];
         }
 
-
-
+        // 页面渲染所需下拉数据
         $khRankList = Db::table('crm_client_rank')->select();
         $khStatusList = Db::table('crm_client_status')->select();
         $xsSourceList = Db::table('crm_clues_source')->select();
@@ -202,6 +277,11 @@ class Client extends Common
 
         return $this->fetch('personclient/index');
     }
+
+
+
+
+
 
     //成交客户列表
     public function successCliList()
@@ -839,7 +919,9 @@ class Client extends Common
         }
 
         // 组装 contact（仅用 CONTACT_MAP['phone']），供 assemblyData() 落库
-        $numbers = array_values(array_unique(array_filter([$main, $aux], function ($v) { return $v !== ''; })));
+        $numbers = array_values(array_unique(array_filter([$main, $aux], function ($v) {
+            return $v !== '';
+        })));
         $contact = [];
         if (!empty($numbers)) {
             $contact['phone'] = $numbers; // assemblyData 会逐条写入 crm_contacts（contact_extra 为空，vdigits 为纯数字）
@@ -1038,69 +1120,145 @@ class Client extends Common
         return $contactData;
     }
 
+
+
     //新建客户
     public function add()
     {
         if (request()->isPost()) {
             $this->redisLock();
-            // <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户状态、用户名、备注 -->
+
+            // 1) 基础校验（主电话必填、11位；辅号可选且11位；两者不能相同）
             $contact = [];
             list($res, $require_check) = $this->checkDataNew($contact);
-            if (!$res) return fail($require_check);
-            $data['kh_name'] = Request::param('kh_name');
-            $data['kh_contact'] = Request::param('kh_contact');
-            $data['kh_status'] = Request::param('kh_status');
+            if (!$res) {
+                $this->redisUnLock();
+                return fail($require_check);
+            }
+
+            // 2) 组装 leads 数据
+            $data['kh_name']      = Request::param('kh_name');
+            $data['kh_contact']   = Request::param('kh_contact');
+            $data['kh_status']    = Request::param('kh_status');
             $data['product_name'] = Request::param('product_name');
-            $data['oper_user'] = Request::param('oper_user');
-            $data['at_user'] = Session::get('username');
-            $data['pr_user'] = Session::get('username');
+            $data['oper_user']    = Request::param('oper_user');
+            $data['remark']       = Request::param('remark', '');
+
+            // 3) 解析并写入协同人（joint_person），支持 数组 / JSON / 逗号分隔
+            $jpRaw = Request::param('joint_person');
+            $jpIds = [];
+            if (is_array($jpRaw)) {
+                $jpIds = $jpRaw;
+            } else if (is_string($jpRaw)) {
+                $jpRaw = trim($jpRaw);
+                if ($jpRaw !== '') {
+                    if ($jpRaw[0] === '[') {
+                        $tmp = json_decode($jpRaw, true);
+                        if (is_array($tmp)) $jpIds = $tmp;
+                    } else {
+                        $jpIds = explode(',', $jpRaw);
+                    }
+                }
+            }
+            // 仅保留数字、去空去重
+            $jpIds = array_values(array_unique(array_filter(array_map(function ($v) {
+                return preg_replace('/\D/', '', (string)$v);
+            }, $jpIds), function ($v) {
+                return $v !== '';
+            })));
+            $jpStr = implode(',', $jpIds);
+            // 若你的 joint_person 仍为 varchar(30)，做长度保护（推荐把字段扩为 varchar(255)）
+            if (strlen($jpStr) > 30) {
+                $this->redisUnLock();
+                return fail('协同人过多，超出存储限制（请减少选择或扩大 joint_person 字段长度）');
+            }
+            $data['joint_person'] = $jpStr;
+
+            // 4) 系统字段
+            $data['at_user']     = Session::get('username');
+            $data['pr_user']     = Session::get('username');
             $data['pr_user_bef'] = Session::get('username');
-            $data['ut_time'] = date("Y-m-d H:i:s", time());
-            $data['at_time'] = date("Y-m-d H:i:s", time());
-            $data['status'] = 1;
-            $data['ispublic'] = 3;
+            $data['ut_time']     = date("Y-m-d H:i:s", time());
+            $data['at_time']     = date("Y-m-d H:i:s", time());
+            $data['status']      = 1;
+            $data['ispublic']    = 3;
+
+            // 5) 查重（按 contact_value 直接查）
             list($res, $msg) = $this->checkDuplicateNew($data);
-            if (!$res) return fail($msg);
+            if (!$res) {
+                $this->redisUnLock();
+                return fail($msg);
+            }
+
+            // 6) 获取主/辅电话（保留纯数字）
+            $mainPhone = preg_replace('/\D/', '', (string)Request::param('phone', ''));
+            $auxPhone  = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
+
             Db::startTrans();
             try {
-                // 客户信息保存
+                // a) 新增主表
                 Db::table('crm_leads')->insert($data);
                 $id = Db::getLastInsID();
                 if (!$id) {
-                    return fail('客户信息插入失败');
+                    throw new \Exception('客户信息插入失败');
                 }
-                $contactData = $this->assemblyData($contact, $id);
-                Db::table('crm_contacts')->insertAll($contactData);
 
+                // b) 新增联系方式（严格按你的要求设置 contact_type）
+                $now = date("Y-m-d H:i:s", time());
+                $contactsToInsert = [];
+                if ($mainPhone !== '') {
+                    $contactsToInsert[] = [
+                        'leads_id'      => $id,
+                        'contact_type'  => 1,                 // 主电话 = 1
+                        'contact_extra' => '',
+                        'contact_value' => $mainPhone,
+                        'vdigits'       => $mainPhone,
+                        'is_delete'     => 0,
+                        'created_at'    => $now,
+                    ];
+                }
+                if ($auxPhone !== '') {
+                    $contactsToInsert[] = [
+                        'leads_id'      => $id,
+                        'contact_type'  => 3,                 // 辅助电话 = 3
+                        'contact_extra' => '',
+                        'contact_value' => $auxPhone,
+                        'vdigits'       => $auxPhone,
+                        'is_delete'     => 0,
+                        'created_at'    => $now,
+                    ];
+                }
+                if (!empty($contactsToInsert)) {
+                    Db::table('crm_contacts')->insertAll($contactsToInsert);
+                }
 
-                // 添加日志记录
+                // c) 操作日志
                 $this->addOperLog(
                     $id,
                     '新增客户',
-                    ['运营人员'=>$data['oper_user'],'联系方式'=>$contact]
+                    [
+                        '运营人员' => $data['oper_user'],
+                        '联系方式' => ['主电话' => $mainPhone, '辅助电话' => $auxPhone],
+                        '协同人'  => $jpIds
+                    ]
                 );
-                
-                // 提交事务
+
                 Db::commit();
                 $this->redisUnLock();
                 return success();
             } catch (\Exception $e) {
-                // 回滚事务
                 Db::rollback();
                 $this->redisUnLock();
                 return fail($e->getMessage());
             }
         }
 
-
-
-        // 1. 加载产品列表（产品ID、名称、分类），用于产品名称下拉
+        // GET：渲染新增页面所需下拉数据
         $currentAdmin = \app\admin\model\Admin::getMyInfo();
         $where = [];
         if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
             $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
         }
-        // 查询产品表和分类表，获取产品名称及所属分类，并选择一个产品ID（使用 MIN(id) 保证唯一）
         $productRows = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id')
             ->where($where)
@@ -1110,39 +1268,31 @@ class Client extends Common
             ->select();
         $this->assign('productList', $productRows);
 
-        // 2. 加载询盘来源列表（客户状态列表），用于询盘来源下拉
         $khStatusList = Db::table('crm_client_status')->select();
         $this->assign('khStatusList', $khStatusList);
 
-        // 3. 加载运营人员列表，并按来源分组用于联动（使用 Common 控制器的 getYyList）
         $yyData = $this->getYyList();
-        // 所有运营人员选项（id和名称）列表，用于运营人员下拉初始选项
-        $operUserList = $yyData['_yyList'];   // 例如：[ ['id'=>用户ID, 'name'=>用户名], ... ]
+        $operUserList = $yyData['_yyList'];
         $this->assign('operUserList', $operUserList);
-        // 运营人员按来源分组的映射，用于前端JS联动（JSON格式）
         $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
 
-        // 4. 加载协同人列表（所有管理员中非超级管理员），用于协同人多选
         $teamName = session('team_name') ?: '';
         $adminList = Db::name('admin')
-            ->where('group_id', '<>', 1)  // 排除超级管理员
-            ->where(function($query) use($teamName) {
-                if ($teamName) {
-                    $query->where('team_name', $teamName);
-                }
+            ->where('group_id', '<>', 1)
+            ->where(function ($query) use ($teamName) {
+                if ($teamName) $query->where('team_name', $teamName);
             })
             ->field('admin_id, username')
             ->select();
-        // 格式化协同人数据供前端 xmSelect 使用（name/value 键）
         $collaboratorData = [];
         foreach ($adminList as $admin) {
             $collaboratorData[] = ['name' => $admin['username'], 'value' => $admin['admin_id']];
         }
         $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
 
-        // 渲染模板
         return $this->fetch('client/add');
     }
+
 
     //编辑客户
     public function edit()
@@ -1179,7 +1329,7 @@ class Client extends Common
                 $this->addOperLog(
                     $data['id'],
                     '编辑客户',
-                    ['运营人员'=>$data['oper_user'],'联系方式'=>$contact]
+                    ['运营人员' => $data['oper_user'], '联系方式' => $contact]
                 );
                 // 提交事务
                 Db::commit();
@@ -1255,10 +1405,10 @@ class Client extends Common
         Db::startTrans();
         try {
             // 验证并删除客户
-            $clients = model('client')->with('contacts')->where('id','in',$ids)->where(function ($query) use ($username) {
-                    $query->where('pr_user', $username)
-                        ->whereOr('pr_user_bef', $username);
-                })->select();
+            $clients = model('client')->with('contacts')->where('id', 'in', $ids)->where(function ($query) use ($username) {
+                $query->where('pr_user', $username)
+                    ->whereOr('pr_user_bef', $username);
+            })->select();
             if ($clients->isEmpty()) {
                 throw new \Exception('无权限删除选中客户');
             }
@@ -1272,10 +1422,10 @@ class Client extends Common
             Db::commit();
             //写入操作日志
             $this->addOperLog(
-                     null,
-                    '删除客户',
-                    "$username 删除客户:".implode(',',$ids).'客户明细:'.$clients,
-                );
+                null,
+                '删除客户',
+                "$username 删除客户:" . implode(',', $ids) . '客户明细:' . $clients,
+            );
             return json(['code' => 0, 'msg' => '删除成功']);
         } catch (\Exception $e) {
             Db::rollback();
@@ -1541,7 +1691,7 @@ class Client extends Common
         $page = input('page') ? input('page') : 1;
         $limit = input('limit') ? input('limit') : config('pageSize');
         $keyword = Request::param('keyword');
-              if (!empty($keyword['timebucket'])) {
+        if (!empty($keyword['timebucket'])) {
             $keyword['timebucket'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
         }
         if (!empty($keyword['at_time'])) {
