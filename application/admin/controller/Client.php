@@ -1295,101 +1295,320 @@ class Client extends Common
 
 
     //编辑客户
+    // public function edit()
+    // {
+    //     if (Request::isAjax()) {
+    //         $this->redisLock();
+    //         $data = Request::param();
+    //         $data['ut_time'] = date("Y-m-d H:i:s", time());
+    //         $contact = [];
+    //         list($res, $require_check) = $this->checkData($contact);
+    //         if (!$res) return fail($require_check);
+    //         list($res, $msg) = $this->checkDuplicate($data, $require_check);
+    //         if (!$res) return fail($msg);
+    //         unset($data['phone_code']);
+    //         foreach (self::CONTACT_MAP as $k => $v) {
+    //             unset($data[$k]);
+    //         }
+    //         try {
+    //             //删除客户关联联系方式
+    //             Db::table('crm_contacts')->where(['leads_id' => $data['id']])->update(['is_delete' => 1]);
+    //             $contactData = $this->assemblyData($contact, $data['id']);
+    //             Db::table('crm_contacts')->insertAll($contactData);
+    //             //客户信息保存
+    //             Db::table('crm_leads')->where(['id' => $data['id']])->where('status', 1)->update($data);
+    //             //新增商品
+    //             // $product_name = Request::param('product_name');
+    //             // $product = $this->checkProduct($product_name);
+    //             // if (!$product) {
+    //             //     $this->addProduct($product_name);
+    //             // }
+
+
+    //             // 添加日志记录
+    //             $this->addOperLog(
+    //                 $data['id'],
+    //                 '编辑客户',
+    //                 ['运营人员' => $data['oper_user'], '联系方式' => $contact]
+    //             );
+    //             // 提交事务
+    //             Db::commit();
+    //             // $this->redisUnLock();
+    //             return success();
+    //         } catch (\Exception $e) {
+    //             // 回滚事务
+    //             Db::rollback();
+    //             $this->redisUnLock();
+    //             return fail($e->getMessage());
+    //         }
+    //     }
+
+
+    //     $result = Db::table('crm_leads')->where(['id' => Request::param('id')])->find();
+
+    //     $this->assign('result', $result);
+
+    //     // $xsSourceList = Db::table('crm_clues_source')->select();
+    //     $khRankList = Db::table('crm_client_rank')->select();
+    //     $khStatusList = Db::table('crm_client_status')->select();
+    //     // $xsAreaList = Db::table('crm_clues_area')->select();
+    //     $xsHangyeList = Db::table('crm_client_hangye')->select();
+    //     $this->assign('xsHangyeList', $xsHangyeList);
+    //     // $this->assign('xsAreaList', $xsAreaList);
+    //     // $this -> assign('xsSourceList',$xsSourceList);
+    //     $this->assign('khRankList', $khRankList);
+    //     $this->assign('khStatusList', $khStatusList);
+    //     //新增地区联动
+    //     $countries = $this->getCountries();
+    //     $this->assign('countries', $countries);
+    //     //客户关联联系方式
+    //     $select = db('crm_contacts')->where(['leads_id' => $result['id'], 'is_delete' => 0])->select();
+    //     $con_map = array_flip(self::CONTACT_MAP);
+    //     $contact = [];
+
+    //     foreach ($select as $c) {
+    //         $value = $c['contact_extra'] ? $c['contact_extra'] . '#' . $c['contact_value'] : $c['contact_value'];
+    //         // $contact[$con_map[$c['contact_type']]][] = $value;
+    //         $contact[$c['contact_type']][] = $value;
+    //     }
+    //     foreach (self::CONTACT_MAP as $v) {
+    //         if (!isset($contact[$v])) $contact[$v][] = '';
+    //     }
+    //     $contacts = [];
+    //     foreach ($contact as $key => $value) {
+    //         if (isset($con_map[$key])) {
+    //             $contacts[$con_map[$key]] = $value;
+    //         }
+    //     }
+    //     unset($con_map, $contact);
+    //     $this->assign('contact', $contacts);
+    //     $yyList = $this->getYyList();
+    //     $this->assign('yyList', json_encode($yyList['yyList']));
+    //     $this->assign('_yyList', json_encode($yyList['_yyList']));
+    //     //新增商品
+    //     $productList = $this->getProductListClient();
+    //     $this->assign('productList', $productList);
+    //     return $this->fetch('client/edit');
+    // }
+    //编辑客户
     public function edit()
     {
-        if (Request::isAjax()) {
+        // 保存
+        if (request()->isPost()) {
             $this->redisLock();
-            $data = Request::param();
-            $data['ut_time'] = date("Y-m-d H:i:s", time());
-            $contact = [];
-            list($res, $require_check) = $this->checkData($contact);
-            if (!$res) return fail($require_check);
-            list($res, $msg) = $this->checkDuplicate($data, $require_check);
-            if (!$res) return fail($msg);
-            unset($data['phone_code']);
-            foreach (self::CONTACT_MAP as $k => $v) {
-                unset($data[$k]);
+
+            $id = (int)\think\facade\Request::param('id', 0);
+            if (!$id) {
+                $this->redisUnLock();
+                return fail('参数错误：缺少ID');
             }
+
+            // 1) 基础校验（与新增保持一致：主电话必填、11位；辅号可选且11位；两者不能相同）
+            $contact = [];
+            list($res, $require_check) = $this->checkDataNew($contact);
+            if (!$res) {
+                $this->redisUnLock();
+                return fail($require_check);
+            }
+
+            // 2) 组装 leads 数据
+            $data = [];
+            $data['id']           = $id;
+            $data['kh_name']      = \think\facade\Request::param('kh_name');
+            $data['kh_contact']   = \think\facade\Request::param('kh_contact', '');
+            $data['kh_status']    = \think\facade\Request::param('kh_status');      // 询盘来源ID
+            $data['product_name'] = \think\facade\Request::param('product_name');   // 产品ID
+            $data['oper_user']    = \think\facade\Request::param('oper_user');      // 运营人员ID（与你的 add 保持一致）
+            $data['remark']       = \think\facade\Request::param('remark', '');
+            $data['ut_time']      = date("Y-m-d H:i:s");
+
+            // 3) 解析并写入协同人（joint_person），支持 数组 / JSON / 逗号分隔
+            $jpRaw = \think\facade\Request::param('joint_person');
+            $jpIds = [];
+            if (is_array($jpRaw)) {
+                $jpIds = $jpRaw;
+            } else if (is_string($jpRaw)) {
+                $jpRaw = trim($jpRaw);
+                if ($jpRaw !== '') {
+                    if ($jpRaw[0] === '[') {
+                        $tmp = json_decode($jpRaw, true);
+                        if (is_array($tmp)) $jpIds = $tmp;
+                    } else {
+                        $jpIds = explode(',', $jpRaw);
+                    }
+                }
+            }
+            // 仅保留数字、去空去重
+            $jpIds = array_values(array_unique(array_filter(array_map(function ($v) {
+                return preg_replace('/\D/', '', (string)$v);
+            }, $jpIds), function ($v) {
+                return $v !== '';
+            })));
+            $jpStr = implode(',', $jpIds);
+            if (strlen($jpStr) > 30) { // 若 joint_person 仍为 varchar(30)
+                $this->redisUnLock();
+                return fail('协同人过多，超出存储限制（请减少选择或扩大 joint_person 字段长度）');
+            }
+            $data['joint_person'] = $jpStr;
+
+            // 4) 查重（按 contact_value 直接查；会自动排除自身 leads_id）
+            list($res, $msg) = $this->checkDuplicateNew($data);
+            if (!$res) {
+                $this->redisUnLock();
+                return fail($msg);
+            }
+
+            // 5) 获取主/辅电话（保留纯数字）
+            $mainPhone = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone', ''));
+            $auxPhone  = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone2', ''));
+
             try {
-                //删除客户关联联系方式
-                Db::table('crm_contacts')->where(['leads_id' => $data['id']])->update(['is_delete' => 1]);
-                $contactData = $this->assemblyData($contact, $data['id']);
-                Db::table('crm_contacts')->insertAll($contactData);
-                //客户信息保存
-                Db::table('crm_leads')->where(['id' => $data['id']])->where('status', 1)->update($data);
-                //新增商品
-                // $product_name = Request::param('product_name');
-                // $product = $this->checkProduct($product_name);
-                // if (!$product) {
-                //     $this->addProduct($product_name);
-                // }
+                \think\Db::startTrans();
 
+                // 更新主表
+                \think\Db::table('crm_leads')->where('id', $id)->update($data);
 
-                // 添加日志记录
-                $this->addOperLog(
-                    $data['id'],
+                // 先标记旧的主/辅号码为删除（仅 contact_type 1 和 3）
+                \think\Db::table('crm_contacts')
+                    ->where('leads_id', $id)
+                    ->whereIn('contact_type', [1, 3])
+                    ->where('is_delete', 0)
+                    ->update(['is_delete' => 1]);
+
+                // 新的联系方式
+                $now = date("Y-m-d H:i:s");
+                $contactsToInsert = [];
+                if ($mainPhone !== '') {
+                    $contactsToInsert[] = [
+                        'leads_id'      => $id,
+                        'contact_type'  => 1,               // 主电话
+                        'contact_extra' => '',
+                        'contact_value' => $mainPhone,
+                        'vdigits'       => $mainPhone,
+                        'is_delete'     => 0,
+                        'created_at'    => $now,
+                    ];
+                }
+                if ($auxPhone !== '') {
+                    $contactsToInsert[] = [
+                        'leads_id'      => $id,
+                        'contact_type'  => 3,               // 辅助电话
+                        'contact_extra' => '',
+                        'contact_value' => $auxPhone,
+                        'vdigits'       => $auxPhone,
+                        'is_delete'     => 0,
+                        'created_at'    => $now,
+                    ];
+                }
+                if (!empty($contactsToInsert)) {
+                    \think\Db::table('crm_contacts')->insertAll($contactsToInsert);
+                }
+
+                // 日志
+                self::addOperLog(
+                    $id,
                     '编辑客户',
-                    ['运营人员' => $data['oper_user'], '联系方式' => $contact]
+                    [
+                        '运营人员' => $data['oper_user'],
+                        '联系方式' => ['主电话' => $mainPhone, '辅助电话' => $auxPhone],
+                        '协同人'  => $jpIds
+                    ]
                 );
-                // 提交事务
-                Db::commit();
-                // $this->redisUnLock();
+
+                \think\Db::commit();
+                $this->redisUnLock();
                 return success();
             } catch (\Exception $e) {
-                // 回滚事务
-                Db::rollback();
+                \think\Db::rollback();
                 $this->redisUnLock();
                 return fail($e->getMessage());
             }
         }
 
+        // 编辑页展示
+        $id = (int)\think\facade\Request::param('id', 0);
+        if (!$id) return $this->fetch('client/edit'); // 防御
 
-        $result = Db::table('crm_leads')->where(['id' => Request::param('id')])->find();
+        $result = \think\Db::table('crm_leads')->where(['id' => $id])->find();
 
-        $this->assign('result', $result);
+        // 主/辅电话：1 主、3 辅
+        $mainPhone = '';
+        $auxPhone  = '';
+        $contacts = \think\Db::table('crm_contacts')
+            ->where('is_delete', 0)
+            ->where('leads_id', $id)
+            ->whereIn('contact_type', [1, 3])
+            ->order('id', 'asc')
+            ->field('contact_type, contact_value')
+            ->select();
+        foreach ($contacts as $c) {
+            if ($c['contact_type'] == 1 && $mainPhone === '') $mainPhone = $c['contact_value'];
+            if ($c['contact_type'] == 3 && $auxPhone === '') $auxPhone  = $c['contact_value'];
+        }
 
-        // $xsSourceList = Db::table('crm_clues_source')->select();
-        $khRankList = Db::table('crm_client_rank')->select();
-        $khStatusList = Db::table('crm_client_status')->select();
-        // $xsAreaList = Db::table('crm_clues_area')->select();
-        $xsHangyeList = Db::table('crm_client_hangye')->select();
-        $this->assign('xsHangyeList', $xsHangyeList);
-        // $this->assign('xsAreaList', $xsAreaList);
-        // $this -> assign('xsSourceList',$xsSourceList);
-        $this->assign('khRankList', $khRankList);
+        // 产品列表（与 add 一致）
+        $currentAdmin = \app\admin\model\Admin::getMyInfo();
+        $where = [];
+        if (!empty($currentAdmin['org']) && strpos($currentAdmin['org'], 'admin') === false) {
+            $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
+        }
+        $productRows = \think\Db::name('crm_products')->alias('p')
+            ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+            ->where($where)
+            ->group('p.product_name, c.category_name')
+            ->field('MIN(p.id) as id, p.product_name, c.category_name')
+            ->order('p.product_name', 'asc')
+            ->select();
+        $this->assign('productList', $productRows);
+
+        // 询盘来源
+        $khStatusList = \think\Db::table('crm_client_status')->select();
         $this->assign('khStatusList', $khStatusList);
-        //新增地区联动
-        $countries = $this->getCountries();
-        $this->assign('countries', $countries);
-        //客户关联联系方式
-        $select = db('crm_contacts')->where(['leads_id' => $result['id'], 'is_delete' => 0])->select();
-        $con_map = array_flip(self::CONTACT_MAP);
-        $contact = [];
 
-        foreach ($select as $c) {
-            $value = $c['contact_extra'] ? $c['contact_extra'] . '#' . $c['contact_value'] : $c['contact_value'];
-            // $contact[$con_map[$c['contact_type']]][] = $value;
-            $contact[$c['contact_type']][] = $value;
+        // 运营人员下拉 + 分组（与 add 一致）
+        $yyData = $this->getYyList();
+        $operUserList = $yyData['_yyList'];   // [{id,name}]
+        $this->assign('operUserList', $operUserList);
+        $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
+
+        // 协同人选项
+        $teamName = session('team_name') ?: '';
+        $adminList = \think\Db::name('admin')
+            ->where('group_id', '<>', 1)  // 非超管
+            ->where(function ($query) use ($teamName) {
+                if ($teamName) {
+                    $query->where('team_name', $teamName);
+                }
+            })
+            ->field('admin_id, username')
+            ->select();
+        $collaboratorData = [];
+        foreach ($adminList as $admin) {
+            $collaboratorData[] = ['name' => $admin['username'], 'value' => $admin['admin_id']];
         }
-        foreach (self::CONTACT_MAP as $v) {
-            if (!isset($contact[$v])) $contact[$v][] = '';
-        }
-        $contacts = [];
-        foreach ($contact as $key => $value) {
-            if (isset($con_map[$key])) {
-                $contacts[$con_map[$key]] = $value;
+        $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
+
+        // 协同人已选
+        $jointPersonInit = [];
+        if (!empty($result['joint_person'])) {
+            $tmp = $result['joint_person'];
+            if (preg_match('/^\s*\[.*\]\s*$/', $tmp)) {
+                $arr = json_decode($tmp, true);
+                if (is_array($arr)) $jointPersonInit = $arr;
+            } else {
+                $jointPersonInit = array_values(array_filter(explode(',', $tmp)));
             }
         }
-        unset($con_map, $contact);
-        $this->assign('contact', $contacts);
-        $yyList = $this->getYyList();
-        $this->assign('yyList', json_encode($yyList['yyList']));
-        $this->assign('_yyList', json_encode($yyList['_yyList']));
-        //新增商品
-        $productList = $this->getProductListClient();
-        $this->assign('productList', $productList);
+        $this->assign('jointPersonInit', json_encode($jointPersonInit, JSON_UNESCAPED_UNICODE));
+
+        // 页面回填
+        $this->assign('result', $result);
+        $this->assign('mainPhone', $mainPhone);
+        $this->assign('auxPhone',  $auxPhone);
+
         return $this->fetch('client/edit');
     }
+
 
     //删除客户
     // 修改del方法支持批量删除
