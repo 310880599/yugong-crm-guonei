@@ -812,6 +812,47 @@ class Client extends Common
     }
 
 
+
+    // 放在 Client 控制器内，替代原 checkData 的用途
+    private function checkDataNew(&$contact)
+    {
+        // 读取并规范化（仅保留数字）
+        $main = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone', ''));
+        $aux  = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone2', ''));
+
+        // 主电话必填
+        if ($main === '') {
+            return [false, '主电话不能为空'];
+        }
+
+        // 格式：11位数字
+        if (!preg_match('/^\d{11}$/', $main)) {
+            return [false, '主电话必须为11位数字'];
+        }
+        if ($aux !== '' && !preg_match('/^\d{11}$/', $aux)) {
+            return [false, '辅助电话必须为11位数字'];
+        }
+
+        // 主/辅不能相同
+        if ($aux !== '' && $main === $aux) {
+            return [false, '主电话与辅助电话不能相同'];
+        }
+
+        // 组装 contact（仅用 CONTACT_MAP['phone']），供 assemblyData() 落库
+        $numbers = array_values(array_unique(array_filter([$main, $aux], function ($v) { return $v !== ''; })));
+        $contact = [];
+        if (!empty($numbers)) {
+            $contact['phone'] = $numbers; // assemblyData 会逐条写入 crm_contacts（contact_extra 为空，vdigits 为纯数字）
+        }
+
+        // 提供给 checkDuplicate 的去重集合（vdigits 匹配）
+        $require_check = $numbers;
+
+        return [true, $require_check];
+    }
+
+
+
     //数据校验
     private function checkData(&$contact)
     {
@@ -906,6 +947,44 @@ class Client extends Common
         return [true, ''];
     }
 
+    // 根据 add.html 的手机号字段（phone、phone2）做查重
+    // 逻辑：仅在 crm_contacts.contact_value 上检查，不拼接 contact_extra；
+    // 返回值与原函数保持一致：[bool, msg]
+    private function checkDuplicateNew($data)
+    {
+        $whereContacts = [
+            ['is_delete', '=', 0],
+            ['contact_type', '=', self::CONTACT_MAP['phone']],
+        ];
+        if (isset($data['id'])) {
+            $whereContacts[] = ['leads_id', '<>', $data['id']];
+        }
+
+        $request = request();
+        $p1 = preg_replace('/\D/', '', (string)$request->param('phone', ''));
+        $p2 = preg_replace('/\D/', '', (string)$request->param('phone2', ''));
+        $phones = array_values(array_unique(array_filter([$p1, $p2], function ($v) {
+            return $v !== '';
+        })));
+
+        if (empty($phones)) {
+            // 无需查重（由上游校验控制是否必填）
+            return [true, ''];
+        }
+
+        $contactExist = Db::table('crm_contacts')
+            ->where($whereContacts)
+            ->whereIn('contact_value', $phones)
+            ->find();
+
+        if ($contactExist) {
+            $find = Db::table('crm_leads')->where('id', $contactExist['leads_id'])->find();
+            return [false, $contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']];
+        }
+
+        return [true, ''];
+    }
+
     /**
      * 验证国际手机号格式
      * @param string $phone 原始手机号
@@ -966,16 +1045,13 @@ class Client extends Common
             $this->redisLock();
             // <!-- 客户名称、地区、行业类别、联系人、联系号码、客户级别、客户状态、用户名、备注 -->
             $contact = [];
-            list($res, $require_check) = $this->checkData($contact);
+            list($res, $require_check) = $this->checkDataNew($contact);
             if (!$res) return fail($require_check);
             $data['kh_name'] = Request::param('kh_name');
-            $data['xs_area'] = Request::param('xs_area');
             $data['kh_contact'] = Request::param('kh_contact');
-            $data['kh_rank'] = Request::param('kh_rank');
             $data['kh_status'] = Request::param('kh_status');
             $data['product_name'] = Request::param('product_name');
             $data['oper_user'] = Request::param('oper_user');
-            $data['remark'] = Request::param('remark');
             $data['at_user'] = Session::get('username');
             $data['pr_user'] = Session::get('username');
             $data['pr_user_bef'] = Session::get('username');
@@ -983,7 +1059,7 @@ class Client extends Common
             $data['at_time'] = date("Y-m-d H:i:s", time());
             $data['status'] = 1;
             $data['ispublic'] = 3;
-            list($res, $msg) = $this->checkDuplicate($data, $require_check);
+            list($res, $msg) = $this->checkDuplicateNew($data);
             if (!$res) return fail($msg);
             Db::startTrans();
             try {
