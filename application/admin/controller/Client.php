@@ -817,10 +817,7 @@ class Client extends Common
     {
         $map = [
             'phone' => '手机号码',
-            'email' => '邮箱',
             'whatsapp' => 'whatsapp',
-            'ali_id' => '阿里id',
-            'wechat' => '微信',
         ];
         $request = request();
         $phone_code = $request->param('phone_code');
@@ -976,11 +973,9 @@ class Client extends Common
             $data['kh_contact'] = Request::param('kh_contact');
             $data['kh_rank'] = Request::param('kh_rank');
             $data['kh_status'] = Request::param('kh_status');
-            // $data['kh_username'] = Request::param('kh_username');
             $data['product_name'] = Request::param('product_name');
             $data['oper_user'] = Request::param('oper_user');
             $data['remark'] = Request::param('remark');
-            // $data['kh_need'] = Request::param('kh_need');
             $data['at_user'] = Session::get('username');
             $data['pr_user'] = Session::get('username');
             $data['pr_user_bef'] = Session::get('username');
@@ -1001,12 +996,6 @@ class Client extends Common
                 $contactData = $this->assemblyData($contact, $id);
                 Db::table('crm_contacts')->insertAll($contactData);
 
-                //新增商品
-                // $product_name = Request::param('product_name');
-                // $product = $this->checkProduct($product_name);
-                // if (!$product) {
-                //     $this->addProduct($product_name);
-                // }
 
                 // 添加日志记录
                 $this->addOperLog(
