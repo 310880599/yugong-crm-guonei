@@ -280,7 +280,21 @@ class Client extends Common
 
 
 
+    //（协同人客户）列表
+    public function joiCliList()
+    {
+        // 页面渲染所需下拉数据
+        $khRankList = Db::table('crm_client_rank')->select();
+        $khStatusList = Db::table('crm_client_status')->select();
+        $xsSourceList = Db::table('crm_clues_source')->select();
+        $yyList = $this->getYyList();
+        $this->assign('_yyList', json_encode($yyList['_yyList']));
+        $this->assign('khRankList', $khRankList);
+        $this->assign('khStatusList', $khStatusList);
+        $this->assign('xsSourceList', $xsSourceList);  //线索/客户来源
 
+        return $this->fetch('jointclient/index');
+    }
 
 
     //成交客户列表
@@ -1293,103 +1307,8 @@ class Client extends Common
         return $this->fetch('client/add');
     }
 
+    
 
-    //编辑客户
-    // public function edit()
-    // {
-    //     if (Request::isAjax()) {
-    //         $this->redisLock();
-    //         $data = Request::param();
-    //         $data['ut_time'] = date("Y-m-d H:i:s", time());
-    //         $contact = [];
-    //         list($res, $require_check) = $this->checkData($contact);
-    //         if (!$res) return fail($require_check);
-    //         list($res, $msg) = $this->checkDuplicate($data, $require_check);
-    //         if (!$res) return fail($msg);
-    //         unset($data['phone_code']);
-    //         foreach (self::CONTACT_MAP as $k => $v) {
-    //             unset($data[$k]);
-    //         }
-    //         try {
-    //             //删除客户关联联系方式
-    //             Db::table('crm_contacts')->where(['leads_id' => $data['id']])->update(['is_delete' => 1]);
-    //             $contactData = $this->assemblyData($contact, $data['id']);
-    //             Db::table('crm_contacts')->insertAll($contactData);
-    //             //客户信息保存
-    //             Db::table('crm_leads')->where(['id' => $data['id']])->where('status', 1)->update($data);
-    //             //新增商品
-    //             // $product_name = Request::param('product_name');
-    //             // $product = $this->checkProduct($product_name);
-    //             // if (!$product) {
-    //             //     $this->addProduct($product_name);
-    //             // }
-
-
-    //             // 添加日志记录
-    //             $this->addOperLog(
-    //                 $data['id'],
-    //                 '编辑客户',
-    //                 ['运营人员' => $data['oper_user'], '联系方式' => $contact]
-    //             );
-    //             // 提交事务
-    //             Db::commit();
-    //             // $this->redisUnLock();
-    //             return success();
-    //         } catch (\Exception $e) {
-    //             // 回滚事务
-    //             Db::rollback();
-    //             $this->redisUnLock();
-    //             return fail($e->getMessage());
-    //         }
-    //     }
-
-
-    //     $result = Db::table('crm_leads')->where(['id' => Request::param('id')])->find();
-
-    //     $this->assign('result', $result);
-
-    //     // $xsSourceList = Db::table('crm_clues_source')->select();
-    //     $khRankList = Db::table('crm_client_rank')->select();
-    //     $khStatusList = Db::table('crm_client_status')->select();
-    //     // $xsAreaList = Db::table('crm_clues_area')->select();
-    //     $xsHangyeList = Db::table('crm_client_hangye')->select();
-    //     $this->assign('xsHangyeList', $xsHangyeList);
-    //     // $this->assign('xsAreaList', $xsAreaList);
-    //     // $this -> assign('xsSourceList',$xsSourceList);
-    //     $this->assign('khRankList', $khRankList);
-    //     $this->assign('khStatusList', $khStatusList);
-    //     //新增地区联动
-    //     $countries = $this->getCountries();
-    //     $this->assign('countries', $countries);
-    //     //客户关联联系方式
-    //     $select = db('crm_contacts')->where(['leads_id' => $result['id'], 'is_delete' => 0])->select();
-    //     $con_map = array_flip(self::CONTACT_MAP);
-    //     $contact = [];
-
-    //     foreach ($select as $c) {
-    //         $value = $c['contact_extra'] ? $c['contact_extra'] . '#' . $c['contact_value'] : $c['contact_value'];
-    //         // $contact[$con_map[$c['contact_type']]][] = $value;
-    //         $contact[$c['contact_type']][] = $value;
-    //     }
-    //     foreach (self::CONTACT_MAP as $v) {
-    //         if (!isset($contact[$v])) $contact[$v][] = '';
-    //     }
-    //     $contacts = [];
-    //     foreach ($contact as $key => $value) {
-    //         if (isset($con_map[$key])) {
-    //             $contacts[$con_map[$key]] = $value;
-    //         }
-    //     }
-    //     unset($con_map, $contact);
-    //     $this->assign('contact', $contacts);
-    //     $yyList = $this->getYyList();
-    //     $this->assign('yyList', json_encode($yyList['yyList']));
-    //     $this->assign('_yyList', json_encode($yyList['_yyList']));
-    //     //新增商品
-    //     $productList = $this->getProductListClient();
-    //     $this->assign('productList', $productList);
-    //     return $this->fetch('client/edit');
-    // }
     //编辑客户
     public function edit()
     {
