@@ -2068,6 +2068,114 @@ class Client extends Common
 
 
 
+    // 在 application/admin/controller/Client.php 内新增以下方法
+    public function jointPersonClientSearch()
+    {
+        $page    = input('page/d', 1);
+        $limit   = input('limit/d', config('pageSize'));
+        $keyword = input('keyword/a', []);
+
+        // 时间范围：沿用你项目里的 buildTimeWhere
+        if (!empty($keyword['timebucket'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+        }
+        if (!empty($keyword['at_time'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+        }
+
+        // 取列表
+        $list = model('client')->getJointClientSearchList($page, $limit, $keyword);
+        if (empty($list) || empty($list['data'])) {
+            return ['code' => 0, 'msg' => '获取成功!', 'data' => [], 'count' => 0, 'rel' => 1];
+        }
+
+        // ===== 结果集二次加工：来源名/主辅电话/协同人名 =====
+        $rows    = &$list['data'];
+        $leadIds = array_column($rows, 'id');
+
+        // 1) 询盘来源(ID->名称) 映射（表不存在则跳过）
+        $statusMap = [];
+        try {
+            $hasStatusTable = Db::query("SHOW TABLES LIKE 'crm_client_status'");
+            if (!empty($hasStatusTable)) {
+                $statusMap = Db::table('crm_client_status')->column('status_name', 'id');
+            }
+        } catch (\Exception $e) {
+            $statusMap = [];
+        }
+
+        // 2) 批量取主/辅电话（1=主、3=辅）
+        $phoneMap = [];
+        if (!empty($leadIds)) {
+            $contacts = Db::table('crm_contacts')
+                ->where('is_delete', 0)
+                ->where('leads_id', 'in', $leadIds)
+                ->where('contact_type', 'in', [1, 3])
+                ->order('id', 'asc')
+                ->field('leads_id, contact_type, contact_value')
+                ->select();
+            foreach ($contacts as $c) {
+                $lid = $c['leads_id'];
+                if (!isset($phoneMap[$lid])) {
+                    $phoneMap[$lid] = ['main' => '', 'aux' => ''];
+                }
+                if ($c['contact_type'] == 1 && $phoneMap[$lid]['main'] === '') {
+                    $phoneMap[$lid]['main'] = $c['contact_value'];
+                } elseif ($c['contact_type'] == 3 && $phoneMap[$lid]['aux'] === '') {
+                    $phoneMap[$lid]['aux'] = $c['contact_value'];
+                }
+            }
+        }
+
+        // 3) 协同人显示名
+        $uidSet = [];
+        foreach ($rows as &$row) {
+            // 来源中文名（映射不到则回退为原值）
+            $row['kh_status_name'] = isset($statusMap[$row['kh_status']]) ? $statusMap[$row['kh_status']] : (string)$row['kh_status'];
+            // 主/辅电话
+            $row['main_phone'] = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['main'] : '';
+            $row['aux_phone']  = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['aux']  : '';
+
+            // 解析 joint_person（JSON 数组或逗号分隔）
+            $idsArr = [];
+            if (!empty($row['joint_person'])) {
+                $jp = $row['joint_person'];
+                if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                    $tmp = json_decode($jp, true);
+                    if (is_array($tmp)) $idsArr = $tmp;
+                } else {
+                    $idsArr = preg_split('/[,，\s]+/', $jp, -1, PREG_SPLIT_NO_EMPTY);
+                }
+            }
+            $row['_joint_ids'] = $idsArr;
+            foreach ($idsArr as $uid) $uidSet[$uid] = true;
+        }
+        unset($row);
+
+        // 批量查协同人用户名（admin_id -> username）
+        $adminMap = [];
+        try {
+            if (!empty($uidSet) && Db::query("SHOW TABLES LIKE 'admin'")) {
+                $adminMap = Db::table('admin')
+                    ->where('admin_id', 'in', array_keys($uidSet))
+                    ->column('username', 'admin_id');
+            }
+        } catch (\Exception $e) {
+            $adminMap = [];
+        }
+
+        foreach ($rows as &$row) {
+            $names = [];
+            foreach ($row['_joint_ids'] as $uid) {
+                $names[] = isset($adminMap[$uid]) ? $adminMap[$uid] : (string)$uid;
+            }
+            $row['joint_person_names'] = $names ? implode('、', $names) : '';
+            unset($row['_joint_ids']);
+        }
+        unset($row);
+
+        return ['code' => 0, 'msg' => '获取成功!', 'data' => $rows, 'count' => $list['total'], 'rel' => 1];
+    }
 
 
 

@@ -143,6 +143,67 @@ class Client extends Model
     }
 
 
+    // 在 application/admin/model/Client.php 内新增以下方法
+    public function getJointClientSearchList($page, $limit, $keyword)
+    {
+        $mapAtTime   = [];
+        $mapKhRank   = [];
+        $mapKhStatus = [];
+        $mapPhone    = [];
+        $mapKhName   = [];
+        $mapXsSource = [];
+        $where       = [];
+
+        // 时间范围（控制器已转成 between 等 where 数组）
+        if (!empty($keyword['timebucket'])) {
+            $mapAtTime[] = $keyword['timebucket'];
+        }
+        if ($keyword['kh_rank'] !== '' && $keyword['kh_rank'] !== null) {
+            $mapKhRank = ['kh_rank' => $keyword['kh_rank']];
+        }
+        if ($keyword['kh_status'] !== '' && $keyword['kh_status'] !== null) {
+            $mapKhStatus = ['kh_status' => $keyword['kh_status']];
+        }
+        if (!empty($keyword['phone'])) {
+            // 复用你已有的按电话查 leads_id 的逻辑（需在本模型中存在 getContactSearch 方法，TP5.1 版）
+            $mapPhone = $this->getContactSearch($keyword['phone']);
+        }
+        if (!empty($keyword['oper_user'])) {
+            $where[] = ['oper_user', 'like', '%' . $keyword['oper_user'] . '%'];
+        }
+        if (!empty($keyword['kh_name'])) {
+            $mapKhName = [['kh_name', 'like', '%' . $keyword['kh_name'] . '%']];
+        }
+        if ($keyword['xs_source'] !== '' && $keyword['xs_source'] !== null) {
+            $mapXsSource = ['xs_source' => $keyword['xs_source']];
+        }
+
+        // 当前登录用户，只取“我作为协同人”的客户，且不是我负责
+        $currentUsername = session('username');
+        $currentAdminId  = session('aid');
+
+        $result = Db::table('crm_leads')
+            ->where($mapPhone)
+            ->where($mapKhName)
+            ->where($mapKhStatus)
+            ->where($mapKhRank)
+            ->where($mapXsSource)
+            ->where($mapAtTime)
+            ->where($where)
+            ->where(['status' => 1, 'issuccess' => -1])                  // 仅有效客户且未成交
+            ->where('pr_user', '<>', $currentUsername)                    // 负责人不是我
+            ->where(function ($query) use ($currentAdminId) {
+                $query->whereRaw("FIND_IN_SET('{$currentAdminId}', joint_person)");
+            })
+            ->order('at_time desc')
+            ->paginate(['list_rows' => $limit, 'page' => $page])
+            ->toArray();
+
+        return ($result['total'] == 0) ? null : $result;
+    }
+
+
+
     //个人查询
     public function getPersonClientSearchList($page, $limit, $keyword)
     {
