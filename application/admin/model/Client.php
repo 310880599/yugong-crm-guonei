@@ -80,8 +80,8 @@ class Client extends Model
         $usernames  = [$current_admin['username']];
         if ($current_admin['group_id'] == 1) {
             $usernames = [];
-            if($a_where){
-                 $usernames = Db::name('admin')->where($a_where)->column('username');
+            if ($a_where) {
+                $usernames = Db::name('admin')->where($a_where)->column('username');
             }
         } else if ($team_name) {
             // 主管查看直属下属及自己的客户
@@ -115,18 +115,33 @@ class Client extends Model
         }
     }
 
+
     public function getContactSearch($phone)
     {
-        $phone =  preg_split('/-| /', $phone);
-        if (count($phone) >= 2) {
-            $phone = $phone[1];
-        } else $phone = $phone[0];
-        $leads_ids =  Db::table('crm_contacts')->where('is_delete', 0)->where('contact_type', ControllerClient::CONTACT_MAP['phone'])
-            ->where('contact_value', 'like', '%' . $phone . '%')
-            ->field('leads_id')->select();
-        $leads_ids = array_column($leads_ids, 'leads_id');
-        return [['id', 'in', $leads_ids]];
+        $phone = trim((string)$phone);
+        if ($phone === '') {
+            return []; // 不加条件
+        }
+
+        // 用户可能输入含空格/短横线/国家码，取数字部分做模糊
+        $phoneKeyword = preg_replace('/\D+/', '', $phone);
+
+        $rows = Db::table('crm_contacts')
+            ->where('is_delete', 0)
+            ->where('contact_type', 'in', [1, 3]) // 1主 3辅:contentReference[oaicite:4]{index=4}
+            ->where('contact_value', 'like', "%{$phoneKeyword}%")
+            ->field('leads_id')
+            ->select();
+
+        $leadsIds = array_column($rows, 'leads_id');
+
+        if (empty($leadsIds)) {
+            // 返回一个必不成立条件，避免 SQL 报错
+            return [['id', '=', -1]];
+        }
+        return [['id', 'in', $leadsIds]];
     }
+
 
     //个人查询
     public function getPersonClientSearchList($page, $limit, $keyword)

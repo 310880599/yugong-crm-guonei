@@ -280,21 +280,133 @@ class Client extends Common
 
 
 
+
+
     //（协同人客户）列表
     public function joiCliList()
     {
-        // 页面渲染所需下拉数据
-        $khRankList = Db::table('crm_client_rank')->select();
+        if (request()->isPost()) {
+            $page     = input('page') ? input('page') : 1;
+            $pageSize = input('limit') ? input('limit') : config('pageSize');
+            $adminId  = Session::get('aid');          // 当前登录用户 admin_id
+            $username = Session::get('username');     // 当前登录用户名
+
+            // 查询当前用户作为协同人的客户列表
+            $list = Db::table('crm_leads')
+                ->where(['status' => 1, 'issuccess' => -1])           // 仅有效客户（未成交）
+                ->where('pr_user', '<>', $username)                   // 排除当前用户自己负责的客户
+                ->where(function ($query) use ($adminId) {
+                    // joint_person 字段包含当前用户ID
+                    $query->whereRaw("FIND_IN_SET('{$adminId}', joint_person)");
+                })
+                ->order('at_time desc')
+                ->paginate(['list_rows' => $pageSize, 'page' => $page])
+                ->toArray();
+
+            if (empty($list) || empty($list['data'])) {
+                // 无数据情况
+                return ['code' => 0, 'msg' => '获取成功!', 'data' => [], 'count' => 0, 'rel' => 1];
+            }
+
+            // 提取数据集合
+            $rows    = &$list['data'];
+            $leadIds = array_column($rows, 'id');
+
+            // 准备映射：询盘来源ID -> 中文名称
+            $statusMap = Db::table('crm_client_status')->column('status_name', 'id');
+
+            // 获取所有选中客户的主/辅电话（contact_type: 1=主电话, 3=辅助电话）
+            $phoneMap = [];
+            if (!empty($leadIds)) {
+                $contacts = Db::table('crm_contacts')
+                    ->where('is_delete', 0)
+                    ->whereIn('leads_id', $leadIds)
+                    ->whereIn('contact_type', [1, 3])
+                    ->order('id', 'asc')
+                    ->field('leads_id, contact_type, contact_value')
+                    ->select();
+                foreach ($contacts as $c) {
+                    $lid = $c['leads_id'];
+                    if (!isset($phoneMap[$lid])) {
+                        $phoneMap[$lid] = ['main' => '', 'aux' => ''];
+                    }
+                    if ($c['contact_type'] == 1 && $phoneMap[$lid]['main'] === '') {
+                        $phoneMap[$lid]['main'] = $c['contact_value'];
+                    } elseif ($c['contact_type'] == 3 && $phoneMap[$lid]['aux'] === '') {
+                        $phoneMap[$lid]['aux'] = $c['contact_value'];
+                    }
+                }
+            }
+
+            // 收集协同人ID，稍后批量查询用户名
+            $uidSet = [];
+            foreach ($rows as &$row) {
+                // 填充询盘来源中文名称
+                $row['kh_status_name'] = isset($statusMap[$row['kh_status']])
+                    ? $statusMap[$row['kh_status']]
+                    : (string)$row['kh_status'];
+                // 填充主/辅电话
+                $row['main_phone'] = $phoneMap[$row['id']]['main'] ?? '';
+                $row['aux_phone']  = $phoneMap[$row['id']]['aux']  ?? '';
+
+                // 解析 joint_person 字段为协同人ID数组（支持JSON数组或逗号分隔）
+                $idsArr = [];
+                if (!empty($row['joint_person'])) {
+                    $jp = $row['joint_person'];
+                    if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                        $tmp = json_decode($jp, true);
+                        if (is_array($tmp)) $idsArr = $tmp;
+                    } else {
+                        $idsArr = array_values(array_filter(explode(',', $jp)));
+                    }
+                }
+                $row['_joint_ids'] = $idsArr;
+                foreach ($idsArr as $uid) {
+                    $uidSet[$uid] = true;
+                }
+            }
+            unset($row);
+
+            // 批量查询协同人用户名映射 (admin_id -> username)
+            $adminMap = [];
+            if (!empty($uidSet)) {
+                $adminMap = Db::table('admin')
+                    ->whereIn('admin_id', array_keys($uidSet))
+                    ->column('username', 'admin_id');
+            }
+            // 填充协同人名称字符串
+            foreach ($rows as &$row) {
+                $names = [];
+                foreach ($row['_joint_ids'] as $uid) {
+                    $names[] = $adminMap[$uid] ?? (string)$uid;
+                }
+                $row['joint_person_names'] = $names ? implode('、', $names) : '';
+                unset($row['_joint_ids']);
+            }
+            unset($row);
+
+            // 返回数据列表
+            return [
+                'code'  => 0,
+                'msg'   => '获取成功!',
+                'data'  => $rows,
+                'count' => $list['total'],
+                'rel'   => 1
+            ];
+        }
+
+        // 非 POST 请求时，渲染页面所需下拉数据（保持不变）
+        $khRankList   = Db::table('crm_client_rank')->select();
         $khStatusList = Db::table('crm_client_status')->select();
         $xsSourceList = Db::table('crm_clues_source')->select();
-        $yyList = $this->getYyList();
+        $yyList       = $this->getYyList();
         $this->assign('_yyList', json_encode($yyList['_yyList']));
         $this->assign('khRankList', $khRankList);
         $this->assign('khStatusList', $khStatusList);
-        $this->assign('xsSourceList', $xsSourceList);  //线索/客户来源
-
+        $this->assign('xsSourceList', $xsSourceList);
         return $this->fetch('jointclient/index');
     }
+
 
 
     //成交客户列表
@@ -1307,7 +1419,7 @@ class Client extends Common
         return $this->fetch('client/add');
     }
 
-    
+
 
     //编辑客户
     public function edit()
@@ -1838,21 +1950,128 @@ class Client extends Common
         $list = model('client')->getClientSearchList($page, $limit, $keyword);
         return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
     }
-    //（我的客户）搜索
+
     public function personClientSearch()
     {
-        $page = input('page') ? input('page') : 1;
-        $limit = input('limit') ? input('limit') : config('pageSize');
-        $keyword = Request::param('keyword');
+        // TP5.1 建议使用 input() 获取参数
+        $page    = input('page/d', 1);
+        $limit   = input('limit/d', config('pageSize'));
+        $keyword = input('keyword/a', []); // 强制为数组
+
+        // 处理时间范围筛选（与原有 buildTimeWhere 兼容）
         if (!empty($keyword['timebucket'])) {
             $keyword['timebucket'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
         }
         if (!empty($keyword['at_time'])) {
             $keyword['timebucket'] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
         }
+
+        // 取列表（保留你原来的模型查询逻辑）
         $list = model('client')->getPersonClientSearchList($page, $limit, $keyword);
-        return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
+
+        if (empty($list) || empty($list['data'])) {
+            return ['code' => 0, 'msg' => '获取成功!', 'data' => [], 'count' => 0, 'rel' => 1];
+        }
+
+        // ===== 补充展示所需的派生字段 =====
+        $rows    = &$list['data'];
+        $leadIds = array_column($rows, 'id');
+
+        // 1) 客户来源(ID->名称) 映射：若表不存在则优雅降级为原值
+        $statusMap = [];
+        try {
+            $hasStatusTable = Db::query("SHOW TABLES LIKE 'crm_client_status'");
+            if (!empty($hasStatusTable)) {
+                $statusMap = Db::table('crm_client_status')->column('status_name', 'id');
+            }
+        } catch (\Exception $e) {
+            $statusMap = [];
+        }
+
+        // 2) 批量查询主/辅电话（crm_contacts：1=主，3=辅；按 leads_id 汇总）:contentReference[oaicite:2]{index=2}
+        $phoneMap = [];
+        if (!empty($leadIds)) {
+            $contacts = Db::table('crm_contacts')
+                ->where('is_delete', 0)
+                ->where('leads_id', 'in', $leadIds)
+                ->where('contact_type', 'in', [1, 3])
+                ->order('id', 'asc')
+                ->field('leads_id, contact_type, contact_value')
+                ->select();
+
+            foreach ($contacts as $c) {
+                $lid = $c['leads_id'];
+                if (!isset($phoneMap[$lid])) {
+                    $phoneMap[$lid] = ['main' => '', 'aux' => ''];
+                }
+                if ($c['contact_type'] == 1 && $phoneMap[$lid]['main'] === '') {
+                    $phoneMap[$lid]['main'] = $c['contact_value'];
+                } elseif ($c['contact_type'] == 3 && $phoneMap[$lid]['aux'] === '') {
+                    $phoneMap[$lid]['aux'] = $c['contact_value'];
+                }
+            }
+        }
+
+        // 3) 协同人姓名：从 admin 表按 joint_person 映射（若表/ID不存在则回退为原ID）
+        $uidSet = [];
+        foreach ($rows as &$row) {
+            // 客户来源中文名（若映射不到则用原值）
+            $row['kh_status_name'] = isset($statusMap[$row['kh_status']]) ? $statusMap[$row['kh_status']] : (string)$row['kh_status'];
+
+            // 主/辅电话
+            $row['main_phone'] = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['main'] : '';
+            $row['aux_phone']  = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['aux'] : '';
+
+            // joint_person 可能是 JSON 数组或逗号分隔的 ID 字符串（crm_leads 有该字段）:contentReference[oaicite:3]{index=3}
+            $idsArr = [];
+            if (!empty($row['joint_person'])) {
+                $jp = $row['joint_person'];
+                if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                    $tmp = json_decode($jp, true);
+                    if (is_array($tmp)) $idsArr = $tmp;
+                } else {
+                    $idsArr = preg_split('/[,，\s]+/', $jp, -1, PREG_SPLIT_NO_EMPTY);
+                }
+            }
+            $row['_joint_ids'] = $idsArr;
+            foreach ($idsArr as $uid) {
+                $uidSet[$uid] = true;
+            }
+        }
+        unset($row);
+
+        // 一次性把协同人的 username 查出来（若 admin 表不存在则跳过）
+        $adminMap = [];
+        try {
+            if (!empty($uidSet) && Db::query("SHOW TABLES LIKE 'admin'")) {
+                $adminMap = Db::table('admin')
+                    ->where('admin_id', 'in', array_keys($uidSet))
+                    ->column('username', 'admin_id');
+            }
+        } catch (\Exception $e) {
+            $adminMap = [];
+        }
+
+        foreach ($rows as &$row) {
+            $names = [];
+            foreach ($row['_joint_ids'] as $uid) {
+                $names[] = isset($adminMap[$uid]) ? $adminMap[$uid] : (string)$uid;
+            }
+            $row['joint_person_names'] = $names ? implode('、', $names) : '';
+            unset($row['_joint_ids']);
+        }
+        unset($row);
+
+        return ['code' => 0, 'msg' => '获取成功!', 'data' => $rows, 'count' => $list['total'], 'rel' => 1];
     }
+
+
+
+
+
+
+
+
     //（我的客户）搜索
     public function chengjiaoClientSearch()
     {

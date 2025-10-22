@@ -162,11 +162,21 @@
 
     <script type="text/html" id="action">
 
-
+    <a class="layui-btn layui-btn-primary layui-btn-xs"  href="{:url('dialogue')}?id={{d.id}}"><i class="layui-icon">&#xe654;</i>写跟进</a>
+    <a class="layui-btn  layui-btn-xs"  data-id="{{d.id}}" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
+    <!-- <a class="layui-btn layui-btn-danger layui-btn-xs" data-id="{{d.id}}" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a> -->
 </script>
 
 
     <script type="text/html" id="topBtn">
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加客户</button>
+    <button type="button" class="layui-btn layui-btn-normal layui-btn-radius layui-btn-sm" id="toAll" style="margin-right: 10px"><i class="layui-icon">&#xe681;</i>导入客户</button>
+    <button type="button" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" id="moveGh" lay-event="moveGh"><i class="layui-icon">&#xe770;</i>移入公海</button>
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="alterAll" lay-event="alterAll"><i class="layui-icon">&#xe60e;</i>转移客户</button>
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="chengjiaoAll" lay-event="chengjiaoAll"><i class="layui-icon">&#xe63c;</i>客户成交</button>
+    <button type="button" id="delAlls" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" lay-event="delAlls"><i class="layui-icon">&#xe640;</i>选中删除</button>
 
 
 </script>
@@ -213,7 +223,7 @@
             var tableIns = table.render({
                 elem: '#' + tableId,
                 id: tableId,
-                url: '{:url("joiClilist")}',
+                url: '{:url("perClilist")}',
                 method: 'post',
                 toolbar: '#topBtn',
                 // where: { keyword: { "timebucket": "month" } },
@@ -252,15 +262,145 @@
                 });
             }
 
+            // 添加按钮
+            $('#add').on('click', function () {
+                layer.open({
+                    type: 2,
+                    title: '添加客户',
+                    area: ['100%', '86%'],
+                    content: "{:url('Client/add')}"
+                });
+            });
+
+            // 统一批量操作处理
+            table.on('toolbar(table-list)', function (obj) {
+                var checkStatus = table.checkStatus(obj.config.id),
+                    data = checkStatus.data;
+
+                switch (obj.event) {
+                    // 移入公海
+                    case 'moveGh':
+                        if (data.length === 0) {
+                            layer.msg('请选择要操作的数据');
+                        } else {
+                            var alterList = data.map(item => item.id);
+                            layer.confirm(`确定将${data.length}个客户转入公海？`, function (index) {
+                                layer.open({
+                                    type: 2,
+                                    title: '移入公海',
+                                    area: ['100%', '86%'],
+                                    content: "{:url('Client/toMoveGh')}?ids=" + alterList.join(',')
+                                });
+                                layer.close(index);
+                            });
+                        }
+                        break;
+
+                    // 批量转移
+                    case 'alterAll':
+                        if (data.length === 0) {
+                            layer.msg('请选择要操作的数据');
+                        } else {
+                            var alterList = data.map(item => item.id);
+                            layer.confirm(`确定11要转移${data.length}个客户吗？`, function (index) {
+                                layer.open({
+                                    type: 2,
+                                    title: '转移客户',
+                                    area: ['100%', '86%'],
+                                    content: "{:url('Client/alterPrUserPri')}?ids=" + alterList.join(',')
+                                });
+                                layer.close(index);
+                            });
+                        }
+                        break;
+
+                    // 批量成交
+                    case 'chengjiaoAll':
+                        if (data.length === 0) {
+                            layer.msg('请选择要操作的数据');
+                        } else {
+                            var alterList = data.map(item => item.id);
+                            layer.confirm(`确定标记${data.length}个客户为成交吗？`, function (index) {
+                                $.post("{:url('Client/chengjiao')}", { ids: alterList }, function (res) {
+                                    layer.close(index);
+                                    if (res.code === 0) {
+                                        layer.msg(res.msg, { time: 1000, icon: 1 });
+                                        tableIn.reload();
+                                    } else {
+                                        layer.msg(res.msg || '操作失败', { time: 1500, icon: 2 });
+                                    }
+                                });
+                            });
+                        }
+                        break;
+
+                    // 批量删除
+                    case 'delAlls':
+                        if (data.length === 0) {
+                            layer.msg('请先选择要删除的客户');
+                        } else {
+                            var ids = data.map(item => item.id);
+                            layer.confirm(`确定删除选中的${ids.length}个客户？`, function (index) {
+                                var loading = layer.load(1, { shade: [0.1, '#fff'] });
+                                $.post("{:url('del')}", { ids: ids }, function (res) {
+                                    layer.close(loading);
+                                    if (res.code === 0) {
+                                        layer.msg(res.msg, { time: 1000, icon: 1 });
+                                        tableIn.reload();
+                                    } else {
+                                        layer.msg(res.msg || '删除失败', { time: 1500, icon: 2 });
+                                    }
+                                });
+                                layer.close(index);
+                            });
+                        }
+                        break;
+                }
+            });
 
             // 行操作事件
             table.on('tool(table-list)', function (obj) {
                 var layEvent =obj.event;
                 var id = obj.data.id;
                 lineEvent(layEvent,id);
-            });
+               });
 
-
+            function lineEvent(event,id){
+                if (event === 'del') {
+                    layer.confirm('确定要删除这个客户吗？', function (index) {
+                        var loading = layer.load(1, { shade: [0.1, '#fff'] });
+                        $.post("{:url('del')}", { ids: [id] }, function (res) {
+                            layer.close(loading);
+                            if (res.code === 0) {
+                                layer.msg(res.msg, { time: 1000, icon: 1 });
+                                tableIn.reload();
+                            } else {
+                                layer.msg('操作失败！', { time: 1000, icon: 2 });
+                            }
+                        });
+                        layer.close(index);
+                    });
+                }
+                else if (event === 'edit') {
+                    layer_add("编辑客户", "{:url('Client/edit')}?id=" + id);
+                }
+                else if (event === 'alter') {
+                    layer_add("转移客户", "{:url('Client/alterPrUserPri')}?ids=" + id);
+                }
+                else if (event === 'chengjiao') {
+                    layer.confirm('确定这个客户已成交吗？', function (index) {
+                        $.post("{:url('Client/chengjiao')}", { ids: id }, function (res) {
+                            layer.close(index);
+                            if (res.code === 0) {
+                                layer.msg(res.msg, { time: 1000, icon: 1 });
+                                tableIn.reload();
+                            } else {
+                                layer.msg('操作失败！', { time: 1000, icon: 2 });
+                            }
+                        });
+                    });
+                }
+            };
             // 浮层按钮事件委托
             $('body').on('click', '.layui-layer-content [lay-event]', function(){
                 var layEvent = $(this).attr('lay-event');
@@ -295,7 +435,26 @@
             // 初始隐藏日期范围选择框
             // $('#at_time').hide();
 
-            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name');
+             const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name');
+            // 文件上传
+            upload.render({
+                elem: '#toAll',
+                url: "{:url('Client/xlsUpload')}",
+                accept: 'file',
+                field: 'xlsFile',
+                exts: 'xls|xlsx',
+                before: function () {
+                    layer.msg('正在导入数据，请稍等...', {
+                        icon: 16,
+                        shade: 0.04,
+                        time: false
+                    });
+                },
+                done: function (res) {
+                    layer.msg(res.msg, { time: 1800, icon: res.code === 0 ? 1 : 2 });
+                    if (res.code === 0) location.reload();
+                }
+            });
         });
 
         // 公共弹窗方法
