@@ -105,15 +105,15 @@
           { field: 'repeat_info', title: '重复类型',
             templet: function (res) { return res.repeat_info || '' }
           },
-          { field: 'id', title: '操作',
-            templet: function (res) {
-              var current = "<?php echo session('username'); ?>";
-              return (res.pr_user && res.pr_user === current)
-                     ? '<a href="<?php echo url("admin/client/edit"); ?>?id=' + res.id +
-                       '" class="layui-btn layui-btn-xs">编辑</a>'
-                     : '';
-            }
-          }
+          // { field: 'id', title: '操作',
+          //   templet: function (res) {
+          //     var current = "<?php echo session('username'); ?>";
+          //     return (res.pr_user && res.pr_user === current)
+          //            ? '<a href="<?php echo url("admin/client/edit"); ?>?id=' + res.id +
+          //              '" class="layui-btn layui-btn-xs">编辑</a>'
+          //            : '';
+          //   }
+          // }
         ]]
       });
 

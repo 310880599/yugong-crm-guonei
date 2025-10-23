@@ -83,9 +83,9 @@ while (true) {
 
         if (isset($row['contact_type']) && $row['contact_type'] !== null) {
             switch ((int)$row['contact_type']) {
-                case 1: $row['repeat_info'] = '电话：'     . $row['contact_value']; break;
+                case 1: $row['repeat_info'] = '主电话：'     . $row['contact_value']; break;
                 case 2: $row['repeat_info'] = '邮箱：'     . $row['contact_value']; break;
-                case 3: $row['repeat_info'] = 'WhatsApp：' . $row['contact_value']; break;
+                case 3: $row['repeat_info'] = '辅助电话：' . $row['contact_value']; break;
                 case 4: $row['repeat_info'] = '阿里ID：'   . $row['contact_value']; break;
                 case 5: $row['repeat_info'] = '微信：'     . $row['contact_value']; break;
                 default:$row['repeat_info'] = '未知类型(' . $row['contact_type'] . ')：' . $row['contact_value'];
