@@ -198,6 +198,16 @@ layui.use(['table','form','upload','util','laydate'], function () {
         colArr.forEach(function (c) { if (saved[c.field]) c.width = saved[c.field]; });
     }
 
+    // 添加按钮
+    $('#add').on('click', function () {
+        layer.open({
+            type: 2,
+            title: '添加客户',
+            area: ['100%', '86%'],
+            content: "{:url('Client/add')}"
+        });
+    });
+
     // 顶部工具栏事件
     table.on('toolbar(table-list)', function (obj) {
         var checkStatus = table.checkStatus(obj.config.id), data = checkStatus.data;
