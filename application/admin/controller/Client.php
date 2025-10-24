@@ -87,89 +87,143 @@ class Client extends Common
 
 
     //客户列表
+    // public function index()
+    // {
+    //     if (request()->isPost()) {
+    //         return $this->clientSearch();
+    //         $page = input('page', 1);
+    //         $pageSize = input('limit', config('pageSize'));
+    //         $adminId = Session::get('aid');
+    //         $subordinates = Db::name('admin')->where('parent_id', $adminId)->column('username');
+
+    //         // 基本客户条件
+    //         $query = Db::name('crm_leads')->alias('l')->where(['l.status' => 1, 'l.issuccess' => -1]);
+
+    //         // if ($adminId == 1) {
+    //         //     // 超级管理员无需额外条件
+    //         // } elseif (!empty($subordinates)) {
+    //         //     // 主管查看直属下属及自己的客户
+    //         //     $usernames = array_merge($subordinates, [Session::get('username')]);
+    //         //     $query->whereIn('l.pr_user', $usernames);
+    //         // } else {
+    //         //     // 普通员工仅查看自己名下的客户
+    //         //     $query->where(['l.pr_user' => Session::get('username')]);
+    //         // }
+    //         $usernames  = [session('username')];
+    //         $team_name = session('team_name') ?? '';
+    //         if ($adminId == 1) {
+    //             $usernames = [];
+    //         } else if ($team_name) {
+    //             // 主管查看直属下属及自己的客户
+    //             $usernames = Db::name('admin')->where('team_name', $team_name)->column('username');
+    //         }
+
+    //         // 查询客户数据，并拼接联系方式
+    //         $list = $query->where(function ($query) use ($usernames) {
+    //             if ($usernames) {
+    //                 $query->whereIn('l.pr_user', $usernames);
+    //             }
+    //         })
+    //             ->field([
+    //                 'l.*',
+    //                 "GROUP_CONCAT(
+    //                 DISTINCT CASE c.contact_type
+    //                     WHEN 1 THEN '手机号'
+    //                     WHEN 3 THEN 'WhatsApp'
+    //                 END ORDER BY c.id SEPARATOR '<br>'
+    //             ) AS contact_type",
+    //                 "GROUP_CONCAT(DISTINCT c.contact_value ORDER BY c.id SEPARATOR '<br>') AS contact_value"
+    //             ])
+    //             ->leftJoin('crm_contacts c', 'l.id = c.leads_id')
+    //             ->group('l.id')
+    //             ->order('l.at_time desc')
+    //             ->paginate([
+    //                 'list_rows' => $pageSize,
+    //                 'page' => $page
+    //             ])
+    //             ->toArray();
+
+    //         return [
+    //             'code' => 0,
+    //             'msg' => '获取成功!',
+    //             'data' => $list['data'],
+    //             'count' => $list['total'],
+    //             'rel' => 1
+    //         ];
+    //     }
+
+    //     $khRankList = Db::table('crm_client_rank')->select();
+    //     $khStatusList = Db::table('crm_client_status')->select();
+    //     $xsSourceList = Db::table('crm_clues_source')->select();
+
+    //     $team_name = session('team_name') ?? '';
+    //     $adminResult = Db::name('admin')->where('group_id', '<>', 1)->where(function ($query) use ($team_name) {
+    //         if ($team_name) {
+    //             $query->where('team_name', $team_name);
+    //         }
+    //     })->field('admin_id,username')->select();
+    //     $this->assign('adminResult', $adminResult);
+    //     $this->assign('khRankList', $khRankList);
+    //     $this->assign('khStatusList', $khStatusList);
+    //     $this->assign('xsSourceList', $xsSourceList);
+
+    //     return $this->fetch();
+    // }
+
+    // 客户列表
     public function index()
     {
         if (request()->isPost()) {
-            return $this->clientSearch();
-            $page = input('page', 1);
-            $pageSize = input('limit', config('pageSize'));
-            $adminId = Session::get('aid');
-            $subordinates = Db::name('admin')->where('parent_id', $adminId)->column('username');
-
-            // 基本客户条件
-            $query = Db::name('crm_leads')->alias('l')->where(['l.status' => 1, 'l.issuccess' => -1]);
-
-            // if ($adminId == 1) {
-            //     // 超级管理员无需额外条件
-            // } elseif (!empty($subordinates)) {
-            //     // 主管查看直属下属及自己的客户
-            //     $usernames = array_merge($subordinates, [Session::get('username')]);
-            //     $query->whereIn('l.pr_user', $usernames);
-            // } else {
-            //     // 普通员工仅查看自己名下的客户
-            //     $query->where(['l.pr_user' => Session::get('username')]);
-            // }
-            $usernames  = [session('username')];
-            $team_name = session('team_name') ?? '';
-            if ($adminId == 1) {
-                $usernames = [];
-            } else if ($team_name) {
-                // 主管查看直属下属及自己的客户
-                $usernames = Db::name('admin')->where('team_name', $team_name)->column('username');
-            }
-
-            // 查询客户数据，并拼接联系方式
-            $list = $query->where(function ($query) use ($usernames) {
-                if ($usernames) {
-                    $query->whereIn('l.pr_user', $usernames);
-                }
-            })
-                ->field([
-                    'l.*',
-                    "GROUP_CONCAT(
-                    DISTINCT CASE c.contact_type
-                        WHEN 1 THEN '手机号'
-                        WHEN 2 THEN '邮箱'
-                        WHEN 3 THEN 'WhatsApp'
-                        ELSE '其他'
-                    END ORDER BY c.id SEPARATOR '<br>'
-                ) AS contact_type",
-                    "GROUP_CONCAT(DISTINCT c.contact_value ORDER BY c.id SEPARATOR '<br>') AS contact_value"
-                ])
-                ->leftJoin('crm_contacts c', 'l.id = c.leads_id')
-                ->group('l.id')
-                ->order('l.at_time desc')
-                ->paginate([
-                    'list_rows' => $pageSize,
-                    'page' => $page
-                ])
-                ->toArray();
-
-            return [
-                'code' => 0,
-                'msg' => '获取成功!',
-                'data' => $list['data'],
-                'count' => $list['total'],
-                'rel' => 1
-            ];
+            // 统一走搜索方法，保证列表初次加载与查询结果一致
+            return $this->clientSearchAll();
         }
 
-        $khRankList = Db::table('crm_client_rank')->select();
+        // ----- 以下为原样保留的页面下拉数据 -----
+        $khRankList   = Db::table('crm_client_rank')->select();
         $khStatusList = Db::table('crm_client_status')->select();
         $xsSourceList = Db::table('crm_clues_source')->select();
 
-        $team_name = session('team_name') ?? '';
-        $adminResult = Db::name('admin')->where('group_id', '<>', 1)->where(function ($query) use ($team_name) {
-            if ($team_name) {
-                $query->where('team_name', $team_name);
-            }
-        })->field('admin_id,username')->select();
+        $team_name   = session('team_name') ?? '';
+        $adminResult = Db::name('admin')->where('group_id', '<>', 1)
+            ->where(function ($query) use ($team_name) {
+                if ($team_name) $query->where('team_name', $team_name);
+            })
+            ->field('admin_id,username')->select();
+
         $this->assign('adminResult', $adminResult);
         $this->assign('khRankList', $khRankList);
         $this->assign('khStatusList', $khStatusList);
         $this->assign('xsSourceList', $xsSourceList);
 
         return $this->fetch();
+    }
+
+
+    // 客户搜索（统一给表格用）
+    public function clientSearchAll()
+    {
+        $page   = (int)input('page', 1);
+        $limit  = (int)input('limit', config('pageSize'));
+        $keyword = \think\facade\Request::param('keyword');
+
+        // 归一化时间范围
+        if (!empty($keyword['timebucket'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+        }
+        if (!empty($keyword['at_time'])) {
+            $keyword['timebucket'] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+        }
+
+        // 走模型方法（已改为返回 main_phone / aux_phone）
+        $list = model('client')->getClientSearchListAll($page, $limit, $keyword);
+
+        return [
+            'code'  => 0,
+            'msg'   => '获取成功!',
+            'data'  => $list['data'] ?? [],
+            'count' => $list['total'] ?? 0,
+            'rel'   => 1
+        ];
     }
 
 
