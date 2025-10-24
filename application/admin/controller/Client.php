@@ -202,29 +202,41 @@ class Client extends Common
     // 客户搜索（统一给表格用）
     public function clientSearchAll()
     {
-        $page   = (int)input('page', 1);
-        $limit  = (int)input('limit', config('pageSize'));
-        $keyword = \think\facade\Request::param('keyword');
+        $page    = input('page/d', 1);
+        $limit   = input('limit/d', config('pageSize'));
+        $keyword = input('keyword/a', []);  // 获取筛选参数数组，默认为空
 
-        // 归一化时间范围
+        // 处理时间范围筛选参数
         if (!empty($keyword['timebucket'])) {
             $keyword['timebucket'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
         }
         if (!empty($keyword['at_time'])) {
+            // 若提供自定义日期范围，则使用它覆盖 timebucket
             $keyword['timebucket'] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
         }
 
-        // 走模型方法（已改为返回 main_phone / aux_phone）
-        $list = model('client')->getClientSearchListAll($page, $limit, $keyword);
+        // 调用模型方法获取查询结果列表
+        $list = model('Client')->getClientSearchListAll($page, $limit, $keyword);
 
+        // 返回数据给前端表格
+        if (empty($list) || empty($list['data'])) {
+            return [
+                'code'  => 0,
+                'msg'   => '获取成功!',
+                'data'  => [],
+                'count' => 0,
+                'rel'   => 1
+            ];
+        }
         return [
             'code'  => 0,
             'msg'   => '获取成功!',
-            'data'  => $list['data'] ?? [],
-            'count' => $list['total'] ?? 0,
+            'data'  => $list['data'],
+            'count' => $list['total'],
             'rel'   => 1
         ];
     }
+
 
 
     //（我的客户）列表
