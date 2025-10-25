@@ -157,15 +157,15 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">运营人员</label>
                 <div class="layui-input-4">
-                    <input type="text" id="oper_user_input" name="oper_user" placeholder="请选择运营人员"  lay-verify="required" class="layui-input"
-                       >
+                    <input type="text" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" lay-verify="required"
+                        class="layui-input">
                 </div>
             </div>
             <div class="layui-form-item">
                 <label class="layui-form-label">协同人</label>
                 <div class="layui-input-4">
-                    <input type="text" id="joint_person" name="joint_person" lay-verify="required" value="" placeholder="请选择协同人"
-                        class="layui-input">
+                    <input type="text" id="joint_person" name="joint_person" lay-verify="required" value=""
+                        placeholder="请选择协同人" class="layui-input">
                 </div>
             </div>
             <div class="layui-form-item">
@@ -195,7 +195,8 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">产品名称</label>
                 <div class="layui-input-4">
-                    <input type="text" id="product_name" name="product_name" placeholder="请输入产品名称" class="layui-input" lay-verify="required">
+                    <input type="text" id="product_name" name="product_name" placeholder="请输入产品名称" class="layui-input"
+                        lay-verify="required">
 
                 </div>
             </div>
@@ -203,6 +204,50 @@
                 <label class="layui-form-label">成交时间</label>
                 <div class="layui-input-4">
                     <input type="text" id="orderTime" name="order_time" placeholder="请输入成交时间" class="layui-input">
+                </div>
+            </div>
+            <!-- 产品明细表格 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">产品明细</label>
+                <div class="layui-input-block">
+                    <table id="product-table" class="layui-table">
+                        <thead>
+                            <tr>
+                                <th>产品名称</th>
+                                <th>规格型号</th>
+                                <th>单位</th>
+                                <th>数量</th>
+                                <th>销售单价</th>
+                                <th>销售价合计</th>
+                                <th>进价合计</th>
+                                <th>子项利润</th>
+                                <th>行备注</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productTableBody">
+                            <!-- 默认提供一行空的输入行 -->
+                            <tr>
+                                <td><input type="text" name="product_name[]" class="layui-input" lay-verify="required">
+                                </td>
+                                <td><input type="text" name="spec_model[]" class="layui-input"></td>
+                                <td><input type="text" name="unit[]" class="layui-input"></td>
+                                <td><input type="number" name="qty[]" class="layui-input" lay-verify="required|number">
+                                </td>
+                                <td><input type="number" name="unit_price[]" class="layui-input"
+                                        lay-verify="required|number" step="0.01"></td>
+                                <td><input type="number" name="total_price[]" class="layui-input" readonly></td>
+                                <td><input type="number" name="purchase_price[]" class="layui-input"
+                                        lay-verify="required|number" step="0.01"></td>
+                                <td><input type="number" name="sub_profit[]" class="layui-input" readonly></td>
+                                <td><input type="text" name="item_remark[]" class="layui-input"></td>
+                                <td><button type="button"
+                                        class="layui-btn layui-btn-danger layui-btn-sm delete-row">删除</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <!-- 新增一行 按钮 -->
+                    <button type="button" id="addRow" class="layui-btn layui-btn-normal">新增一行</button>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -271,8 +316,8 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">利润率(%)</label>
                 <div class="layui-input-4" style="position: relative;">
-                    <input type="text" id="margin_rate" lay-verify="required" name="margin_rate"
-                        placeholder="请输入利润率" class="layui-input"><span
+                    <input type="text" id="margin_rate" lay-verify="required" name="margin_rate" placeholder="请输入利润率"
+                        class="layui-input"><span
                         style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%)">%</span>
                 </div>
             </div>
@@ -321,38 +366,119 @@
                 }
             });
 
-            const products = new EditableSelect(document.getElementById('product_name'),  {$productList|raw},'产品名称','','id',false);
+            const products = new EditableSelect(document.getElementById('product_name'), { $productList| raw}, '产品名称', '', 'id', false);
 
-       
-            // 监听客户来源变化
-            const khSelect = new EditableSelect(document.getElementById('oper_user_input'),  {$_yyList|raw},'运营人员','','name',false);
 
-            var yyList = {$yyList|raw};
-            form.on('select(kh_status)', function(data) {
-                khSelect.clear();
-                var source = data.value;
-                var users = yyList[source] || [];
+        // 监听客户来源变化
+        const khSelect = new EditableSelect(document.getElementById('oper_user_input'), { $_yyList| raw}, '运营人员', '', 'name', false);
 
-                khSelect.setOptions(users);
+        var yyList = { $yyList| raw};
+        form.on('select(kh_status)', function (data) {
+            khSelect.clear();
+            var source = data.value;
+            var users = yyList[source] || [];
+
+            khSelect.setOptions(users);
+        });
+
+        // 动态添加一行产品
+        document.getElementById('addRow').onclick = function () {
+            var tbody = document.getElementById('productTableBody');
+            // 创建新行HTML
+            var newRow = document.createElement('tr');
+            newRow.innerHTML = `
+            <td><input type="text" name="product_name[]" class="layui-input" lay-verify="required"></td>
+            <td><input type="text" name="spec_model[]" class="layui-input"></td>
+            <td><input type="text" name="unit[]" class="layui-input"></td>
+            <td><input type="text" name="qty[]" class="layui-input" lay-verify="required"></td>
+            <td><input type="text" name="unit_price[]" class="layui-input" lay-verify="required"></td>
+            <td><input type="text" name="total_price[]" class="layui-input" readonly></td>
+            <td><input type="text" name="purchase_price[]" class="layui-input" lay-verify="required"></td>
+            <td><input type="text" name="sub_profit[]" class="layui-input" readonly></td>
+            <td><input type="text" name="item_remark[]" class="layui-input"></td>
+            <td><button type="button" class="layui-btn layui-btn-danger layui-btn-sm delete-row">删除</button></td>
+        `;
+            tbody.appendChild(newRow);
+            // 如果使用了 EditableSelect 自动完成，下行代码可为新加入的产品名称输入框启用
+            // new EditableSelect(newRow.querySelector('input[name="product_name[]"]'), {$productList|raw}, '产品名称', '', 'id', false);
+            form.render(); // 重新渲染表单，使新加行的 lay-verify 生效
+        };
+
+
+        // 代理监听删除按钮点击，删除所在行
+        $('#productTableBody').on('click', '.delete-row', function () {
+            $(this).closest('tr').remove();
+            updateTotals();  // 每删一行后更新总计
+        });
+
+        // 计算并更新一行的销售合计和利润
+        function updateRow($tr) {
+            var qty = parseFloat($tr.find('input[name="qty[]"]').val()) || 0;
+            var unitPrice = parseFloat($tr.find('input[name="unit_price[]"]').val()) || 0;
+            var purchase = parseFloat($tr.find('input[name="purchase_price[]"]').val()) || 0;
+            // 计算销售合计和子项利润
+            var total = qty * unitPrice;
+            var profit = total - purchase;
+            // 更新当前行的销售价合计和子项利润，保留两位小数
+            $tr.find('input[name="total_price[]"]').val(total.toFixed(2));
+            $tr.find('input[name="sub_profit[]"]').val(profit.toFixed(2));
+        }
+
+        // 计算并更新所有产品行的总金额、总利润和利润率
+        function updateTotals() {
+            var sumTotal = 0, sumProfit = 0, sumPurchase = 0;
+            $('#productTableBody tr').each(function () {
+                var $tr = $(this);
+                var qty = parseFloat($tr.find('input[name="qty[]"]').val()) || 0;
+                var unitPrice = parseFloat($tr.find('input[name="unit_price[]"]').val()) || 0;
+                var purchase = parseFloat($tr.find('input[name="purchase_price[]"]').val()) || 0;
+                var lineTotal = qty * unitPrice;
+                var lineProfit = lineTotal - purchase;
+                sumTotal += lineTotal;
+                sumProfit += lineProfit;
+                sumPurchase += purchase;
             });
+            // 更新订单总金额、总利润和利润率字段
+            $('#money').val(sumTotal.toFixed(2));
+            $('#profit').val(sumProfit.toFixed(2));
+            var marginRate = 0;
+            if (sumTotal > 0) {
+                marginRate = (sumProfit / sumTotal * 100);
+            }
+            $('#margin_rate').val(marginRate.toFixed(2));
+        }
+
+        // 当数量、单价或进价改变时，实时更新行合计和总计
+        $('#productTableBody').on('input', 'input[name="qty[]"], input[name="unit_price[]"], input[name="purchase_price[]"]', function () {
+            var $row = $(this).closest('tr');
+            updateRow($row);
+            updateTotals();
+        });
 
 
-            //监听提交
-            form.on('submit(submit)', function (data) {
 
-                $.post("{:url('Order/add')}", data.field, function (res) {
-                    if (res.code == 0) {
-                        layer.msg(res.msg, { time: 2000 });
-                        layer.close(layer.index);
-                        window.parent.location.reload();
-                    } else {
-                        layer.msg(res.msg, { time: 2000 });
-                    }
 
-                }, 'json')
+        //监听提交
+        form.on('submit(submit)', function (data) {
 
-                return false;
-            });
+
+            updateTotals();
+
+            $.post("{:url('Order/add')}", data.field, function (res) {
+                if (res.code == 0) {
+                    layer.msg(res.msg, { time: 2000 });
+                    layer.close(layer.index);
+                    window.parent.location.reload();
+                } else {
+                    layer.msg(res.msg, { time: 2000 });
+                }
+
+            }, 'json')
+
+            
+
+            return false;
+        });
         });
     </script>
 </body>

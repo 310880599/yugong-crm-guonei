@@ -57,11 +57,11 @@ class Order extends Common
         //查询所有公司
         $user = \app\admin\model\Admin::getMyInfo();
         $orgList = self::ORG;
-        if($user['org']){
+        if ($user['org']) {
             $orgList = $this->getOrg($user['org']);
         }
         $this->assign('orgList', $orgList);
-        
+
         //查询所有客户来源
         $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
         $this->assign('sourceList', $sourceList);
@@ -101,52 +101,161 @@ class Order extends Common
     //新建订单
     public function add()
     {
+        // if (request()->isPost()) {
+        //     // $data['cphone'] = Request::param('cphone');
+        //     $data['cname'] = Request::param('cname');
+        //     $data['at_user'] = Session::get('username');
+        //     if (Request::param('pr_user')) {
+        //         $data['pr_user'] = Request::param('pr_user');
+        //     } else {
+        //         $data['pr_user'] = Session::get('username');
+        //     }
+        //     $data['money'] = Request::param('money');
+        //     // $data['ticheng'] = Request::param('ticheng');
+        //     $data['remark'] = Request::param('remark');
+        //     $data['create_time'] = date("Y-m-d H:i:s", time());
+        //     $data['status'] = '待审核';
+
+        //     $data['order_no'] = date("YmdHis", time()) . rand(1000, 9999);
+        //     $data['order_time'] = Request::param('order_time');
+        //     $data['profit'] = Request::param('profit');
+        //     $data['margin_rate'] = Request::param('margin_rate');
+        //     $data['country'] = Request::param('country');
+        //     $data['contact'] = Request::param('contact');
+        //     $data['customer_type'] = Request::param('customer_type');
+        //     $data['product_name'] = Request::param('product_name');
+        //     $data['source'] = Request::param('source');
+        //     $data['oper_user'] = Request::param('oper_user');
+        //     $data['team_name'] = Request::param('team_name');
+        //     // $userExist = db('crm_leads')->where('phone', $data['phone'])->find();
+        //     // if ($userExist){
+        //     //     $msg = ['code' => -200,'msg'=>'抱歉，重复号码不可添加！','data'=>[]];
+        //     //     return json($msg);
+        //     // }
+
+        //     $result = Db::table('crm_client_order')->insert($data);
+        //     if ($result) {
+        //    //新增商品
+        //         // $product_name = Request::param('product_name');
+        //         // $product = $this->checkProduct($product_name);
+        //         // if(!$product){
+        //         //     $this->addProduct($product_name);
+        //         // }
+
+        //         $msg = ['code' => 0, 'msg' => '添加成功！', 'data' => []];
+        //         return json($msg);
+        //     } else {
+        //         $msg = ['code' => -200, 'msg' => '添加失败！', 'data' => []];
+        //         return json($msg);
+        //     }
+        // }
+
+
         if (request()->isPost()) {
-            // $data['cphone'] = Request::param('cphone');
-            $data['cname'] = Request::param('cname');
-            $data['at_user'] = Session::get('username');
-            if (Request::param('pr_user')) {
-                $data['pr_user'] = Request::param('pr_user');
-            } else {
-                $data['pr_user'] = Session::get('username');
+            // 获取订单主信息字段
+            $data = [];
+            $data['contact']        = Request::param('contact');        // 客户联系方式
+            $data['cname']          = Request::param('cname');          // 客户名称
+            $data['country']        = Request::param('country');        // 发货地址
+            $data['customer_type']  = Request::param('customer_type');  // 客户性质
+            $data['source']         = Request::param('source');         // 询盘来源
+            $data['pr_user']        = Request::param('pr_user') ?: Session::get('username'); // 业务员（如果前端未填写则默认当前用户）
+            $data['oper_user']      = Request::param('oper_user');      // 运营人员
+            $data['team_name']      = Request::param('team_name');      // 团队名称
+            $data['at_user']        = Session::get('username');         // 创建人（当前登录用户）
+            $data['order_time']     = Request::param('order_time');     // 成交时间
+            $data['shipping_cost']  = Request::param('shipping_cost');  // 估算运费
+            $data['invoice_amount'] = Request::param('invoice_amount'); // 开票金额
+            $data['tax_amount']     = Request::param('tax_amount');     // 税费金额
+            $data['debugging_cost'] = Request::param('debugging_cost'); // 调试费
+            $data['sales_commission'] = Request::param('sales_commission'); // 佣金
+            $data['split_remarks']  = Request::param('split_remarks');  // 分成备注
+            $data['amount_received'] = Request::param('amount_received'); // 已收款金额
+            $data['remark']         = Request::param('remark');         // 订单整体备注
+            // 初始化订单状态、创建时间和订单编号
+            $data['status']      = '待审核';
+            $data['create_time'] = date("Y-m-d H:i:s");
+            $data['order_no']    = date("YmdHis") . rand(1000, 9999);   // 生成唯一订单号
+
+            // 获取产品明细字段数组
+            $productNames   = Request::param('product_name/a');
+            $specModels     = Request::param('spec_model/a');
+            $units          = Request::param('unit/a');
+            $qtys           = Request::param('qty/a');
+            $unitPrices     = Request::param('unit_price/a');
+            $totalPrices    = Request::param('total_price/a');
+            $purchasePrices = Request::param('purchase_price/a');
+            $subProfits     = Request::param('sub_profit/a');
+            $itemRemarks    = Request::param('item_remark/a');
+
+            // 计算订单总金额和总利润（服务器端再次计算以保证准确）
+            $sumTotal = 0;
+            $sumProfit = 0;
+            $itemsData = [];  // 准备插入明细表的数组
+            if (!empty($productNames) && is_array($productNames)) {
+                foreach ($productNames as $index => $pname) {
+                    if (empty($pname)) continue;  // 跳过空产品行（如有）
+                    // 当前行各字段值
+                    $qty    = isset($qtys[$index]) ? floatval($qtys[$index]) : 0;
+                    $price  = isset($unitPrices[$index]) ? floatval($unitPrices[$index]) : 0;
+                    $purchase = isset($purchasePrices[$index]) ? floatval($purchasePrices[$index]) : 0;
+                    $lineTotal  = round($qty * $price, 2);
+                    $lineProfit = round($lineTotal - $purchase, 2);
+                    // 汇总总金额和利润
+                    $sumTotal  += $lineTotal;
+                    $sumProfit += $lineProfit;
+                    // 准备当前产品行的数据
+                    $itemsData[] = [
+                        'order_id'      => 0,  // 占位，稍后填入实际订单ID
+                        'product_name'  => $pname,
+                        'spec_model'    => $specModels[$index] ?? '',
+                        'unit'          => $units[$index] ?? '',
+                        'qty'           => $qty,
+                        'unit_price'    => $price,
+                        'total_price'   => $lineTotal,
+                        'purchase_price' => $purchase,
+                        'sub_profit'    => $lineProfit,
+                        'remark'        => $itemRemarks[$index] ?? ''
+                    ];
+                }
             }
-            $data['money'] = Request::param('money');
-            // $data['ticheng'] = Request::param('ticheng');
-            $data['remark'] = Request::param('remark');
-            $data['create_time'] = date("Y-m-d H:i:s", time());
-            $data['status'] = '待审核';
+            // 将汇总金额、利润等填入主订单数据
+            $data['money']       = round($sumTotal, 2);
+            $data['profit']      = round($sumProfit, 2);
+            $data['margin_rate'] = ($sumTotal > 0) ? round($sumProfit / $sumTotal * 100, 2) : 0;
+            // 如果原主表有字段存储产品名称（如存第一个产品名称），也可赋值：
+            if (!empty($productNames)) {
+                $data['product_name'] = $productNames[0] . (count($productNames) > 1 ? ' 等' : '');
+            }
 
-            $data['order_no'] = date("YmdHis", time()) . rand(1000, 9999);
-            $data['order_time'] = Request::param('order_time');
-            $data['profit'] = Request::param('profit');
-            $data['margin_rate'] = Request::param('margin_rate');
-            $data['country'] = Request::param('country');
-            $data['contact'] = Request::param('contact');
-            $data['customer_type'] = Request::param('customer_type');
-            $data['product_name'] = Request::param('product_name');
-            $data['source'] = Request::param('source');
-            $data['oper_user'] = Request::param('oper_user');
-            $data['team_name'] = Request::param('team_name');
-            // $userExist = db('crm_leads')->where('phone', $data['phone'])->find();
-            // if ($userExist){
-            //     $msg = ['code' => -200,'msg'=>'抱歉，重复号码不可添加！','data'=>[]];
-            //     return json($msg);
-            // }
-
-            $result = Db::table('crm_client_order')->insert($data);
-            if ($result) {
-           //新增商品
-                // $product_name = Request::param('product_name');
-                // $product = $this->checkProduct($product_name);
-                // if(!$product){
-                //     $this->addProduct($product_name);
-                // }
-
-                $msg = ['code' => 0, 'msg' => '添加成功！', 'data' => []];
-                return json($msg);
-            } else {
-                $msg = ['code' => -200, 'msg' => '添加失败！', 'data' => []];
-                return json($msg);
+            // 开始事务，保存主表和明细表
+            Db::startTrans();
+            try {
+                // 插入主订单数据
+                $orderId = Db::name('crm_client_order')->insertGetId($data);
+                if (!$orderId) {
+                    throw new \Exception('主订单插入失败');
+                }
+                // 插入明细数据
+                if (!empty($itemsData)) {
+                    // 将生成的订单ID回填到每个明细
+                    foreach ($itemsData as &$item) {
+                        $item['order_id'] = $orderId;
+                    }
+                    unset($item);
+                    // 批量插入明细表
+                    $res = Db::name('crm_order_item')->insertAll($itemsData);
+                    if ($res === false || $res != count($itemsData)) {
+                        throw new \Exception('订单明细插入失败');
+                    }
+                }
+                // 提交事务
+                Db::commit();
+                return json(['code' => 0, 'msg' => '添加成功！', 'data' => []]);
+            } catch (\Exception $e) {
+                // 出现错误，回滚事务
+                Db::rollback();
+                return json(['code' => -200, 'msg' => '添加失败！', 'data' => []]);
             }
         }
 
@@ -211,7 +320,7 @@ class Order extends Common
                     $res['pr_user'] = $custinfo['pr_user'];
                     $res['country'] = $custinfo['xs_area'];
                     $res['oper_user'] = $custinfo['oper_user'];
-                    $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $custinfo['kh_status'] . ",所属业务员:" . $custinfo['pr_user']. ",所属运营:" . $custinfo['oper_user'];
+                    $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $custinfo['kh_status'] . ",所属业务员:" . $custinfo['pr_user'] . ",所属运营:" . $custinfo['oper_user'];
                 }
             } else {
                 $res['code'] = 0;
@@ -342,7 +451,7 @@ class Order extends Common
         $keyword = Request::param('keyword');
         // 过滤掉 null 元素
         if ($keyword) $keyword = array_filter($keyword);
-        if(isset($keyword['timebucket'])||isset($keyword['at_time']))$keyword['timebucket']=isset($keyword['timebucket'])?$keyword['timebucket']:$keyword['at_time'];
+        if (isset($keyword['timebucket']) || isset($keyword['at_time'])) $keyword['timebucket'] = isset($keyword['timebucket']) ? $keyword['timebucket'] : $keyword['at_time'];
         // if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
         if (isset($keyword['order_no'])) $where[] = ['order_no', 'like', "%{$keyword['order_no']}%"];
         if (isset($keyword['timebucket'])) {
@@ -374,34 +483,34 @@ class Order extends Common
             $where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
             $client_where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
         }
-        if (!$team_name &&isset($keyword['team_name'])) {
+        if (!$team_name && isset($keyword['team_name'])) {
             $where[] = ['team_name', '=', $keyword['team_name']];
             $team_name = $keyword['team_name'];
         }
         $org_where = [];
-        if($user['org']){
+        if ($user['org']) {
             $org_where[] =  $this->getOrgWhere($user['org']);
         }
-        if(!empty($keyword['org'])){
+        if (!empty($keyword['org'])) {
             $org_where[] =  $this->getOrgWhere($keyword['org']);
         }
-        if($team_name){
+        if ($team_name) {
             $usernames = Db::table('admin')->where('team_name', $team_name)->where($org_where)->column('username');
-        }else{
-            if(!empty($org_where)){
+        } else {
+            if (!empty($org_where)) {
                 $usernames = Db::table('admin')->where($org_where)->column('username');
             }
         }
-        if(isset($usernames)){
-              if(!$usernames){
-                    $client_where[]=['pr_user', '=', time()];
-                    $where[]=['pr_user', '=', time()];
-                }else{
-                    $client_where[] = ['pr_user', 'in', $usernames];
-                    $client_where[] = ['oper_user', 'in', $usernames];
+        if (isset($usernames)) {
+            if (!$usernames) {
+                $client_where[] = ['pr_user', '=', time()];
+                $where[] = ['pr_user', '=', time()];
+            } else {
+                $client_where[] = ['pr_user', 'in', $usernames];
+                $client_where[] = ['oper_user', 'in', $usernames];
 
-                    $where[] = ['pr_user', 'in', $usernames];
-                }
+                $where[] = ['pr_user', 'in', $usernames];
+            }
         }
         if (isset($keyword['source'])) {
             $where[] = ['source', '=', $keyword['source']];
@@ -444,7 +553,7 @@ class Order extends Common
             'successRate' => number_format($successRate, 2),
             'totalMoney' => number_format($totalMoney, 2),
             'totalProfit' => number_format($totalProfit, 2),
-            'totalProfitRate' => $totalMoney >0?number_format($totalProfit/$totalMoney*100, 2):0,
+            'totalProfitRate' => $totalMoney > 0 ? number_format($totalProfit / $totalMoney * 100, 2) : 0,
             'totalCount' => $successOrders,
         ];
     }
