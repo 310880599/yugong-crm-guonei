@@ -270,7 +270,7 @@
                 var data = obj.data;
 
                 if (obj.event === 'del') {
-                    layer.confirm('您确定要删除这个客户吗？', function (index) {
+                    layer.confirm('您确定要删除这个订单吗？', function (index) {
                         var loading = layer.load(1, { shade: [0.1, '#fff'] });
                         $.post("{:url('del')}", { id: data.id }, function (res) {
                             layer.close(loading);
@@ -287,7 +287,7 @@
                 else if (obj.event === 'edit') {
                     layer.open({
                         type: 2,
-                        title: '编辑客户',
+                        title: '编辑订单',
                         closeBtn: 1, //是否显示关闭按钮
                         area: ['100%', '86%'],
                         anim: 2,  //动画
@@ -317,7 +317,7 @@
             $('body').on('click', '#add', function () {
                 var indexOpen = layer.open({
                     type: 2,
-                    title: '添加客户',
+                    title: '添加订单',
                     closeBtn: 1, //是否显示关闭按钮
                     area: ['100%', '86%'],
                     anim: 2,  //动画

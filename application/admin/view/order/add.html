@@ -100,7 +100,7 @@
     <div class="admin-main layui-anim layui-anim-upbit" ng-app="hd" ng-controller="ctrl">
         <form class="layui-form layui-form-pane">
             <div class="layui-form-item">
-                <label class="layui-form-label">联系方式</label>
+                <label class="layui-form-label">联系方式<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
                     <input type="text" id="contact" onchange="changeyewu()" name="contact" lay-verify="required"
                         placeholder="请输入客户联系方式" class="layui-input">
@@ -162,6 +162,13 @@
                 </div>
             </div>
             <div class="layui-form-item">
+                <label class="layui-form-label">协同人</label>
+                <div class="layui-input-4">
+                    <input type="text" id="joint_person" name="joint_person" lay-verify="required" value="" placeholder="请选择协同人"
+                        class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
                 <label class="layui-form-label">团队名称</label>
                 <div class="layui-input-4">
                     <select name="team_name" id="team_name" lay-verify="required" lay-search="">
@@ -199,6 +206,55 @@
                 </div>
             </div>
             <div class="layui-form-item">
+                <label class="layui-form-label">估算运费<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" id="shipping_cost" name="shipping_cost" lay-verify="required" value=""
+                        placeholder="请输入估算运费" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">开票金额<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" id="invoice_amount" name="invoice_amount" lay-verify="required" value=""
+                        placeholder="请输入开票金额" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">税费金额<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" id="tax_amount" name="tax_amount" lay-verify="required" value=""
+                        placeholder="请输入税费金额" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">调试费<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" id="debugging_cost" name="debugging_cost" lay-verify="required" value=""
+                        placeholder="请输入调试费" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">佣金<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" id="sales_commission" name="sales_commission" lay-verify="required" value=""
+                        placeholder="请输入佣金" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">分成备注<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" id="split_remarks" name="split_remarks" lay-verify="required" value=""
+                        placeholder="请输入分成备注" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">已收款金额<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <input type="text" id="amount_received" name="amount_received" lay-verify="required" value=""
+                        placeholder="请输入已收款金额" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
                 <label class="layui-form-label">订单金额(￥)</label>
                 <div class="layui-input-4">
                     <input type="text" id="money" name="money" lay-verify="number|required" placeholder="请输入金额"
@@ -208,14 +264,14 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">利润(￥)</label>
                 <div class="layui-input-4">
-                    <input type="text" id="profit" lay-verify="number|required" name="profit" placeholder="请输入利润"
+                    <input type="text" id="profit" lay-verify="required" name="profit" placeholder="请输入利润"
                         class="layui-input">
                 </div>
             </div>
             <div class="layui-form-item">
                 <label class="layui-form-label">利润率(%)</label>
                 <div class="layui-input-4" style="position: relative;">
-                    <input type="text" id="margin_rate" lay-verify="number|required" name="margin_rate"
+                    <input type="text" id="margin_rate" lay-verify="required" name="margin_rate"
                         placeholder="请输入利润率" class="layui-input"><span
                         style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%)">%</span>
                 </div>

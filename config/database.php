@@ -16,9 +16,9 @@ return [
     'hostname'        => '127.0.0.1',
     // 数据库名
     // 'database'        => 'crm',
-    'database'        => 'guoneizuixinone',
+    'database'        => 'guoneizuixintwo',
     // 用户名
-    'username'        => 'guoneizuixinone',
+    'username'        => 'guoneizuixintwo',
     // 密码
     'password'        => '963852741',
     // 端口
