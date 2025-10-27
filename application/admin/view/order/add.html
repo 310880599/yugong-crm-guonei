@@ -16,6 +16,8 @@
     <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
     <script src="/js/jquery.min.js"></script>
     <script src="/static/admin/js/select.js"></script>
+    <script src="/static/plugins/layui/layui.js"></script>
+    <script src="/static/admin/js/xm-select.js"></script>
 
 
 
@@ -148,10 +150,9 @@
                     <select name="source" id="source" lay-verify="required" lay-filter="kh_status" lay-search="">
                         <option value="">请选择询盘来源</option>
                         {volist name='sourceList' id='vo'}
-                        <option value="{$vo}">{$vo}</option>
+                        <option value="{$vo|htmlentities}">{$vo|htmlentities}</option>
                         {/volist}
                     </select>
-
                 </div>
             </div>
             <div class="layui-form-item">
@@ -182,22 +183,12 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">客户性质</label>
                 <div class="layui-input-4">
-                    <!-- <input type="text" id="customer_type" name="customer_type" placeholder="请输入客户性质"
-                        class="layui-input"> -->
                     <select name="customer_type" id="customer_type" lay-verify="required" lay-search="">
                         <option value="">请选择客户性质</option>
                         {volist name='customer_type' id='vo'}
                         <option value="{$vo}" {if $vo==$customer_type} selected="selected" {/if}>{$vo}</option>
                         {/volist}
                     </select>
-                </div>
-            </div>
-            <div class="layui-form-item">
-                <label class="layui-form-label">产品名称</label>
-                <div class="layui-input-4">
-                    <input type="text" id="product_name" name="product_name" placeholder="请输入产品名称" class="layui-input"
-                        lay-verify="required">
-
                 </div>
             </div>
             <div class="layui-form-item">
@@ -366,20 +357,25 @@
                 }
             });
 
-            const products = new EditableSelect(document.getElementById('product_name'), { $productList| raw}, '产品名称', '', 'id', false);
+            // 渲染下拉框（产品名称、询盘来源、运营人员）
+            form.render('select');
 
+           //     const products = new EditableSelect(document.getElementById('product_name'), {$productList|raw}, '产品名称', '', 'id', false);
 
-        // 监听客户来源变化
-        const khSelect = new EditableSelect(document.getElementById('oper_user_input'), { $_yyList| raw}, '运营人员', '', 'name', false);
-
-        var yyList = { $yyList| raw};
-        form.on('select(kh_status)', function (data) {
-            khSelect.clear();
-            var source = data.value;
-            var users = yyList[source] || [];
-
-            khSelect.setOptions(users);
-        });
+           // 监听“询盘来源”下拉改变，动态过滤对应的运营人员选项
+            var yyList = {$yyList|raw};  // 运营人员分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
+            form.on('select(kh_status)', function (data) {
+                var sourceName = $(data.elem).find("option:selected").text();  // 获取选中的来源名称
+                var users = yyList[sourceName] || [];                          // 找到该来源对应的运营人员列表
+                // 重置运营人员下拉选项
+                var $oper = $('select[name="oper_user"]');
+                $oper.empty();
+                $oper.append('<option value="">请选择运营人员</option>');
+                $.each(users, function (index, user) {
+                    $oper.append('<option value="' + user.id + '">' + user.name + '</option>');
+                });
+                form.render('select', '');  // 重新渲染下拉框
+            });
 
         // 动态添加一行产品
         document.getElementById('addRow').onclick = function () {
@@ -475,7 +471,7 @@
 
             }, 'json')
 
-            
+
 
             return false;
         });

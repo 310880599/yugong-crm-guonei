@@ -101,55 +101,6 @@ class Order extends Common
     //新建订单
     public function add()
     {
-        // if (request()->isPost()) {
-        //     // $data['cphone'] = Request::param('cphone');
-        //     $data['cname'] = Request::param('cname');
-        //     $data['at_user'] = Session::get('username');
-        //     if (Request::param('pr_user')) {
-        //         $data['pr_user'] = Request::param('pr_user');
-        //     } else {
-        //         $data['pr_user'] = Session::get('username');
-        //     }
-        //     $data['money'] = Request::param('money');
-        //     // $data['ticheng'] = Request::param('ticheng');
-        //     $data['remark'] = Request::param('remark');
-        //     $data['create_time'] = date("Y-m-d H:i:s", time());
-        //     $data['status'] = '待审核';
-
-        //     $data['order_no'] = date("YmdHis", time()) . rand(1000, 9999);
-        //     $data['order_time'] = Request::param('order_time');
-        //     $data['profit'] = Request::param('profit');
-        //     $data['margin_rate'] = Request::param('margin_rate');
-        //     $data['country'] = Request::param('country');
-        //     $data['contact'] = Request::param('contact');
-        //     $data['customer_type'] = Request::param('customer_type');
-        //     $data['product_name'] = Request::param('product_name');
-        //     $data['source'] = Request::param('source');
-        //     $data['oper_user'] = Request::param('oper_user');
-        //     $data['team_name'] = Request::param('team_name');
-        //     // $userExist = db('crm_leads')->where('phone', $data['phone'])->find();
-        //     // if ($userExist){
-        //     //     $msg = ['code' => -200,'msg'=>'抱歉，重复号码不可添加！','data'=>[]];
-        //     //     return json($msg);
-        //     // }
-
-        //     $result = Db::table('crm_client_order')->insert($data);
-        //     if ($result) {
-        //    //新增商品
-        //         // $product_name = Request::param('product_name');
-        //         // $product = $this->checkProduct($product_name);
-        //         // if(!$product){
-        //         //     $this->addProduct($product_name);
-        //         // }
-
-        //         $msg = ['code' => 0, 'msg' => '添加成功！', 'data' => []];
-        //         return json($msg);
-        //     } else {
-        //         $msg = ['code' => -200, 'msg' => '添加失败！', 'data' => []];
-        //         return json($msg);
-        //     }
-        // }
-
 
         if (request()->isPost()) {
             // 获取订单主信息字段
@@ -280,6 +231,11 @@ class Order extends Common
         //新增商品
         $productList = $this->getProductList();
         $this->assign('productList', $productList);
+        // var_dump($sourceList);
+        // var_dump($teamList);
+        // var_dump(self::CUSTOMER_TYPE);
+        //var_dump($yyList['yyList']);
+        //var_dump($yyList['_yyList']);
         return $this->fetch('order/add');
     }
     public function changeyewu()
