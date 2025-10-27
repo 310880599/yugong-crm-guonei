@@ -211,6 +211,7 @@
                         <thead>
                             <tr>
                                 <th>产品名称</th>
+                                <th>产品经理</th>
                                 <th>规格型号</th>
                                 <th>单位</th>
                                 <th>数量</th>
@@ -226,6 +227,8 @@
                             <!-- 默认提供一行空的输入行 -->
                             <tr>
                                 <td><input type="text" name="product_name[]" class="layui-input" lay-verify="required">
+                                </td>
+                                <td><input type="text" name="product_manager[]" class="layui-input" lay-verify="required">
                                 </td>
                                 <td><input type="text" name="spec_model[]" class="layui-input"></td>
                                 <td><input type="text" name="unit[]" class="layui-input"></td>
@@ -403,6 +406,7 @@
             var newRow = document.createElement('tr');
             newRow.innerHTML = `
             <td><input type="text" name="product_name[]" class="layui-input" lay-verify="required"></td>
+            <td><input type="text" name="product_manager[]" class="layui-input" lay-verify="required"></td>
             <td><input type="text" name="spec_model[]" class="layui-input"></td>
             <td><input type="text" name="unit[]" class="layui-input"></td>
             <td><input type="text" name="qty[]" class="layui-input" lay-verify="required"></td>
