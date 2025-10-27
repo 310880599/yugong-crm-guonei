@@ -225,12 +225,26 @@ class Order extends Common
         // var_dump($userlist);
         $this->assign('username', Session::get('username'));
         $this->assign('team_name', Session::get('team_name'));
-        $yyList = $this->getYyList();
-        $this->assign('yyList', json_encode($yyList['yyList']));
-        $this->assign('_yyList', json_encode($yyList['_yyList']));
+        $yyData = $this->getYyList();
+        $operUserList = $yyData['_yyList'];
+        $this->assign('operUserList', $operUserList);
+        $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
         //新增商品
         $productList = $this->getProductList();
         $this->assign('productList', $productList);
+        $teamName = session('team_name') ?: '';
+        $adminList = Db::name('admin')
+            ->where('group_id', '<>', 1)
+            ->where(function ($query) use ($teamName) {
+                if ($teamName) $query->where('team_name', $teamName);
+            })
+            ->field('admin_id, username')
+            ->select();
+        $collaboratorData = [];
+        foreach ($adminList as $admin) {
+            $collaboratorData[] = ['name' => $admin['username'], 'value' => $admin['admin_id']];
+        }
+        $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
         // var_dump($sourceList);
         // var_dump($teamList);
         // var_dump(self::CUSTOMER_TYPE);

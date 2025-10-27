@@ -155,18 +155,24 @@
                     </select>
                 </div>
             </div>
+            <!-- 运营人员：可搜索单选下拉（提交用户ID） -->
             <div class="layui-form-item">
-                <label class="layui-form-label">运营人员</label>
+                <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" lay-verify="required"
-                        class="layui-input">
+                    <select name="oper_user" lay-search lay-verify="required">
+                        <option value="">请选择运营人员</option>
+                        {volist name="operUserList" id="user"}
+                        <option value="{$user.id}">{$user.name}</option>
+                        {/volist}
+                    </select>
                 </div>
             </div>
+            <!-- 协同人：可搜索多选下拉（提交ID数组） -->
             <div class="layui-form-item">
-                <label class="layui-form-label">协同人</label>
+                <label class="layui-form-label">协同人<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" id="joint_person" name="joint_person" lay-verify="required" value=""
-                        placeholder="请选择协同人" class="layui-input">
+                    <!-- xmSelect 多选下拉容器 -->
+                    <div id="collaboratorSelect"></div>
                 </div>
             </div>
             <div class="layui-form-item">
@@ -357,25 +363,38 @@
                 }
             });
 
-            // 渲染下拉框（产品名称、询盘来源、运营人员）
-            form.render('select');
-
-           //     const products = new EditableSelect(document.getElementById('product_name'), {$productList|raw}, '产品名称', '', 'id', false);
-
-           // 监听“询盘来源”下拉改变，动态过滤对应的运营人员选项
-            var yyList = {$yyList|raw};  // 运营人员分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
-            form.on('select(kh_status)', function (data) {
-                var sourceName = $(data.elem).find("option:selected").text();  // 获取选中的来源名称
-                var users = yyList[sourceName] || [];                          // 找到该来源对应的运营人员列表
-                // 重置运营人员下拉选项
-                var $oper = $('select[name="oper_user"]');
-                $oper.empty();
-                $oper.append('<option value="">请选择运营人员</option>');
-                $.each(users, function (index, user) {
-                    $oper.append('<option value="' + user.id + '">' + user.name + '</option>');
-                });
-                form.render('select', '');  // 重新渲染下拉框
+            // 初始化协同人多选下拉的数据列表（由后台传入的 JSON 字符串）
+            var collaboratorData = {$collaboratorList|raw};
+            // 渲染协同人多选下拉框
+            xmSelect.render({
+                el: '#collaboratorSelect',      // 容器元素对应上文中的 div
+                name: 'joint_person',           // 提交字段名，协同人ID数组
+                layVerify: 'required',          // 验证规则：必选
+                tips: '请选择协同人员',           // 占位提示文字
+                filterable: true,              // 支持搜索过滤选项:contentReference[oaicite:9]{index=9}
+                clickClose: false,             // 多选时点击选项不关闭下拉框，方便连续选择
+                // initValue: []               // 初始选中值（如果有默认协同人，可在此指定数组）
+                data: collaboratorData         // 协同人选项数据列表
             });
+            // 渲染表单，使新插入的下拉框呈现出 LayUI 样式
+            form.render('select');  // 对 select 下拉框进行重绘:contentReference[oaicite:10]{index=10}
+
+            //const products = new EditableSelect(document.getElementById('product_name'), {$productList|raw}, '产品名称', '', 'id', false);
+
+        // 监听“询盘来源”下拉改变，动态过滤对应的运营人员选项
+        var yyList = {$yyList|raw};  // 运营人员分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
+        form.on('select(kh_status)', function (data) {
+            var sourceName = $(data.elem).find("option:selected").text();  // 获取选中的来源名称
+            var users = yyList[sourceName] || [];                          // 找到该来源对应的运营人员列表
+            // 重置运营人员下拉选项
+            var $oper = $('select[name="oper_user"]');
+            $oper.empty();
+            $oper.append('<option value="">请选择运营人员</option>');
+            $.each(users, function (index, user) {
+                $oper.append('<option value="' + user.id + '">' + user.name + '</option>');
+            });
+            form.render('select', '');  // 重新渲染下拉框
+        });
 
         // 动态添加一行产品
         document.getElementById('addRow').onclick = function () {
