@@ -204,9 +204,19 @@ class Order extends Common
                 }
             }
 
-            $data['money']       = round($sumTotal, 2);
-            $data['profit']      = round($sumProfit, 2);
-            $data['margin_rate'] = ($sumTotal > 0) ? round($sumProfit / $sumTotal * 100, 2) : 0;
+            // 计算订单总金额（已存在逻辑）
+            $data['money'] = round($sumTotal, 2);
+
+            // 将费用字段从字符串转换为浮点数，然后计算最终利润
+            $shippingCost    = floatval(Request::param('shipping_cost'));
+            $taxAmount       = floatval(Request::param('tax_amount'));
+            $debuggingCost   = floatval(Request::param('debugging_cost'));
+            $salesCommission = floatval(Request::param('sales_commission'));
+
+            $finalProfit       = $sumProfit - $shippingCost - $taxAmount - $debuggingCost - $salesCommission;
+            $data['profit']    = round($finalProfit, 2);
+            $data['margin_rate'] = ($sumTotal > 0) ? round($finalProfit / $sumTotal * 100, 2) : 0;
+
 
             // 主表 product_name（存第一个产品名称，非ID）
             if (!empty($productIds)) {

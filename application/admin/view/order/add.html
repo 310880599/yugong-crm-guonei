@@ -453,6 +453,7 @@
         // 更新所有产品行的总金额、总利润和利润率
         function updateTotals() {
             var sumTotal = 0, sumProfit = 0;
+            // 遍历每一行产品，计算总金额和总利润（已有逻辑）
             $('#productTableBody tr').each(function () {
                 var $tr = $(this);
                 var qty = parseFloat($tr.find('input[name="qty[]"]').val()) || 0;
@@ -463,14 +464,25 @@
                 sumTotal += lineTotal;
                 sumProfit += lineProfit;
             });
+            // 更新订单总金额字段
             $('#money').val(sumTotal.toFixed(2));
-            $('#profit').val(sumProfit.toFixed(2));
+
+            // 读取其他费用字段并计算最终利润
+            var shippingCost = parseFloat($('#shipping_cost').val()) || 0;
+            var taxAmount = parseFloat($('#tax_amount').val()) || 0;
+            var debuggingCost = parseFloat($('#debugging_cost').val()) || 0;
+            var salesCommission = parseFloat($('#sales_commission').val()) || 0;
+            var finalProfit = sumProfit - shippingCost - taxAmount - debuggingCost - salesCommission;
+            $('#profit').val(finalProfit.toFixed(2));
+
+            // 计算利润率并更新字段（避免除以 0）
             var marginRate = 0;
             if (sumTotal > 0) {
-                marginRate = (sumProfit / sumTotal) * 100;
+                marginRate = (finalProfit / sumTotal) * 100;
             }
             $('#margin_rate').val(marginRate.toFixed(2));
         }
+
 
         // 当数量、单价或进价改变时，实时更新对应行和总计
         $('#productTableBody').on('input', 'input[name="qty[]"], input[name="unit_price[]"], input[name="purchase_price[]"]', function () {
