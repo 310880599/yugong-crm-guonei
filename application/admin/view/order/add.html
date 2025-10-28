@@ -258,7 +258,7 @@
                 </div>
             </div>
             <div class="layui-form-item">
-                <label class="layui-form-label">开票金额<span style="color:red;">*</span></label>
+                <label class="layui-form-label">票种/票金额<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
                     <input type="text" id="invoice_amount" name="invoice_amount" lay-verify="required"
                         placeholder="请输入开票金额" class="layui-input">
@@ -362,17 +362,17 @@
             });
             // 初始化协同人多选下拉
             var collaboratorData = {$collaboratorList|raw};
-            xmSelect.render({
-                el: '#collaboratorSelect',
-                name: 'joint_person',
-                layVerify: 'required',
-                tips: '请选择协同人员',
-                filterable: true,
-                clickClose: false,
-                data: collaboratorData
-            });
-            // 渲染现有的下拉框（包括产品名称、询盘来源等）
-            form.render('select');
+        xmSelect.render({
+            el: '#collaboratorSelect',
+            name: 'joint_person',
+            layVerify: 'required',
+            tips: '请选择协同人员',
+            filterable: true,
+            clickClose: false,
+            data: collaboratorData
+        });
+        // 渲染现有的下拉框（包括产品名称、询盘来源等）
+        form.render('select');
 
         // **加粗产品下拉中括号内的分类名称部分** 
         function boldCategory($select) {
@@ -490,6 +490,15 @@
             updateRow($row);
             updateTotals();
         });
+
+        // 页面加载完成时，自动计算初始订单金额、利润和利润率
+        updateTotals();
+
+        // 当运费、税费、调试费或佣金字段的值发生变化时，实时更新总计、利润和利润率
+        $('#shipping_cost, #tax_amount, #debugging_cost, #sales_commission').on('input', function () {
+            updateTotals();
+        });
+
 
         // 表单提交监听
         form.on('submit(submit)', function (data) {
