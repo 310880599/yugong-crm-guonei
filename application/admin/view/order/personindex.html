@@ -251,10 +251,21 @@
                     { field: 'margin_rate', title: '利润率(%)', totalRow: true },
                     { field: 'order_time', title: '成交时间' },
                     { field: 'source', title: '询盘来源' },
-                    { field: 'pr_user', title: '负责人', hide: false },
-                    { field: 'team_name', title: '团队', hide: false },
+                    { field: 'pr_user', title: '负责人' },
+                    { field: 'team_name', title: '团队' },
+                    { field: 'client_company', title: '客户公司' },  // New field
+                    { field: 'country', title: '发货地址' }, // New field
+                    { field: 'joint_person', title: '协同人' }, // New field
+                    { field: 'customer_type', title: '客户性质' }, // New field
+                    { field: 'sales_commission', title: '佣金' }, // New field
+                    { field: 'split_remarks', title: '分成备注' }, // New field
+                    { field: 'tax_amount', title: '税费金额' }, // New field
+                    { field: 'debugging_cost', title: '调试费' }, // New field
+                    { field: 'invoice_amount', title: '开票金额' }, // New field
+                    { field: 'shipping_cost', title: '估算运费' }, // New field
                     { width: 200, title: '操作', toolbar: '#action' }
                 ]],
+
                 limit: 100, //每页默认显示的数量
 
                 page: { limits: [10, 20, 30, 40, 50, 100, 9999999] },

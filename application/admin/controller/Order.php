@@ -70,9 +70,34 @@ class Order extends Common
     }
 
     //（我的订单）列表
+    // public function personindex()
+    // {
+
+    //     if (request()->isPost()) {
+    //         $params = Request::param();
+    //         if (!isset($params['keyword'])) {
+    //             $params['keyword'] = [];
+    //         }
+    //         $params['keyword']['timebucket'] = 'month';
+    //         Request::merge($params);
+    //         return $this->personClientSearch();
+    //         // $key = input('post.key');
+    //         // $page = input('page') ? input('page') : 1;
+    //         // $pageSize = input('limit') ? input('limit') : config('pageSize');
+    //         // $list = db('crm_client_order')
+    //         //     ->where(['pr_user' => Session::get('username')])
+    //         //     ->order('create_time desc')
+    //         //     ->paginate(array('list_rows' => $pageSize, 'page' => $page))
+    //         //     ->toArray();
+    //         // return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
+    //     }
+    //     $this->assign('customer_type', self::CUSTOMER_TYPE);
+    //     $this->assign('sourceList', Db::name('crm_client_status')->distinct(true)->column('status_name'));
+    //     return $this->fetch();
+    // }
+    //（我的订单）列表第1版 
     public function personindex()
     {
-
         if (request()->isPost()) {
             $params = Request::param();
             if (!isset($params['keyword'])) {
@@ -81,21 +106,45 @@ class Order extends Common
             $params['keyword']['timebucket'] = 'month';
             Request::merge($params);
             return $this->personClientSearch();
-            // $key = input('post.key');
-            // $page = input('page') ? input('page') : 1;
-            // $pageSize = input('limit') ? input('limit') : config('pageSize');
-            // $list = db('crm_client_order')
-            //     ->where(['pr_user' => Session::get('username')])
-            //     ->order('create_time desc')
-            //     ->paginate(array('list_rows' => $pageSize, 'page' => $page))
-            //     ->toArray();
-            // return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
         }
+
+        // Assigning new fields to the view for display
         $this->assign('customer_type', self::CUSTOMER_TYPE);
         $this->assign('sourceList', Db::name('crm_client_status')->distinct(true)->column('status_name'));
+
+        // Get additional fields for display in the table
+        $orders = Db::name('crm_client_order')
+            ->alias('co')
+            ->join('admin a', 'a.admin_id = co.pr_user', 'LEFT') // Join for pr_user
+            ->join('admin b', 'b.admin_id = co.joint_person', 'LEFT') // Join for joint_person
+            ->field('
+            co.id,
+            co.order_no,
+            co.cname,
+            co.contact,
+            co.money,
+            co.profit,
+            co.margin_rate,
+            co.order_time,
+            co.source,
+            co.pr_user,
+            co.team_name,
+            co.client_company,
+            co.country,
+            co.joint_person,
+            co.customer_type,
+            co.sales_commission,
+            co.split_remarks,
+            co.tax_amount,
+            co.debugging_cost,
+            co.invoice_amount,
+            co.shipping_cost
+        ')
+            ->paginate(10);
+
+        $this->assign('orders', $orders);
         return $this->fetch();
     }
-
 
 
 
@@ -108,7 +157,7 @@ class Order extends Common
             $data = [];
             $data['contact']          = Request::param('contact');        // 客户联系方式
             $data['cname']            = Request::param('cname');          // 客户名称
-            $data['client_company']            = Request::param('client_company');// 客户公司
+            $data['client_company']            = Request::param('client_company'); // 客户公司
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
             $data['source']           = Request::param('source');         // 询盘来源
@@ -161,7 +210,7 @@ class Order extends Common
             }
             $data['joint_person'] = $jpStr;
 
-            
+
 
             // ====== 明细字段（注意：product_name[] 现在是【产品ID】）======
             $productIds     = Request::param('product_name/a'); // <-- 产品ID数组
