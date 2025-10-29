@@ -98,6 +98,8 @@ class Order extends Common
 
 
 
+
+
     // 新建订单第3版
     public function add()
     {
@@ -106,6 +108,7 @@ class Order extends Common
             $data = [];
             $data['contact']          = Request::param('contact');        // 客户联系方式
             $data['cname']            = Request::param('cname');          // 客户名称
+            $data['client_company']            = Request::param('client_company');// 客户公司
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
             $data['source']           = Request::param('source');         // 询盘来源
@@ -126,6 +129,39 @@ class Order extends Common
             $data['status']           = '待审核';
             $data['create_time']      = date("Y-m-d H:i:s");
             $data['order_no']         = date("YmdHis") . rand(1000, 9999);
+
+
+            // 3) 解析并写入协同人（joint_person），支持 数组 / JSON / 逗号分隔
+            $jpRaw = Request::param('joint_person');
+            $jpIds = [];
+            if (is_array($jpRaw)) {
+                $jpIds = $jpRaw;
+            } else if (is_string($jpRaw)) {
+                $jpRaw = trim($jpRaw);
+                if ($jpRaw !== '') {
+                    if ($jpRaw[0] === '[') {
+                        $tmp = json_decode($jpRaw, true);
+                        if (is_array($tmp)) $jpIds = $tmp;
+                    } else {
+                        $jpIds = explode(',', $jpRaw);
+                    }
+                }
+            }
+            // 仅保留数字、去空去重
+            $jpIds = array_values(array_unique(array_filter(array_map(function ($v) {
+                return preg_replace('/\D/', '', (string)$v);
+            }, $jpIds), function ($v) {
+                return $v !== '';
+            })));
+            $jpStr = implode(',', $jpIds);
+            // 若你的 joint_person 仍为 varchar(30)，做长度保护（推荐把字段扩为 varchar(255)）
+            if (strlen($jpStr) > 30) {
+                $this->redisUnLock();
+                return fail('协同人过多，超出存储限制（请减少选择或扩大 joint_person 字段长度）');
+            }
+            $data['joint_person'] = $jpStr;
+
+            
 
             // ====== 明细字段（注意：product_name[] 现在是【产品ID】）======
             $productIds     = Request::param('product_name/a'); // <-- 产品ID数组

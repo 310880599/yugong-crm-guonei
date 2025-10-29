@@ -118,6 +118,14 @@
                         placeholder="请输入客户名称" class="layui-input">
                 </div>
             </div>
+            <!-- 客户公司 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户公司</label>
+                <div class="layui-input-4">
+                    <input type="text" id="client_company" name="client_company" lay-verify="required" value=""
+                        placeholder="请输入客户公司" class="layui-input">
+                </div>
+            </div>
             <!-- 客户负责人 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">客户负责人</label>
@@ -362,17 +370,19 @@
             });
             // 初始化协同人多选下拉
             var collaboratorData = {$collaboratorList|raw};
-        xmSelect.render({
-            el: '#collaboratorSelect',
-            name: 'joint_person',
-            layVerify: 'required',
-            tips: '请选择协同人员',
-            filterable: true,
-            clickClose: false,
-            data: collaboratorData
-        });
-        // 渲染现有的下拉框（包括产品名称、询盘来源等）
-        form.render('select');
+            xmSelect.render({
+                el: '#collaboratorSelect',
+                name: 'joint_person',
+                layVerify: 'required',
+                tips: '请选择协同人员',
+                filterable: true,
+                clickClose: false,
+                data: collaboratorData
+            });
+            // 渲染现有的下拉框（包括产品名称、询盘来源等）
+            form.render('select');
+
+
 
         // **加粗产品下拉中括号内的分类名称部分** 
         function boldCategory($select) {
@@ -500,8 +510,10 @@
         });
 
 
+
         // 表单提交监听
         form.on('submit(submit)', function (data) {
+
             // 提交前同步更新总计字段，以防用户未触发输入事件
             updateTotals();
             $.post("{:url('Order/add')}", data.field, function (res) {
