@@ -26,7 +26,9 @@
         }
         /* 将下拉中括号内的分类名称加粗显示 */
         .cat-bold { font-weight: bold; }
-        /* =================== 修复：强制 LayUI 下拉选中值左对齐 =================== */
+
+        /* =================== 关键修复：强制 LayUI 下拉选中值左对齐 =================== */
+        /* 覆盖所有皮肤/自定义样式对 select 标题输入框的居中设置 */
         body .layui-form-select .layui-select-title input.layui-input,
         body .layui-form-select .layui-select-title input.layui-input[readonly],
         body .layui-form-select .layui-select-title > input.layui-input.layui-unselect {
@@ -35,7 +37,7 @@
             padding-left: 12px !important;
             padding-right: 12px !important;
         }
-        /* 下拉面板里的文字左对齐 */
+        /* 下拉面板里的文字也统一左对齐（可选） */
         body .layui-form-select dl dd,
         body .layui-form-select dl dt {
             text-align: left !important;
@@ -48,6 +50,7 @@
         <form class="layui-form layui-form-pane">
             <!-- 隐藏域：订单ID -->
             <input type="hidden" name="id" value="{$orderInfo.id}">
+
             <!-- 客户联系方式 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">联系方式<span style="color:red;">*</span></label>
@@ -56,6 +59,7 @@
                            value="{$orderInfo.contact|htmlentities}" placeholder="请输入客户联系方式" class="layui-input">
                 </div>
             </div>
+
             <!-- 发货地址 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">发货地址<span style="color:red;">*</span></label>
@@ -64,6 +68,7 @@
                               class="layui-textarea">{:htmlentities($orderInfo.country)}</textarea>
                 </div>
             </div>
+
             <!-- 客户名称 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">客户名称<span style="color:red;">*</span></label>
@@ -72,6 +77,7 @@
                            value="{$orderInfo.cname|htmlentities}" placeholder="请输入客户名称" class="layui-input">
                 </div>
             </div>
+
             <!-- 客户公司 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">客户公司</label>
@@ -80,6 +86,7 @@
                            value="{$orderInfo.client_company|htmlentities}" placeholder="请输入客户公司" class="layui-input">
                 </div>
             </div>
+
             <!-- 客户负责人 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">客户负责人</label>
@@ -88,6 +95,7 @@
                            value="{$orderInfo.pr_user|default=''}" class="layui-input">
                 </div>
             </div>
+
             <!-- 询盘来源 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">询盘来源</label>
@@ -102,6 +110,7 @@
                     </select>
                 </div>
             </div>
+
             <!-- 运营人员 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>
@@ -116,6 +125,7 @@
                     </select>
                 </div>
             </div>
+
             <!-- 协同人 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">协同人<span style="color:red;">*</span></label>
@@ -123,6 +133,7 @@
                     <div id="collaboratorSelect"></div>
                 </div>
             </div>
+
             <!-- 团队名称 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">团队名称</label>
@@ -135,6 +146,7 @@
                     </select>
                 </div>
             </div>
+
             <!-- 客户性质 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">客户性质</label>
@@ -147,6 +159,7 @@
                     </select>
                 </div>
             </div>
+
             <!-- 成交时间 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">成交时间</label>
@@ -155,6 +168,7 @@
                            placeholder="请选择成交时间" class="layui-input">
                 </div>
             </div>
+
             <!-- 产品明细表格 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">产品明细</label>
@@ -243,6 +257,7 @@
                     <button type="button" id="addRow" class="layui-btn layui-btn-normal">新增一行</button>
                 </div>
             </div>
+
             <!-- 费用和金额字段 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">估算运费<span style="color:red;">*</span></label>
@@ -293,6 +308,7 @@
                            value="{$orderInfo.amount_received|default='0'}" placeholder="请输入已收款金额" class="layui-input">
                 </div>
             </div>
+
             <!-- 订单金额、利润、利润率 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">订单金额(￥)</label>
@@ -316,6 +332,7 @@
                     <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%);">%</span>
                 </div>
             </div>
+
             <!-- 备注 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">备注</label>
@@ -323,6 +340,7 @@
                     <textarea name="remark" placeholder="请输入备注信息" class="layui-textarea">{:htmlentities($orderInfo.remark)}</textarea>
                 </div>
             </div>
+
             <!-- 提交按钮 -->
             <div class="layui-form-item">
                 <div class="layui-input-block">
@@ -331,9 +349,11 @@
             </div>
         </form>
     </div>
+
     {include file="common/foot"/}
+
     <script type="text/javascript">
-        // 根据联系方式自动获取客户信息
+        // 根据联系方式自动获取客户信息（与添加订单共用）
         function changeyewu() {
             var contact = $("#contact").val();
             $('#cname').val('');
@@ -346,13 +366,11 @@
                         $('#checklabel').css('color', 'red');
                     } else {
                         $('#checklabel').css('color', 'green');
-                        // 填充返回的客户信息
                         $('#cname').val(result['msg']['custname']);
                         $('#pr_user').val(result['msg']['pr_user']);
                         $('#oper_user_input').val(result['msg']['oper_user']);
                         $('#country').val(result['msg']['country']);
                         $('#kh_username').val(result['msg']['kh_username']);
-                        // 根据返回的来源文本匹配下拉选中项
                         var sourceValue = result['msg']['source'] || "";
                         var lowerSourceValue = sourceValue.toLowerCase();
                         var $sourceSelect = $('#source');
@@ -360,41 +378,36 @@
                         $sourceSelect.find('option').each(function () {
                             var optionValue = $(this).val();
                             if (optionValue !== '' && lowerSourceValue.includes(optionValue.toLowerCase())) {
-                                $sourceSelect.val(optionValue);
-                                matched = true;
-                                return false;
+                                $sourceSelect.val(optionValue); matched = true; return false;
                             }
                         });
-                        if (!matched) {
-                            $sourceSelect.val('');
-                        }
+                        if (!matched) { $sourceSelect.val(''); }
                         layui.form.render('select');
-                        fixSelectAlign(); // 渲染后调整下拉框对齐
+                        fixSelectAlign(); // 兜底：渲染后再打一次补丁
                     }
                     $('#checklabel').html(result['msg']['msg']);
                 },
-                error: function () {
-                    alert("异常！");
-                }
+                error: function () { alert("异常！"); }
             });
         }
+
         layui.use(['form', 'layer', 'laydate'], function () {
             var form = layui.form, layer = layui.layer, $ = layui.jquery, laydate = layui.laydate;
-            // 成交时间选择器
+
             laydate.render({
                 elem: '#orderTime',
                 type: 'datetime',
                 format: 'yyyy-MM-dd HH:mm:ss'
             });
-            // 自定义验证规则：数值验证
+
+            // 自定义验证规则：数字
             form.verify({
                 number: function (value) {
-                    if (!/^\d+(\.\d+)?$/.test(value)) {
-                        return '请输入有效的数字';
-                    }
+                    if (!/^\d+(\.\d+)?$/.test(value)) return '请输入有效的数字';
                 }
             });
-            // 协同人多选下拉初始化
+
+            // 协同人
             var collaboratorData = {$collaboratorList|raw};
             xmSelect.render({
                 el: '#collaboratorSelect',
@@ -405,23 +418,36 @@
                 clickClose: false,
                 data: collaboratorData
             });
-            // 渲染表单
+
             form.render('select');
-            fixSelectAlign(); // 首次渲染后调整下拉框文本左对齐
-            // 分类名加粗显示处理
+            fixSelectAlign(); // 初次渲染后修正对齐
+
+            // 分类名加粗
             function boldCategory($select) {
                 var $options = $select.next('.layui-form-select').find('dl dd');
                 $options.each(function () {
                     var text = $(this).text();
                     var m = text.match(/^(.*)\s*\((.+)\)\s*$/);
-                    if (m) {
-                        $(this).html(m[1] + ' (<span class="cat-bold">' + m[2] + '</span>)');
-                    }
+                    if (m) $(this).html(m[1] + ' (<span class="cat-bold">' + m[2] + '</span>)');
                 });
             }
-            // 初始化时对已有的产品名称下拉选项应用加粗样式
             boldCategory($('select[name="product_name[]"]'));
-            // 新增产品明细行
+
+            // 询盘来源变更 → 运营人员联动
+            var yyList = {$yyList|raw};
+            form.on('select(kh_status)', function (data) {
+                var sourceName = $(data.elem).find("option:selected").text();
+                var users = yyList[sourceName] || [];
+                var $oper = $('select[name="oper_user"]');
+                $oper.empty().append('<option value="">请选择运营人员</option>');
+                $.each(users, function (i, user) {
+                    $oper.append('<option value="' + user.id + '">' + user.name + '</option>');
+                });
+                form.render('select');
+                fixSelectAlign(); // 渲染后再修正一次
+            });
+
+            // 新增产品行
             var productOptions = $('select[name="product_name[]"]').first().html();
             var managerOptions = $('select[name="product_manager[]"]').first().html();
             $('#addRow').on('click', function () {
@@ -441,15 +467,17 @@
                     '<td><button type="button" class="layui-btn layui-btn-danger layui-btn-sm delete-row">删除</button></td>';
                 $tbody.append(newRow);
                 form.render('select');
-                fixSelectAlign(); // 确保新行下拉框文本左对齐
+                fixSelectAlign(); // 让新行的两个下拉保持左对齐
                 boldCategory($(newRow).find('select[name="product_name[]"]'));
             });
+
             // 删除产品行
             $('#productTableBody').on('click', '.delete-row', function () {
                 $(this).closest('tr').remove();
-                updateTotals();  // 更新总计
+                updateTotals();
             });
-            // 更新单行的销售合计和子项利润
+
+            // 行合计 & 子项利润
             function updateRow($tr) {
                 var qty = parseFloat($tr.find('input[name="qty[]"]').val()) || 0;
                 var unitPrice = parseFloat($tr.find('input[name="unit_price[]"]').val()) || 0;
@@ -459,7 +487,8 @@
                 $tr.find('input[name="total_price[]"]').val(total.toFixed(2));
                 $tr.find('input[name="sub_profit[]"]').val(profit.toFixed(2));
             }
-            // 更新所有产品行的总金额和总利润
+
+            // 总计 / 利润 / 利润率
             function updateTotals() {
                 var sumTotal = 0, sumProfit = 0;
                 $('#productTableBody tr').each(function () {
@@ -472,32 +501,29 @@
                 });
                 $('#money').val(sumTotal.toFixed(2));
                 var shippingCost = parseFloat($('#shipping_cost').val()) || 0;
-                var taxAmount   = parseFloat($('#tax_amount').val()) || 0;
-                var debugging   = parseFloat($('#debugging_cost').val()) || 0;
-                var commission  = parseFloat($('#sales_commission').val()) || 0;
-                var finalProfit = sumProfit - shippingCost - taxAmount - debugging - commission;
+                var taxAmount    = parseFloat($('#tax_amount').val()) || 0;
+                var debugging    = parseFloat($('#debugging_cost').val()) || 0;
+                var commission   = parseFloat($('#sales_commission').val()) || 0;
+                var finalProfit  = sumProfit - shippingCost - taxAmount - debugging - commission;
                 $('#profit').val(finalProfit.toFixed(2));
                 var marginRate = (sumTotal > 0) ? (finalProfit / sumTotal) * 100 : 0;
                 $('#margin_rate').val(marginRate.toFixed(2));
             }
-            // 数量、单价或进价改变时，更新对应行和总计
-            $('#productTableBody').on('input', 'input[name="qty[]"], input[name="unit_price[]"], input[name="purchase_price[]"]', function () {
-                updateRow($(this).closest('tr'));
-                updateTotals();
-            });
-            // 页面初始时计算总计
+
+            $('#productTableBody').on('input',
+                'input[name="qty[]"], input[name="unit_price[]"], input[name="purchase_price[]"]',
+                function () { updateRow($(this).closest('tr')); updateTotals(); }
+            );
             updateTotals();
-            // 运费、税费、调试费、佣金改变时，更新总利润和利润率
             $('#shipping_cost, #tax_amount, #debugging_cost, #sales_commission').on('input', updateTotals);
-            // 表单提交监听
+
+            // 提交
             form.on('submit(submit)', function (data) {
-                // 提交前先更新总计，避免遗漏最新数据
                 updateTotals();
                 $.post("{:url('Order/edit')}", data.field, function (res) {
                     if (res.code === 0) {
                         layer.msg(res.msg, { time: 2000 }, function () {
-                            layer.close(layer.index);
-                            window.parent.location.reload();
+                            layer.close(layer.index); window.parent.location.reload();
                         });
                     } else {
                         layer.msg(res.msg, { time: 2000 });
@@ -505,7 +531,8 @@
                 }, 'json');
                 return false;
             });
-            // 工具函数：修正下拉框文本左对齐
+
+            /* ===== 兜底函数：把 select 标题 input 强制左对齐（内联 !important） ===== */
             function fixSelectAlign(ctx) {
                 var $ctx = ctx ? $(ctx) : $(document);
                 $ctx.find('.layui-form-select .layui-select-title input.layui-input').each(function () {
@@ -515,7 +542,7 @@
                     this.style.setProperty('padding-right', '12px', 'important');
                 });
             }
-            // 将对齐修正函数暴露到全局，便于在其他异步回调中调用
+            // 把函数暴露到全局，便于其他异步回调需要时调用
             window.fixSelectAlign = fixSelectAlign;
         });
     </script>
