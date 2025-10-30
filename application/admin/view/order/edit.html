@@ -121,6 +121,18 @@
                     </select>
                 </div>
             </div>
+            <!-- 收款账户 (Receiving Account) -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">收款账户</label>
+                <div class="layui-input-4">
+                    <select name="bank_account" id="bank_account" lay-verify="required" lay-search>
+                        <option value="">请选择收款账户</option>
+                        {volist name="accountList" id="acc"}
+                        <option value="{$acc.id}" {if $acc.id == $orderInfo.bank_account}selected{/if}>{$acc.account}</option>
+                        {/volist}
+                    </select>
+                </div>
+            </div>
             <!-- 运营人员 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>

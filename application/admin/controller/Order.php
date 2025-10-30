@@ -479,6 +479,7 @@ class Order extends Common
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
             $data['source']           = Request::param('source');         // 询盘来源
+            $data['bank_account']     = Request::param('bank_account');  // 收款账户 ID (as string)
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username'); // 客户负责人（默认当前用户）
             $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['team_name']        = Request::param('team_name');      // 团队名称
@@ -661,6 +662,8 @@ class Order extends Common
         // 使用 array_map 和 trim 去除每个值的前后空格
         $sourceList = array_map('trim', $sourceList);
         //var_dump($sourceList);
+        $accountList = Db::name('crm_receive_account')->field('id, account')->select();  // fetch all accounts (id and name)
+        $this->assign('accountList', $accountList);
         $this->assign('teamList', $teamList);
         $this->assign('sourceList', $sourceList);
         $this->assign('customer_type', self::CUSTOMER_TYPE);
