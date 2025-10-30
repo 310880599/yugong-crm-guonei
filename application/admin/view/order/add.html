@@ -152,8 +152,8 @@
                 <div class="layui-input-4">
                     <select name="bank_account" id="bank_account" lay-verify="required" lay-search="">
                         <option value="">请选择收款账户</option>
-                        {volist name='bankaccount' id='vo'}
-                        <option value="{$vo|htmlentities}">{$vo|htmlentities}</option>
+                        {volist name="accountList" id="acc"}
+                            <option value="{$acc.id}">{$acc.account|htmlentities}</option>
                         {/volist}
                     </select>
                 </div>

@@ -165,6 +165,7 @@ class Order extends Common
             $data['source']           = Request::param('source');         // 询盘来源
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username');
             $data['oper_user']        = Request::param('oper_user');      // 运营人员
+            $data['bank_account']     = Request::param('bank_account');   // 收款账户
             $data['team_name']        = Request::param('team_name');      // 团队名称
             $data['at_user']          = Session::get('username');         // 创建人
             $data['order_time']       = Request::param('order_time');     // 成交时间
@@ -353,10 +354,10 @@ class Order extends Common
         $this->assign('customer_type', self::CUSTOMER_TYPE);
 
         $userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
-        $bankaccount = Db::name('crm_receive_account')->field('id,account')->select();
+        $accountList = Db::name('crm_receive_account')->field('id, account')->select();
         //var_dump($bankaccount);
         $this->assign('userlist', $userlist);
-        $this->assign('bankaccount', json_encode($bankaccount, JSON_UNESCAPED_UNICODE));
+        $this->assign('accountList', $accountList);
         $this->assign('username', Session::get('username'));
         $this->assign('team_name', Session::get('team_name'));
 
