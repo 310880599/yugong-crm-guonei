@@ -353,7 +353,10 @@ class Order extends Common
         $this->assign('customer_type', self::CUSTOMER_TYPE);
 
         $userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
+        $bankaccount = Db::name('crm_receive_account')->field('id,account')->select();
+        //var_dump($bankaccount);
         $this->assign('userlist', $userlist);
+        $this->assign('bankaccount', json_encode($bankaccount, JSON_UNESCAPED_UNICODE));
         $this->assign('username', Session::get('username'));
         $this->assign('team_name', Session::get('team_name'));
 
