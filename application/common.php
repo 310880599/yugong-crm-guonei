@@ -859,3 +859,9 @@ function bulkTransfer(array &$source, array $keysToRemove): array
     $source = array_diff_key($source, $removed);
     return $removed;
 }
+
+// 自定义过滤器：先转义后去空格
+function htmlentities_trim($value)
+{
+    return trim(htmlentities($value, ENT_QUOTES, 'UTF-8'));
+}

@@ -328,4 +328,10 @@ class Common extends Controller
         $list = Db::name('crm_product_category')->where($where)->select();
         return $list;
     }
+
+    // 自定义过滤器：先转义后去空格
+    function htmlentities_trim($value)
+    {
+        return trim(htmlentities($value, ENT_QUOTES, 'UTF-8'));
+    }
 }

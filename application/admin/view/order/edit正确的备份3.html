@@ -116,7 +116,9 @@
                     <select name="source" id="source" lay-verify="required" lay-filter="kh_status" lay-search>
                         <option value="">请选择询盘来源</option>
                         {volist name="sourceList" id="vo"}
-                        <option value="{$vo|htmlentities}" {if $vo == $orderInfo.source} selected {/if}>{$vo|htmlentities}</option>
+                        <option value="{$vo|htmlentities}" {if $vo == $orderInfo.source} selected {/if}>
+                            {$vo|htmlentities}
+                        </option>
                         {/volist}
                     </select>
                 </div>
@@ -128,7 +130,9 @@
                     <select name="oper_user" lay-search lay-verify="required">
                         <option value="">请选择运营人员</option>
                         {volist name="operUserList" id="user"}
-                        <option value="{$user.id}" {if $user.id == $orderInfo.oper_user} selected {/if}>{$user.name}</option>
+                        <option value="{$user.id}" {if $user.id == $orderInfo.oper_user} selected {/if}>
+                            {$user.name}
+                        </option>
                         {/volist}
                     </select>
                 </div>
@@ -199,7 +203,9 @@
                                     <select name="product_name[]" lay-search lay-verify="required">
                                         <option value="">请选择产品名称</option>
                                         {volist name="productList" id="vo"}
-                                        <option value="{$vo.id}" {if $vo.id == $item.product_id} selected {/if}>{$vo.product_name} ({$vo.category_name|default='无'})</option>
+                                        <option value="{$vo.id}" {if $vo.id == $item.product_id} selected {/if}>
+                                            {$vo.product_name} ({$vo.category_name|default='无'})
+                                        </option>
                                         {/volist}
                                     </select>
                                 </td>
@@ -207,7 +213,9 @@
                                     <select name="product_manager[]" lay-search lay-verify="required">
                                         <option value="">请选择产品经理</option>
                                         {volist name="managerList" id="vo"}
-                                        <option value="{$vo.admin_id}" {if $vo.admin_id == $item.manager_id} selected {/if}>{$vo.username}</option>
+                                        <option value="{$vo.admin_id}" {if $vo.admin_id == $item.manager_id} selected {/if}>
+                                            {$vo.username}
+                                        </option>
                                         {/volist}
                                     </select>
                                 </td>
@@ -418,17 +426,9 @@
                 clickClose: false,
                 data: collaboratorData
             });
-
-
-
             // 渲染表单
             form.render('select');
             fixSelectAlign(); // 首次渲染后调整下拉框文本左对齐
-
-
-
-
-
             // 分类名加粗显示处理
             function boldCategory($select) {
                 var $options = $select.next('.layui-form-select').find('dl dd');
@@ -512,7 +512,6 @@
             $('#shipping_cost, #tax_amount, #debugging_cost, #sales_commission').on('input', updateTotals);
             // 表单提交监听
             form.on('submit(submit)', function (data) {
-
                 // 提交前先更新总计，避免遗漏最新数据
                 updateTotals();
                 $.post("{:url('Order/edit')}", data.field, function (res) {

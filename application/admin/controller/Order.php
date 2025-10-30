@@ -903,6 +903,9 @@ class Order extends Common
         // 准备下拉选项数据（团队列表、来源列表、客户性质列表、运营人员列表等）
         $teamList   = $this->getTeamList();
         $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
+        // 使用 array_map 和 trim 去除每个值的前后空格
+        $sourceList = array_map('trim', $sourceList);
+        //var_dump($sourceList);
         $this->assign('teamList', $teamList);
         $this->assign('sourceList', $sourceList);
         $this->assign('customer_type', self::CUSTOMER_TYPE);
