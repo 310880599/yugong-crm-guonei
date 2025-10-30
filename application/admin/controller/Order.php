@@ -69,6 +69,59 @@ class Order extends Common
         return $this->fetch();
     }
 
+
+    //导出订单
+    public function exportindex()
+    {
+        if (request()->isPost()) {
+            //获取函数的所有方法
+            $params = Request::param();
+            if (!isset($params['keyword'])) {
+                $params['keyword'] = [];
+            }
+            $params['keyword']['timebucket'] = 'month';
+            Request::merge($params);
+            return $this->clientSearch();
+            // $key = input('post.key');
+            // $page = input('page') ? input('page') : 1;
+            // $pageSize = input('limit') ? input('limit') : config('pageSize');
+            // $list = db('crm_client_order')
+            //     ->order('create_time desc')
+            //     ->paginate(array('list_rows' => $pageSize, 'page' => $page))
+            //     ->toArray();
+            // return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
+        }
+
+        // $total_money = db('crm_client_order')->sum('money');
+        // $total_profit = db('crm_client_order')->sum('profit');
+        // $this->assign('total_money', number_format($total_money, 2));
+        // $this->assign('total_profit', number_format($total_profit, 2));
+
+
+        //查询所有管理员（去除admin）
+        $adminResult = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
+        $this->assign('adminResult', $adminResult);
+
+        //查询所有团队
+        $teamList = $this->getTeamList();
+        $this->assign('teamList', $teamList);
+
+        //查询所有公司
+        $user = \app\admin\model\Admin::getMyInfo();
+        $orgList = self::ORG;
+        if ($user['org']) {
+            $orgList = $this->getOrg($user['org']);
+        }
+        $this->assign('orgList', $orgList);
+
+        //查询所有客户来源
+        $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
+        $this->assign('sourceList', $sourceList);
+        $this->assign('customer_type', self::CUSTOMER_TYPE);
+        return $this->fetch();
+    }
+
+
     //（我的订单）列表
     public function personindex()
     {
@@ -403,309 +456,7 @@ class Order extends Common
 
         $this->success($res);
     }
-    // //编辑客户
-    // public function edit()
-    // {
-    //     if (Request::isAjax()) {
-    //         $data  = Request::param();
-    //         $data['ut_time'] = date("Y-m-d H:i:s", time());
 
-    //         $result = Db::table('crm_client_order')->where(['id' => $data['id']])->update($data);
-    //         if ($result) {
-    //             //新增商品
-    //             // $product_name = Request::param('product_name');
-    //             // $product = $this->checkProduct($product_name);
-    //             // if(!$product){
-    //             //     $this->addProduct($product_name);
-    //             // }
-
-    //             $msg = ['code' => 0, 'msg' => '编辑成功！', 'data' => []];
-    //             return json($msg);
-    //         } else {
-    //             $msg = ['code' => -200, 'msg' => '编辑失败！', 'data' => []];
-    //             return json($msg);
-    //         }
-    //     }
-
-
-    //     $result = Db::table('crm_client_order')->where(['id' => Request::param('id')])->find();
-
-    //     $this->assign('orderInfo', $result);
-
-    //     $userlist = Db::name('admin')->where('group_id', '<>', 1)->field('admin_id,username')->select();
-    //     $this->assign('userlist', $userlist);
-    //     //查询所有团队
-    //     $teamList = $this->getTeamList();
-    //     $this->assign('teamList', $teamList);
-    //     //查询所有客户来源
-    //     $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
-    //     $this->assign('sourceList', $sourceList);
-    //     $this->assign('customer_type', self::CUSTOMER_TYPE);
-
-    //     $this->assign('username', Session::get('username'));
-    //     $this->assign('team_name', Session::get('team_name'));
-    //     $yyList = $this->getYyList();
-    //     $this->assign('yyList', json_encode($yyList['yyList']));
-    //     $this->assign('_yyList', json_encode($yyList['_yyList']));
-    //     //新增商品
-    //     $productList = $this->getProductList();
-    //     $this->assign('productList', $productList);
-
-    //     return $this->fetch('order/edit');
-    // }
-
-    // //编辑客户第2版
-    // public function edit()
-    // {
-    //     if (request()->isPost()) {
-    //         // 获取主表字段
-    //         $id = Request::param('id/d');  // 订单ID
-    //         if (!$id) {
-    //             return json(['code' => -200, 'msg' => '缺少订单ID参数']);
-    //         }
-    //         $data = [];
-    //         $data['contact']          = Request::param('contact');        // 客户联系方式
-    //         $data['cname']            = Request::param('cname');          // 客户名称
-    //         $data['client_company']   = Request::param('client_company'); // 客户公司
-    //         $data['country']          = Request::param('country');        // 发货地址
-    //         $data['customer_type']    = Request::param('customer_type');  // 客户性质
-    //         $data['source']           = Request::param('source');         // 询盘来源
-    //         $data['pr_user']          = Request::param('pr_user') ?: Session::get('username'); // 客户负责人
-    //         $data['oper_user']        = Request::param('oper_user');      // 运营人员
-    //         $data['team_name']        = Request::param('team_name');      // 团队名称
-    //         $data['order_time']       = Request::param('order_time');     // 成交时间
-    //         $data['shipping_cost']    = Request::param('shipping_cost');  // 估算运费
-    //         $data['invoice_amount']   = Request::param('invoice_amount'); // 开票金额
-    //         $data['tax_amount']       = Request::param('tax_amount');     // 税费金额
-    //         $data['debugging_cost']   = Request::param('debugging_cost'); // 调试费
-    //         $data['sales_commission'] = Request::param('sales_commission'); // 佣金
-    //         $data['split_remarks']    = Request::param('split_remarks');  // 分成备注
-    //         $data['amount_received']  = Request::param('amount_received'); // 已收款金额
-    //         $data['remark']           = Request::param('remark');         // 备注
-    //         $data['ut_time']          = date("Y-m-d H:i:s");              // 更新日期时间
-
-    //         // 解析协同人 joint_person 字段（支持数组或JSON或逗号分隔字符串）
-    //         $jpRaw = Request::param('joint_person');
-    //         $jpIds = [];
-    //         if (is_array($jpRaw)) {
-    //             $jpIds = $jpRaw;
-    //         } else if (is_string($jpRaw)) {
-    //             $jpRaw = trim($jpRaw);
-    //             if ($jpRaw !== '') {
-    //                 if ($jpRaw[0] === '[') {
-    //                     // JSON字符串
-    //                     $tmp = json_decode($jpRaw, true);
-    //                     if (is_array($tmp)) $jpIds = $tmp;
-    //                 } else {
-    //                     // 逗号分隔
-    //                     $jpIds = explode(',', $jpRaw);
-    //                 }
-    //             }
-    //         }
-    //         // 保留数字字符并去重
-    //         $jpIds = array_values(array_unique(array_filter(array_map(function ($v) {
-    //             return preg_replace('/\D/', '', (string)$v);
-    //         }, $jpIds), function ($v) {
-    //             return $v !== '';
-    //         })));
-    //         $jpStr = implode(',', $jpIds);
-    //         // 字段长度控制（如有需要）
-    //         if (strlen($jpStr) > 255) {
-    //             return json(['code' => -200, 'msg' => '协同人选择过多，超出存储限制']);
-    //         }
-    //         $data['joint_person'] = $jpStr;
-
-    //         // 获取明细表字段数组（产品明细多行）
-    //         $productIds     = Request::param('product_name/a');   // 产品ID数组
-    //         $managerIds     = Request::param('product_manager/a'); // 产品经理ID数组
-    //         $specModels     = Request::param('spec_model/a');
-    //         $units          = Request::param('unit/a');
-    //         $qtys           = Request::param('qty/a');
-    //         $unitPrices     = Request::param('unit_price/a');
-    //         $totalPrices    = Request::param('total_price/a');
-    //         $purchasePrices = Request::param('purchase_price/a');
-    //         $subProfits     = Request::param('sub_profit/a');
-    //         $itemRemarks    = Request::param('item_remark/a');
-
-    //         // 查询涉及的产品名称（用于获取产品名称文本及分类）
-    //         $idArr = [];
-    //         if (!empty($productIds) && is_array($productIds)) {
-    //             foreach ($productIds as $pid) {
-    //                 $pid = (int)$pid;
-    //                 if ($pid > 0) $idArr[] = $pid;
-    //             }
-    //             $idArr = array_values(array_unique($idArr));
-    //         }
-    //         $idNameMap = [];
-    //         if (!empty($idArr)) {
-    //             $rows = Db::name('crm_products')->alias('p')
-    //                 ->leftJoin('crm_product_category c', 'p.category_id = c.id')
-    //                 ->where('p.id', 'in', $idArr)
-    //                 ->field('p.id, p.product_name, c.category_name')
-    //                 ->select();
-    //             foreach ($rows as $r) {
-    //                 // 可按需拼接分类名：$r['product_name'].' ('.$r['category_name'].')'
-    //                 $idNameMap[$r['id']] = $r['product_name'];
-    //             }
-    //         }
-
-    //         // 计算总金额和利润，并构建明细数据数组
-    //         $sumTotal = 0;
-    //         $sumProfit = 0;
-    //         $itemsData = [];
-    //         if (!empty($productIds) && is_array($productIds)) {
-    //             foreach ($productIds as $index => $pid) {
-    //                 $pid = (int)$pid;
-    //                 if ($pid <= 0) continue;  // 跳过无效行
-    //                 $pnameText = $idNameMap[$pid] ?? '';
-    //                 // 当前行数量、单价、成本
-    //                 $qty      = isset($qtys[$index]) ? floatval($qtys[$index]) : 0;
-    //                 $price    = isset($unitPrices[$index]) ? floatval($unitPrices[$index]) : 0;
-    //                 $purchase = isset($purchasePrices[$index]) ? floatval($purchasePrices[$index]) : 0;
-    //                 // 计算行销售合计和子项利润
-    //                 $lineTotal  = round($qty * $price, 2);
-    //                 $lineProfit = round($lineTotal - $purchase, 2);
-    //                 $sumTotal  += $lineTotal;
-    //                 $sumProfit += $lineProfit;
-    //                 // 产品经理ID（默认为0表示未选择）
-    //                 $managerId = 0;
-    //                 if (!empty($managerIds[$index])) {
-    //                     $managerId = intval($managerIds[$index]);
-    //                 }
-    //                 // 明细行数据
-    //                 $itemsData[] = [
-    //                     'order_id'       => $id,                  // 关联订单ID
-    //                     'line_no'        => $index + 1,           // 行号
-    //                     'product_id'     => (string)$pid,         // 产品ID
-    //                     'product_name'   => $pnameText,           // 产品名称文本
-    //                     'spec_model'     => $specModels[$index] ?? '',
-    //                     'unit'           => $units[$index] ?? '',
-    //                     'qty'            => (int)$qty,
-    //                     'unit_price'     => number_format($price, 2, '.', ''),
-    //                     'total_price'    => number_format($lineTotal, 2, '.', ''),
-    //                     'purchase_price' => number_format($purchase, 2, '.', ''),
-    //                     'sub_profit'     => number_format($lineProfit, 2, '.', ''),
-    //                     'remark'         => $itemRemarks[$index] ?? '',
-    //                     'manager_id'     => $managerId
-    //                 ];
-    //             }
-    //         }
-
-    //         // 汇总订单金额、利润、利润率
-    //         $data['money']       = round($sumTotal, 2);
-    //         $shippingCost        = floatval($data['shipping_cost'] ?? 0);
-    //         $taxAmount           = floatval($data['tax_amount'] ?? 0);
-    //         $debuggingCost       = floatval($data['debugging_cost'] ?? 0);
-    //         $salesCommission     = floatval($data['sales_commission'] ?? 0);
-    //         $finalProfit         = $sumProfit - $shippingCost - $taxAmount - $debuggingCost - $salesCommission;
-    //         $data['profit']      = round($finalProfit, 2);
-    //         $data['margin_rate'] = ($sumTotal > 0) ? round($finalProfit / $sumTotal * 100, 2) : 0;
-
-    //         // 更新主表产品名称摘要（存第一个产品名称，加“等”表示多个）
-    //         if (!empty($productIds)) {
-    //             $firstPid   = (int)($productIds[0] ?? 0);
-    //             $firstName  = $idNameMap[$firstPid] ?? '';
-    //             if ($firstName !== '') {
-    //                 $data['product_name'] = $firstName . (count($productIds) > 1 ? ' 等' : '');
-    //             }
-    //         }
-
-    //         // 执行数据库更新（事务）
-    //         Db::startTrans();
-    //         try {
-    //             // 更新订单主表
-    //             $result = Db::name('crm_client_order')->where('id', $id)->update($data);
-    //             if ($result === false) {
-    //                 throw new \Exception('主订单更新失败');
-    //             }
-    //             // 删除旧的明细行
-    //             Db::name('crm_order_item')->where('order_id', $id)->delete();
-    //             // 插入新的明细行数据
-    //             if (!empty($itemsData)) {
-    //                 $res = Db::name('crm_order_item')->insertAll($itemsData);
-    //                 if ($res === false || $res != count($itemsData)) {
-    //                     throw new \Exception('订单明细更新失败');
-    //                 }
-    //             }
-    //             Db::commit();
-    //             return json(['code' => 0, 'msg' => '编辑成功！']);
-    //         } catch (\Exception $e) {
-    //             Db::rollback();
-    //             return json(['code' => -200, 'msg' => '编辑失败！' . $e->getMessage()]);
-    //         }
-    //     }
-
-    //     // ==== GET请求：加载编辑页面 ====
-    //     $orderId = Request::param('id/d');
-    //     $order = Db::name('crm_client_order')->where('id', $orderId)->find();
-    //     if (!$order) {
-    //         $this->error('订单不存在或已删除');
-    //     }
-    //     // 查询该订单关联的产品明细行
-    //     $items = Db::name('crm_order_item')->where('order_id', $orderId)->select();
-    //     // 查询下拉选项数据（团队、来源、客户性质、运营人员、产品列表、协同人、产品经理等）
-    //     $teamList = $this->getTeamList();
-    //     $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
-    //     $this->assign('teamList', $teamList);
-    //     $this->assign('sourceList', $sourceList);
-    //     $this->assign('customer_type', self::CUSTOMER_TYPE);
-    //     // 当前登录用户信息
-    //     $this->assign('username', Session::get('username'));
-    //     $this->assign('team_name', Session::get('team_name'));
-    //     // 运营人员列表及映射
-    //     $yyData = $this->getYyList();
-    //     $operUserList = $yyData['_yyList'];
-    //     $this->assign('operUserList', $operUserList);
-    //     $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
-    //     // 产品列表（带分类名）
-    //     $currentAdmin = \app\admin\model\Admin::getMyInfo();
-    //     $where = [];
-    //     if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
-    //         $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
-    //     }
-    //     $productRows = Db::name('crm_products')->alias('p')
-    //         ->leftJoin('crm_product_category c', 'p.category_id = c.id')
-    //         ->where($where)
-    //         ->group('p.product_name, c.category_name')
-    //         ->field('MIN(p.id) as id, p.product_name, c.category_name')
-    //         ->order('p.product_name', 'asc')
-    //         ->select();
-    //     $this->assign('productList', $productRows);
-    //     // 协同人列表（xmSelect数据）
-    //     $teamName = Session::get('team_name') ?: '';
-    //     $adminList = Db::name('admin')
-    //         ->where('group_id', '<>', 1)
-    //         ->where(function ($query) use ($teamName) {
-    //             if ($teamName) $query->where('team_name', $teamName);
-    //         })
-    //         ->field('admin_id, username')
-    //         ->select();
-    //     $collaboratorData = [];
-    //     // 当前订单协同人ID数组，用于标记选中
-    //     $currentJpIds = [];
-    //     if (!empty($order['joint_person'])) {
-    //         $currentJpIds = explode(',', $order['joint_person']);
-    //     }
-    //     foreach ($adminList as $admin) {
-    //         $item = ['name' => $admin['username'], 'value' => $admin['admin_id']];
-    //         if (in_array($admin['admin_id'], $currentJpIds)) {
-    //             $item['selected'] = true;  // 默认选中
-    //         }
-    //         $collaboratorData[] = $item;
-    //     }
-    //     $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
-    //     // 查询所有产品经理列表
-    //     $managerList = Db::name('admin')
-    //         ->where('group_id', 14)
-    //         ->field('admin_id, username')
-    //         ->order('username', 'asc')
-    //         ->select();
-    //     $this->assign('managerList', $managerList);
-    //     // 分配订单主表和明细数据给模板
-    //     $this->assign('orderInfo', $order);
-    //     $this->assign('orderItems', $items);
-    //     return $this->fetch('order/edit');
-    // }
 
     // //编辑客户第3版
     public function edit()
