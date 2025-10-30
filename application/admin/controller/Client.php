@@ -1327,6 +1327,15 @@ class Client extends Common
                 $this->redisUnLock();
                 return fail($require_check);
             }
+            
+            // 2) 客户名称查重（检查 crm_leads 表中是否已存在相同客户名称）
+            $khName = Request::param('kh_name');
+            $existingLead = Db::table('crm_leads')->where('kh_name', $khName)->find();
+            if ($existingLead) {
+                // 若客户名称重复，则释放锁并返回失败信息
+                $this->redisUnLock();
+                return fail('客户名称重复，请更换客户名称');
+            }
 
             // 2) 组装 leads 数据
             $data['kh_name']      = Request::param('kh_name');
