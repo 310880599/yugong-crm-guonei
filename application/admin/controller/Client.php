@@ -1327,7 +1327,7 @@ class Client extends Common
                 $this->redisUnLock();
                 return fail($require_check);
             }
-            
+
             // 2) 客户名称查重（检查 crm_leads 表中是否已存在相同客户名称）
             $khName = Request::param('kh_name');
             $existingLead = Db::table('crm_leads')->where('kh_name', $khName)->find();
@@ -1508,6 +1508,19 @@ class Client extends Common
                 $this->redisUnLock();
                 return fail('参数错误：缺少ID');
             }
+
+            $kh_name = Request::param('kh_name');
+
+            // 检查除当前记录外是否存在相同客户名称
+            $exists = Db::table('crm_leads')
+                        ->where('kh_name', $kh_name)
+                        ->where('id', '<>', $id)
+                        ->find();
+            if ($exists) {
+                // 若客户名称重复，返回错误信息并中断保存
+                return json(['code' => -200, 'msg' => '客户名称重复，请更换客户名称', 'data' => []]);
+            }
+
 
             // 1) 基础校验（与新增保持一致：主电话必填、11位；辅号可选且11位；两者不能相同）
             $contact = [];
