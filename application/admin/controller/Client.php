@@ -1581,26 +1581,62 @@ class Client extends Common
             $mainPhone = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone', ''));
             $auxPhone  = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone2', ''));
 
+
+            // ** 新增：检查主电话和辅助电话在其他客户中是否存在重复（全局唯一） **
+            $phonesToCheck = array_values(array_filter(array_unique([$mainPhone, $auxPhone]), function ($v) {
+                return $v !== '';
+            }));
+
+            if (!empty($phonesToCheck)) {
+                $duplicateContact = \think\Db::table('crm_contacts')
+                    ->where('is_delete', 0)
+                    ->where('leads_id', '<>', $id)
+                    ->whereIn('contact_value', $phonesToCheck)
+                    ->find();
+
+                if ($duplicateContact) {
+                    $this->redisUnLock();
+                    return json([
+                        'code' => -200,
+                        'msg'  => '电话号码 ' . $duplicateContact['contact_value'] . ' 已存在于其他客户信息中，请更换号码',
+                        'data' => []
+                    ]);
+                }
+            }
+            // ** 新增逻辑结束 **
+
             try {
                 \think\Db::startTrans();
 
                 // 更新主表
                 \think\Db::table('crm_leads')->where('id', $id)->update($data);
 
-                // 先标记旧的主/辅号码为删除（仅 contact_type 1 和 3）
-                \think\Db::table('crm_contacts')
+                
+                // 读取当前有效（is_delete=0）的主/辅号码
+                $current = \think\Db::table('crm_contacts')
                     ->where('leads_id', $id)
                     ->whereIn('contact_type', [1, 3])
                     ->where('is_delete', 0)
-                    ->update(['is_delete' => 1]);
+                    ->column('contact_value', 'contact_type');   // [1 => '主号', 3 => '辅号']
 
-                // 新的联系方式
+                $oldMain = $current[1] ?? '';
+                $oldAux  = $current[3] ?? '';
+
                 $now = date("Y-m-d H:i:s");
                 $contactsToInsert = [];
-                if ($mainPhone !== '') {
+
+                // 主电话：仅当发生变化时，才软删旧号并插入新号
+                if ($mainPhone !== '' && $mainPhone !== $oldMain) {
+                    if ($oldMain !== '') {
+                        \think\Db::table('crm_contacts')
+                            ->where('leads_id', $id)
+                            ->where('contact_type', 1)
+                            ->where('is_delete', 0)
+                            ->update(['is_delete' => 1]);
+                    }
                     $contactsToInsert[] = [
                         'leads_id'      => $id,
-                        'contact_type'  => 1,               // 主电话
+                        'contact_type'  => 1,
                         'contact_extra' => '',
                         'contact_value' => $mainPhone,
                         'vdigits'       => $mainPhone,
@@ -1608,10 +1644,19 @@ class Client extends Common
                         'created_at'    => $now,
                     ];
                 }
-                if ($auxPhone !== '') {
+
+                // 辅助电话：仅当发生变化时，才软删旧号并插入新号
+                if ($auxPhone !== '' && $auxPhone !== $oldAux) {
+                    if ($oldAux !== '') {
+                        \think\Db::table('crm_contacts')
+                            ->where('leads_id', $id)
+                            ->where('contact_type', 3)
+                            ->where('is_delete', 0)
+                            ->update(['is_delete' => 1]);
+                    }
                     $contactsToInsert[] = [
                         'leads_id'      => $id,
-                        'contact_type'  => 3,               // 辅助电话
+                        'contact_type'  => 3,
                         'contact_extra' => '',
                         'contact_value' => $auxPhone,
                         'vdigits'       => $auxPhone,
@@ -1619,9 +1664,12 @@ class Client extends Common
                         'created_at'    => $now,
                     ];
                 }
+
+                // 有变化才批量插入
                 if (!empty($contactsToInsert)) {
                     \think\Db::table('crm_contacts')->insertAll($contactsToInsert);
                 }
+
 
                 // 日志
                 self::addOperLog(
