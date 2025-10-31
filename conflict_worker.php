@@ -5,15 +5,15 @@ require __DIR__ . '/thinkphp/base.php';
 
 // ===== 1. 连接 Redis 队列 =====
 $redis = new \Redis();
-$redis->connect('127.0.0.1', 6379);
+$redis->connect('127.0.0.1', 63790);
 // $redis->auth('your_redis_password');   // 如有密码请取消注释
 
-echo "Starting conflict check queue worker...\n";
+echo "Starting conflict check queue worker for 外贸CRM...\n";
 
 while (true) {
 
     /* ---------- 2. 阻塞取任务 ---------- */
-    $job = $redis->blPop(['conflict_queue'], 0);  // 阻塞直到有任务
+    $job = $redis->blPop(['waimao_conflict_queue'], 0);  // 使用外贸前缀的队列键
     if (!$job) continue;
 
     $payload = json_decode($job[1], true);
@@ -104,8 +104,8 @@ while (true) {
     });
 
     /* ---------- 6. 写入 Redis 结果 & 状态 ---------- */
-    $resultKey = 'conflict_result:' . $taskId;
-    $statusKey = 'conflict_status:' . $taskId;
+    $resultKey = 'waimao_conflict_result:' . $taskId;
+    $statusKey = 'waimao_conflict_status:' . $taskId;
 
     $redis->set($resultKey, json_encode($finalList, JSON_UNESCAPED_UNICODE));
     $redis->expire($resultKey, 300);          // 结果 5 分钟有效

@@ -2770,9 +2770,9 @@ class Client extends Common
             ];
             // 将任务数据推送到Redis队列
             $redis = new \Redis();
-            $redis->connect('127.0.0.1', 6379);
+            $redis->connect('127.0.0.1', 63790);
             // 若Redis设置了密码，可使用 $redis->auth('密码');
-            $redis->rPush('conflict_queue', json_encode($jobData));
+            $redis->rPush('waimao_conflict_queue', json_encode($jobData));  // 推送任务到外贸专用队列
             // 返回任务已创建的响应，携带任务ID
             return json([
                 'code'    => 0,
@@ -2794,11 +2794,11 @@ class Client extends Common
         }
 
         $redis = new \Redis();
-        $redis->connect('127.0.0.1', 6379);
+        $redis->connect('127.0.0.1', 63790);
         // $redis->auth('your_redis_password'); // 如有密码请取消注释
 
-        $statusKey = 'conflict_status:' . $taskId;
-        $resultKey = 'conflict_result:' . $taskId;
+        $statusKey = 'waimao_conflict_status:' . $taskId;
+        $resultKey = 'waimao_conflict_result:' . $taskId;
 
         $status = $redis->get($statusKey);
 
