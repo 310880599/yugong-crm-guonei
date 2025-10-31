@@ -2325,57 +2325,42 @@ class Client extends Common
         $list = model('client')->getChengjiaoClientSearchList($page, $limit, $keyword);
         return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
     }
-    //写跟进
-    public function dialogue()
+    // 获取客户详情和评论记录
+    public function getClientDetailAndComments()
     {
-        $result = Db::table('crm_leads')->where(['id' => Request::param('id')])->find();
-
-        $result['comment'] = Db::table('crm_comment')->alias('com')->join('admin adm', 'com.user_id = adm.admin_id')->where(['leads_id' => Request::param('id')])->field('com.*,adm.username,adm.avatar')->select();
-        foreach ($result['comment'] as $k => $v) {
-            $result['comment'][$k]['reply'] = Db::table('crm_reply')->where(['comment_id' => $v['id']])->select();
+        $clientId = Request::param('id');
+        if (!$clientId) {
+            return json(['code' => 1, 'msg' => '缺少客户ID参数']);
         }
-        $result['contacts'] = Db::table('crm_contacts')->where('is_delete', 0)->where(['leads_id' => Request::param('id')])->select();
-        $contactGroup = $this->formatContact($result['contacts'])[$result['id']];
-        $result['contacts'] = $this->getContactType($contactGroup);
-        $cid = Session::get('aid'); //获取当前登录账号
-        $curname = Session::get('username'); //获取当前登录账
-        //$this ->assign('cid',$cid);  //获取当前登录账号$data['id']
-        $group_id = Db::table('admin')->where(['admin_id' => $cid])->field('group_id')->find();
 
-
-        $this->assign('group_id', $group_id['group_id']);  //获取当前登录权限组账号
-
-        $this->assign('curname', $curname);  //获取当前登录账号
-
-        $this->assign('result', $result);
-        //$this ->assign('result1',integer($result['id']));  //跟进上一个  下一个 获取当前id。
-        return $this->fetch('client/dialogue');
-    }
-
-    //评论
-    public function comment()
-    {
-
-        $data['leads_id'] = Request::param('leads_id');
-        $data['user_id'] = Session::get('aid');
-        $data['reply_msg'] = Request::param('reply_msg');
-        $data['create_date'] = time();
-
-        //更新跟进记录
-        $genjin['last_up_records'] = $data['reply_msg'];
-        $genjin['last_up_time'] = date("Y-m-d H:i:s", $data['create_date']);
-        $genjin['ut_time'] = date("Y-m-d H:i:s", time());
-
-        Db::table('crm_leads')->where(['id' => $data['leads_id']])->update($genjin);
-
-        $result = Db::table('crm_comment')->insert($data);
-        $data['create_date'] = date("Y年m月d日 H:i", $data['create_date']);
-
-        if ($result) {
-            return json(['code' => 0, 'msg' => '评论成功！', 'data' => $data]);
-        } else {
-            return json(['code' => 1, 'msg' => '评论失败！']);
+        // 获取客户信息
+        $client = Db::table('crm_leads')->where(['id' => $clientId])->find();
+        if (!$client) {
+            return json(['code' => 1, 'msg' => '客户不存在']);
         }
+
+        // 获取客户的评论记录
+        $comments = Db::table('crm_comment')
+            ->alias('com')
+            ->join('admin adm', 'com.user_id = adm.admin_id')
+            ->where(['leads_id' => $clientId])
+            ->field('com.*, adm.username, adm.avatar')
+            ->order('com.create_date desc')
+            ->select();
+
+        // 格式化时间
+        foreach ($comments as &$comment) {
+            $comment['create_date'] = date("Y年m月d日 H:i", $comment['create_date']);
+        }
+
+        return json([
+            'code' => 0,
+            'data' => [
+                'client' => $client,
+                'comments' => $comments
+            ],
+            'msg' => '获取成功'
+        ]);
     }
 
     //回复
