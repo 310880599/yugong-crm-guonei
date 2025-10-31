@@ -16,11 +16,11 @@ return [
     'hostname'        => '127.0.0.1',
     // 数据库名
     // 'database'        => 'crm',
-    'database'        => 'guoneizuixintwo',
+    'database'        => 'crmneimao',
     // 用户名
-    'username'        => 'guoneizuixintwo',
+    'username'        => 'crmneimao',
     // 密码
-    'password'        => '963852741',
+    'password'        => 'hjRTia3LjW2NyzcT',
     // 端口
     'hostport'        => '3306',
     // 连接dsn
