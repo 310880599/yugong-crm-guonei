@@ -379,13 +379,12 @@ layui.use(['table','form','upload','util','laydate'], function () {
                         '<div class="timeline-content">' +
                         '<img src="{$Think.session.avatar|default="/static/admin/images/0.jpg"}" class="avatar" onerror="this.src=\'/static/admin/images/0.jpg\'">' +
                         '<strong>{$Think.session.username}：</strong>' +
-                        res.data.reply_msg +
+                        replyMsg +
                         '</div>' +
                         '</div>';
                     $('#follow-history-list').prepend(historyHtml);
                     
-                    // 更新最新跟进记录显示
-                    $('#follow-last-record').val(res.data.reply_msg);
+                    $('#follow-last-record').val(replyMsg);
                     $('#follow-last-time').text(createDate);
                     
                     // 更新表格中的最新跟进记录
