@@ -2325,6 +2325,33 @@ class Client extends Common
         $list = model('client')->getChengjiaoClientSearchList($page, $limit, $keyword);
         return $result = ['code' => 0, 'msg' => '获取成功!', 'data' => $list['data'], 'count' => $list['total'], 'rel' => 1];
     }
+
+    //评论
+    public function comment()
+    {
+
+        $data['leads_id'] = Request::param('leads_id');
+        $data['user_id'] = Session::get('aid');
+        $data['reply_msg'] = Request::param('reply_msg');
+        $data['create_date'] = time();
+
+        //更新跟进记录
+        $genjin['last_up_records'] = $data['reply_msg'];
+        $genjin['last_up_time'] = date("Y-m-d H:i:s", $data['create_date']);
+        $genjin['ut_time'] = date("Y-m-d H:i:s", time());
+
+        Db::table('crm_leads')->where(['id' => $data['leads_id']])->update($genjin);
+
+        $result = Db::table('crm_comment')->insert($data);
+        $data['create_date'] = date("Y年m月d日 H:i", $data['create_date']);
+
+        if ($result) {
+            return json(['code' => 0, 'msg' => '评论成功！', 'data' => $data]);
+        } else {
+            return json(['code' => 1, 'msg' => '评论失败！']);
+        }
+    }
+
     // 获取客户详情和评论记录
     public function getClientDetailAndComments()
     {
