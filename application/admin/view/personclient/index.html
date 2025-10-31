@@ -116,10 +116,78 @@
 
     <table class="layui-table" id="table-list" lay-filter="table-list"></table>
 </div>
-
+<!-- 跟进弹窗 -->
+<div id="follow-dialog" style="display: none;">
+    <div class="follow-container">
+        <div class="follow-header">
+            <h3>客户跟进</h3>
+        </div>
+        <div class="follow-content">
+            <div class="follow-info">
+                <div class="info-item">
+                    <span class="info-label">客户ID:</span>
+                    <span id="follow-client-id"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">客户名称:</span>
+                    <span id="follow-client-name"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">联系人:</span>
+                    <span id="follow-contact"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">地区:</span>
+                    <span id="follow-area"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">客户来源:</span>
+                    <span id="follow-source"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">客户级别:</span>
+                    <span id="follow-rank"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">负责人:</span>
+                    <span id="follow-user"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">创建时间:</span>
+                    <span id="follow-create-time"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">最后跟进:</span>
+                    <span id="follow-last-time"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">跟进记录:</span>
+                    <textarea id="follow-last-record" class="layui-textarea" readonly style="height: 80px;"></textarea>
+                </div>
+            </div>
+            <div class="follow-history">
+                <h4>跟进历史</h4>
+                <div id="follow-history-list" style="max-height: 300px; overflow-y: auto;">
+                    <!-- 跟进历史将通过JS动态加载 -->
+                </div>
+                <div style="margin-top: 20px;">
+                    <h4>添加跟进记录</h4>
+                    <div class="layui-form-item layui-form-text">
+                        <textarea name="reply_msg" id="reply_msg" required lay-verify="required"
+                            placeholder="请输入跟进内容" class="layui-textarea" style="height: 100px;"></textarea>
+                    </div>
+                    <div class="layui-form-item">
+                        <input type="hidden" name="leads_id" id="leads_id" value="">
+                        <button class="layui-btn" lay-filter="btn_comment" lay-submit id="submit-comment">提交记录</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- 操作列 -->
 <script type="text/html" id="action">
-    <a class="layui-btn layui-btn-primary layui-btn-xs" href="{:url('dialogue')}?id={{d.id}}"><i class="layui-icon">&#xe654;</i>写跟进</a>
+     <a class="layui-btn layui-btn-primary layui-btn-xs follow-btn" href="javascript:void(0);" data-id="{{d.id}}"><i class="layui-icon">&#xe654;</i>写跟进</a>
     <a class="layui-btn layui-btn-xs" data-id="{{d.id}}" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
     <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
     <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
@@ -180,7 +248,145 @@ layui.use(['table','form','upload','util','laydate'], function () {
         cols: cols,
         done: bindResizeSave
     });
+ // 点击写跟进按钮打开弹窗
+    $(document).on('click', '.follow-btn, .client-link', function() {
+        var clientId = $(this).data('id');
+        openFollowDialog(clientId);
+    });
 
+      // 打开跟进弹窗
+    function openFollowDialog(clientId) {
+        // 显示加载提示
+        var loading = layer.load(1, {shade: [0.1, '#fff']});
+        
+        // 获取客户信息和跟进记录
+        $.ajax({
+            url: "{:url('Client/getClientDetailAndComments')}",
+            method: 'GET',
+            data: {id: clientId},
+            success: function(res) {
+                layer.close(loading);
+                if (res.code === 0) {
+                    var clientData = res.data.client;
+                    var comments = res.data.comments;
+                    
+                    // 填充客户信息
+                    $('#follow-client-id').text(clientData.id);
+                    $('#follow-client-name').text(clientData.kh_name);
+                    $('#follow-contact').text(clientData.kh_contact);
+                    $('#follow-area').text(clientData.xs_area);
+                    $('#follow-source').text(clientData.kh_status);
+                    $('#follow-rank').text(clientData.kh_rank);
+                    $('#follow-user').text(clientData.pr_user);
+                    $('#follow-create-time').text(clientData.at_time);
+                    $('#follow-last-time').text(clientData.last_up_time || '暂无');
+                    $('#follow-last-record').val(clientData.last_up_records || '暂无记录');
+                    $('#leads_id').val(clientData.id);
+                    
+                    // 填充跟进历史
+                    var html = '';
+                    if (comments.length > 0) {
+                        $.each(comments, function(index, item) {
+                            html += '<div class="timeline-item">' +
+                                '<div class="timeline-title">' + item.create_date + '</div>' +
+                                '<div class="timeline-content">' +
+                                '<img src="' + (item.avatar || '/static/admin/images/0.jpg') + '" class="avatar" onerror="this.src=\'/static/admin/images/0.jpg\'">' +
+                                '<strong>' + item.username + '：</strong>' +
+                                item.reply_msg +
+                                '</div>' +
+                                '</div>';
+                        });
+                    } else {
+                        html = '<p>暂无跟进记录</p>';
+                    }
+                    $('#follow-history-list').html(html);
+                    
+                    // 显示弹窗
+                    layer.open({
+                        type: 1,
+                        title: '客户跟进 - ' + clientData.kh_name,
+                        area: ['90%', '80%'],
+                        content: $('#follow-dialog'),
+                        zIndex: layer.zIndex,
+                        key: true, // 启用键盘事件，包括ESC关闭
+                        success: function(layero, index) {
+                            // 确保弹窗内容正确显示
+                            $('#follow-dialog').show();
+                            // 确保弹窗在最上层
+                            layer.setTop(layero);
+                        },
+                        end: function() {
+                            // 弹窗完全关闭后，确保元素被正确隐藏并移除遮挡
+                            $('#follow-dialog').hide().appendTo('body');
+                        }
+                    });
+                } else {
+                    layer.msg(res.msg || '获取客户信息失败');
+                }
+            },
+            error: function() {
+                layer.close(loading);
+                layer.msg('网络错误，获取客户信息失败');
+            }
+        });
+    }
+    // 提交跟进记录
+    $('#submit-comment').on('click', function() {
+        var replyMsg = $('#reply_msg').val();
+        var leadsId = $('#leads_id').val();
+        
+        if (!replyMsg) {
+            layer.msg('请输入跟进内容');
+            return;
+        }
+        
+        // 显示加载提示
+        var loading = layer.load(1, {shade: [0.1, '#fff']});
+        
+        $.ajax({
+            method: 'post',
+            url: "{:url('Client/comment')}",
+            data: {
+                reply_msg: replyMsg,
+                leads_id: leadsId
+            },
+            success: function (res) {
+                layer.close(loading);
+                if (res.code === 0) {
+                    layer.msg(res.msg);
+                    $('#reply_msg').val('');
+                    
+                    // 更新历史记录
+                    var now = new Date();
+                    var createDate = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 ' 
+                        + now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+                    
+                    var historyHtml = '<div class="timeline-item">' +
+                        '<div class="timeline-title">' + createDate + '</div>' +
+                        '<div class="timeline-content">' +
+                        '<img src="{$Think.session.avatar|default="/static/admin/images/0.jpg"}" class="avatar" onerror="this.src=\'/static/admin/images/0.jpg\'">' +
+                        '<strong>{$Think.session.username}：</strong>' +
+                        res.data.reply_msg +
+                        '</div>' +
+                        '</div>';
+                    $('#follow-history-list').prepend(historyHtml);
+                    
+                    // 更新最新跟进记录显示
+                    $('#follow-last-record').val(res.data.reply_msg);
+                    $('#follow-last-time').text(createDate);
+                    
+                    // 更新表格中的最新跟进记录
+                    tableIns.reload();
+                } else {
+                    layer.msg(res.msg);
+                }
+            },
+            error: function () {
+                layer.close(loading);
+                layer.msg('提交失败');
+            }
+        });
+    });
     // 拖拽列宽后的保存
     function bindResizeSave() {
         $(document).off('mouseup.saveWidth').on('mouseup.saveWidth', function () {
