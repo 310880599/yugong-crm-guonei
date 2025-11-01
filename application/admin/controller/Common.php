@@ -15,24 +15,11 @@ class Common extends Controller
         3 => '3s'
     ];
     public  $channel_map = [
-        'ymx' => 'YMX',
-        '亚马逊' => 'YMX',
-        'am' => 'AM',
-        '阿里' => 'AM',
-        'smt' => 'SMT',
-        '速卖通' => 'SMT',
-        'sem' => 'SEM',
-        'seo' => 'SEO',
-        'tk' => 'TK',
-        'tiktok' => 'TK',
-        '抖音' => 'TK',
-        'SEM' => 'SEM',
-        'SEO' => 'SEO',
-        'TK' => 'TK',
-        'SMT' => 'SMT',
-        'AM' => 'AM',
-        'YMX' => 'YMX',
-        '中国制造' => 'MIC',
+        'c端' => 'C端',
+        '抖音' => '抖音',
+        'sem' => '竞价',
+        'SEM' => '竞价',
+        '竞价' => '竞价',
     ];
 
     public $yygid = 12; //运营id
@@ -333,5 +320,71 @@ class Common extends Controller
     function htmlentities_trim($value)
     {
         return trim(htmlentities($value, ENT_QUOTES, 'UTF-8'));
+    }
+
+    // 根据渠道获取店铺列表（从数据库读取，关联crm_client_status表）
+    // channel参数是映射后的渠道名称（如：C端、抖音、竞价）
+    // status_name是crm_client_status表的原始status_name（如：c端、抖音、SEM）
+    public function getShopsByChannel($channel, $status_name = null)
+    {
+        if (empty($channel)) {
+            return [];
+        }
+        
+        try {
+            // 检查表是否存在（考虑表前缀）
+            $prefix = config('database.prefix');
+            $tableName = $prefix . 'crm_operation_shops';
+            // 使用参数化查询避免SQL注入
+            $tables = Db::query("SHOW TABLES LIKE ?", [$tableName]);
+            if (empty($tables)) {
+                // 表不存在，返回空数组
+                return [];
+            }
+            
+            // shops表的channel字段存储的是crm_client_status表的status_name值
+            // 所以需要通过status_name来查询，而不是映射后的channel名称
+            $queryChannel = $status_name;
+            
+            // 如果没有提供status_name，尝试通过channel_map反向查找
+            if (empty($queryChannel)) {
+                foreach ($this->channel_map as $key => $value) {
+                    if ($value === $channel) {
+                        $queryChannel = $key;
+                        break;
+                    }
+                }
+                // 如果还是找不到，尝试直接使用channel（可能是小写）
+                if (empty($queryChannel)) {
+                    $queryChannel = strtolower($channel);
+                }
+            }
+            
+            // 通过channel字段（存储的是status_name值）查询店铺
+            $shops = Db::name('crm_operation_shops')
+                ->where('channel', $queryChannel)
+                ->where('is_active', 1)
+                ->order('sort', 'asc')
+                ->order('id', 'asc')
+                ->field('id, shop_name as name, channel')
+                ->select();
+            
+            // 转换为统一格式
+            $result = [];
+            if ($shops) {
+                foreach ($shops as $shop) {
+                    $result[] = [
+                        'id' => $shop['id'],
+                        'name' => $shop['name'],
+                        'channel' => $shop['channel']
+                    ];
+                }
+            }
+            
+            return $result;
+        } catch (\Exception $e) {
+            // 如果查询出错，返回空数组（错误信息会在调用处处理）
+            return [];
+        }
     }
 }

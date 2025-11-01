@@ -1,4 +1,66 @@
 {include file="common/head"/}
+<style>
+    /* 修复运营端口下拉列表被遮挡的问题 */
+    #operation_ports_select + .layui-form-select,
+    #channel-select + .layui-form-select {
+        position: relative;
+        z-index: 9999;
+    }
+    
+    #operation_ports_select + .layui-form-select dl,
+    #channel-select + .layui-form-select dl {
+        position: absolute !important;
+        z-index: 10000 !important;
+        max-height: 300px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #d2d2d2;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    }
+    
+    /* 确保多选下拉框的下拉列表在最上层 */
+    #port-item .layui-form-select,
+    #channel-item .layui-form-select {
+        position: relative;
+        z-index: 9999;
+    }
+    
+    #port-item .layui-form-select dl,
+    #channel-item .layui-form-select dl {
+        z-index: 10000 !important;
+        position: absolute !important;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    /* 修复页面其他可能的遮挡问题 */
+    .admin-main {
+        position: relative;
+        z-index: 1;
+        overflow: visible;
+    }
+    
+    .layui-form-item {
+        position: relative;
+        z-index: auto;
+        overflow: visible;
+    }
+    
+    /* 确保下拉列表在所有元素之上 */
+    .layui-form-select.layui-form-selected dl {
+        z-index: 10001 !important;
+    }
+    
+    /* 当表单容器有overflow属性时，确保下拉框可以显示 */
+    .layui-form-pane {
+        overflow: visible !important;
+    }
+    
+    /* 修复可能存在的父容器遮挡问题 */
+    .layui-form-pane .layui-form-item {
+        overflow: visible !important;
+    }
+</style>
 <div class="admin-main layui-anim layui-anim-upbit">
     <fieldset class="layui-elem-field layui-field-title">
         <legend>{$title}</legend>
@@ -128,6 +190,182 @@
             $('#adPic').attr('src', info.avatar);
         }
         form.render();
+        
+        // 存储已选择的店铺ID
+        var selectedShopIds = [];
+        
+        // 获取店铺列表
+        function getShopList(channelValue) {
+            $('#port-item').remove();
+            if (!channelValue) {
+                return;
+            }
+            
+            var adminId = (info && info.admin_id) ? info.admin_id : 0;
+            var url = "{:url('getShops')}";
+            
+            // 获取对应的status_id
+            var statusId = 0;
+            var statusName = '';
+            if (window.channelDataMap && window.channelDataMap[channelValue]) {
+                statusId = window.channelDataMap[channelValue].status_id;
+                statusName = window.channelDataMap[channelValue].status_name;
+            } else {
+                // 如果没有找到，尝试从select中获取
+                var $channelOption = $('#channel-select option:selected');
+                if ($channelOption.length > 0) {
+                    statusId = $channelOption.data('status-id') || 0;
+                    statusName = $channelOption.data('status-name') || '';
+                }
+            }
+            
+            $.get(url, { 
+                channel: channelValue, 
+                admin_id: adminId,
+                status_id: statusId,
+                status_name: statusName
+            }, function (res) {
+                // 调试信息
+                if (res.code === 0) {
+                    console.log('获取店铺失败:', res.msg);
+                    if (res.debug) {
+                        console.log('调试信息:', res.debug);
+                    }
+                    layer.msg(res.msg, { icon: 2, time: 3000 });
+                    return;
+                }
+                
+                if (res.code > 0 && res.data && res.data.length > 0) {
+                    // 创建运营端口选择框HTML
+                    var portHtml = '<div class="layui-form-item" id="port-item">'
+                        + '<label class="layui-form-label">运营端口</label>'
+                        + '<div class="layui-input-4">'
+                        + '<select name="operation_ports[]" id="operation_ports_select" multiple lay-verify="required" lay-search lay-filter="portSelect">';
+                    
+                    // 获取已选中的店铺名称（现在存储的是店铺名称，不是ID）
+                    var selectedPorts = [];
+                    if (info && info.operation_ports) {
+                        selectedPorts = info.operation_ports.split(',').map(function(name) {
+                            return String(name.trim()); // 店铺名称
+                        });
+                        selectedShopIds = selectedPorts; // 存储已选择的店铺名称
+                    } else {
+                        selectedShopIds = [];
+                    }
+                    
+                    // 动态添加店铺选项（使用店铺名称作为value）
+                    $.each(res.data, function (index, item) {
+                        var sel = '';
+                        var disabled = '';
+                        var shopName = String(item.name).trim(); // 店铺名称
+                        var itemValue = shopName; // 使用店铺名称作为value
+                        
+                        // 如果当前管理员已选中，则选中
+                        if (selectedPorts.indexOf(shopName) !== -1) {
+                            sel = 'selected';
+                        }
+                        
+                        // 保存原始文本
+                        var originalName = item.name;
+                        
+                        // 如果已被其他管理员使用，禁用并标记
+                        if (item.is_used == 1) {
+                            disabled = 'disabled';
+                            portHtml += '<option ' + sel + ' ' + disabled + ' value="' + itemValue + '" data-shop-name="' + shopName + '" data-original-text="' + originalName + '" title="已被其他管理员使用">' + originalName + '（已占用）</option>';
+                        } else {
+                            // 可用店铺
+                            portHtml += '<option ' + sel + ' value="' + itemValue + '" data-shop-name="' + shopName + '" data-original-text="' + originalName + '">' + originalName + '</option>';
+                        }
+                    });
+                    
+                    // 初始化时更新可用性状态
+                    setTimeout(function() {
+                        updateShopAvailability();
+                    }, 100);
+                    
+                    portHtml += '</select></div></div>';
+                    
+                    // 插入到渠道选择框后面
+                    $('#channel-item').after(portHtml);
+                    form.render('select'); // 重新渲染表单
+                    
+                    // 渲染后设置z-index，确保下拉列表不被遮挡
+                    setTimeout(function() {
+                        var $portSelect = $('#operation_ports_select').next('.layui-form-select');
+                        if ($portSelect.length > 0) {
+                            $portSelect.css('z-index', '10000');
+                            $portSelect.find('dl').css({
+                                'z-index': '10001',
+                                'position': 'absolute'
+                            });
+                        }
+                    }, 200);
+                    
+                    // 监听店铺选择变化
+                    form.on('select(portSelect)', function(data) {
+                        updateShopAvailability();
+                    });
+                    
+                } else {
+                    layer.msg('该渠道暂无店铺数据', { icon: 0 });
+                }
+            }).fail(function() {
+                layer.msg('获取店铺列表失败', { icon: 2 });
+            });
+        }
+        
+        // 更新店铺可用性（选择过的店铺不能再被选择）
+        function updateShopAvailability() {
+            var $select = $('#operation_ports_select');
+            if ($select.length === 0) {
+                return;
+            }
+            
+            // 获取当前选中的所有值（店铺名称）
+            var currentSelected = [];
+            $select.find('option:selected').each(function() {
+                var shopName = $(this).val().trim();
+                if (shopName && currentSelected.indexOf(shopName) === -1) {
+                    currentSelected.push(shopName);
+                }
+            });
+            
+            // 更新所有选项的禁用状态
+            $select.find('option').each(function() {
+                var $option = $(this);
+                var shopName = $option.val().trim();
+                var originalText = $option.data('original-text') || $option.text().replace(/（已选择）|（已占用）/g, '');
+                $option.data('original-text', originalText);
+                
+                // 检查是否已被其他管理员占用
+                var isUsedByOther = $option.text().indexOf('（已占用）') !== -1 && !$option.prop('selected');
+                
+                // 如果店铺已被其他管理员占用，保持禁用状态
+                if (isUsedByOther) {
+                    $option.prop('disabled', true);
+                    return;
+                }
+                
+                // 如果店铺已被当前用户选中，保持可选（允许取消选择）
+                if ($option.prop('selected')) {
+                    $option.prop('disabled', false);
+                    $option.text(originalText);
+                } 
+                // 如果店铺在当前选择列表中但未被选中（重复项），禁用
+                else if (currentSelected.indexOf(shopName) !== -1 && shopName) {
+                    $option.prop('disabled', true);
+                    $option.text(originalText + '（已选择）');
+                }
+                // 其他情况，启用该选项
+                else {
+                    $option.prop('disabled', false);
+                    $option.text(originalText);
+                }
+            });
+            
+            form.render('select'); // 重新渲染
+        }
+        
         function getChannelList(ele) {
             // 发送请求获取渠道列表
             url = "{:url('getChannels')}";
@@ -137,24 +375,52 @@
                     var channelHtml = '<div class="layui-form-item" id="channel-item">'
                         + '<label class="layui-form-label">所属渠道</label>'
                         + '<div class="layui-input-4">'
-                        + '<select name="channel" lay-verify="required">'
+                        + '<select name="channel" id="channel-select" lay-verify="required" lay-filter="channelSelect">'
                         + '<option value="">请选择渠道</option>';
 
-                    // 动态添加渠道选项
-
+                    // 动态添加渠道选项，保存status_id、status_name和店铺列表
+                    var selectedChannel = '';
+                    var channelDataMap = {}; // 存储渠道对应的数据
                     $.each(res.data, function (index, item) {
                         sel = '';
                         if ((info && item.name == info.channel) || (channel && item.name == channel)) {
-                            sel = 'selected class="layui-this"'
+                            sel = 'selected class="layui-this"';
+                            selectedChannel = item.name;
                         }
-                        channelHtml += '<option ' + sel + ' value="' + item.name + '">' + item.name + '</option>';
+                        // 保存渠道数据（包含店铺列表）
+                        channelDataMap[item.name] = {
+                            status_id: item.status_id || item.id,
+                            status_name: item.status_name,
+                            shop_names: item.shop_names || '' // 店铺名称字符串
+                        };
+                        channelHtml += '<option ' + sel + ' value="' + item.name + '" data-status-id="' + (item.status_id || item.id) + '" data-status-name="' + (item.status_name || '') + '" data-shop-names="' + (item.shop_names || '') + '">' + item.name + '</option>';
                     });
+                    
+                    // 将渠道数据映射存储到全局变量
+                    window.channelDataMap = channelDataMap;
 
                     channelHtml += '</select></div></div>';
                     // 先插入渠道选择框，再插入职位单选框
                     $(ele).after(channelHtml);
                     form.val("form", info.org);
                     form.render('select', 'channel'); // 重新渲染表单
+                    
+                    // 渲染后设置z-index，确保下拉列表不被遮挡
+                    setTimeout(function() {
+                        var $channelSelect = $('#channel-select').next('.layui-form-select');
+                        if ($channelSelect.length > 0) {
+                            $channelSelect.css('z-index', '9999');
+                            $channelSelect.find('dl').css({
+                                'z-index': '10000',
+                                'position': 'absolute'
+                            });
+                        }
+                    }, 200);
+                    
+                    // 如果已有选中的渠道，自动加载店铺列表
+                    if (selectedChannel) {
+                        getShopList(selectedChannel);
+                    }
                 } else {
                     layer.msg('获取渠道列表失败', { icon: 2 });
                 }
@@ -192,16 +458,22 @@
                     var channelHtml = '<div class="layui-form-item" id="channel-item">'
                         + '<label class="layui-form-label">所属渠道</label>'
                         + '<div class="layui-input-4">'
-                        + '<select name="channel" lay-verify="required">'
+                        + '<select name="channel" id="channel-select" lay-verify="required" lay-filter="channelSelect">'
                         + '<option value="' + channel + '" selected>' + channel + '</option>'
                         + '</select></div></div>';
                     $formItem.after(channelHtml);
                     form.val("form", info.org);
                     form.render('select', 'channel'); // 重新渲染表单
+                    
+                    // 加载店铺列表
+                    if (channel) {
+                        getShopList(channel);
+                    }
                 }
             } else {
-                // 不是运营用户组时移除渠道选择框
+                // 不是运营用户组时移除渠道选择框和端口选择框
                 $('#channel-item').remove();
+                $('#port-item').remove();
             }
         }
 
@@ -209,6 +481,12 @@
 
         form.on('select(groupSelect)', function (data) {
             handleOperationGroup();
+        });
+        
+        // 监听渠道选择变化
+        form.on('select(channelSelect)', function (data) {
+            var channelValue = data.value;
+            getShopList(channelValue);
         });
         
         form.on('submit(submit)', function (data) {
@@ -252,5 +530,5 @@
                 });
             }
         });
-        });
+    });
 </script>
