@@ -5,7 +5,7 @@ require __DIR__ . '/thinkphp/base.php';
 
 // ===== 1. 连接 Redis 队列 =====
 $redis = new \Redis();
-$redis->connect('127.0.0.1', 63790);
+$redis->connect('127.0.0.1', 6379);
 // $redis->auth('your_redis_password');   // 如有密码请取消注释
 
 echo "Starting conflict check queue worker for 外贸CRM...\n";

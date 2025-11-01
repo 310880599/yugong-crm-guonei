@@ -4,7 +4,7 @@ return [
     'expire'     => 60,             // 任务最大存活时间（秒）
     'default'    => 'default',      // 默认队列名称
     'host'       => '127.0.0.1',
-    'port'       => 63790,          // 外贸CRM使用Redis自定义端口63790
+    'port'       => 6379,          // 外贸CRM使用Redis自定义端口63790
     'password'   => '',             // 如有密码，在此设置
     'select'     => 0,              // 使用第0个Redis数据库
     'timeout'    => 0,              // 超时时间（0表示无限阻塞）
