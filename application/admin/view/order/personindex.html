@@ -46,6 +46,20 @@
         .filtrate-warp .layui-badge:hover {
             color: white !important;
         }
+
+        /* 操作列：按钮一行显示、留出间距、不换行 */
+        .table-actions{ white-space:nowrap; }
+
+        .table-actions .layui-btn{ margin-right:8px; }
+        .table-actions .layui-btn:last-child{ margin-right:0; }
+
+        /* 也可根据需要略微增大按钮点击区域 */
+        .table-actions .layui-btn.layui-btn-xs{ padding:0 10px; }
+
+        /* 防止单元格把按钮挤压换行（可选，按需保留） */
+        .layui-table-view .layui-table-box .layui-table-body .layui-table-cell{
+        /* 不全局加 nowrap，避免影响其他列；只要上面的 .table-actions nowrap 就够了 */
+        }
     </style>
 
 </head>
@@ -218,7 +232,7 @@
     <!-- 是否审核通过 -->
     <!-- {//if $Think.session.aid == 1} -->
     <!-- <a class="layui-btn  layui-btn-xs" lay-event="shenhe"><i class="layui-icon">&#xe642;</i>审核通过</a> -->
-    <a class="layui-btn  layui-btn-xs" lay-event="details"><i class="layui-icon">&#xe642;</i>详情</a>
+    <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="details"><i class="layui-icon">&#xe615;</i> 详情</a>
     {if session('aid') eq 1} 
     <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
@@ -256,7 +270,7 @@
                     { field: 'source', title: '询盘来源' },
                     { field: 'pr_user', title: '负责人', hide: false },
                     { field: 'team_name', title: '团队', hide: false },
-                    { width: 200, title: '操作', toolbar: '#action' }
+                    { title: '操作', toolbar: '#action', width: 320, minWidth: 320, fixed: 'right', align: 'left' }
                 ]],
                 limit: 100, //每页默认显示的数量
 
