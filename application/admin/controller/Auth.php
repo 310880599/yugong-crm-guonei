@@ -119,8 +119,15 @@ class Auth extends Common
             if($data['org'])$data['org'] = $this->org_fgx . implode($this->org_fgx , $data['org']) .$this->org_fgx  ;
             
             // 处理运营端口数据（现在存储的是店铺名称，不是ID）
-            if (isset($data['operation_ports']) && is_array($data['operation_ports'])) {
-                $ports = array_filter(array_map('trim', $data['operation_ports'])); // 过滤空值并去空格
+            if (isset($data['operation_ports']) && !empty($data['operation_ports'])) {
+                // 支持字符串和数组两种格式
+                if (is_array($data['operation_ports'])) {
+                    $ports = array_filter(array_map('trim', $data['operation_ports'])); // 过滤空值并去空格
+                } else {
+                    // 如果是字符串，先转换为数组
+                    $ports = array_filter(array_map('trim', explode(',', $data['operation_ports'])));
+                }
+                
                 if (!empty($ports)) {
                     // 验证店铺是否已被使用（通过店铺名称验证）
                     $channel = $data['channel'] ?? '';
@@ -291,8 +298,15 @@ class Auth extends Common
             }
 
             // 处理运营端口数据（现在存储的是店铺名称，不是ID）
-            if (isset($data['operation_ports']) && is_array($data['operation_ports'])) {
-                $ports = array_filter(array_map('trim', $data['operation_ports'])); // 过滤空值并去空格
+            if (isset($data['operation_ports']) && $data['operation_ports'] !== '') {
+                // 支持字符串和数组两种格式
+                if (is_array($data['operation_ports'])) {
+                    $ports = array_filter(array_map('trim', $data['operation_ports'])); // 过滤空值并去空格
+                } else {
+                    // 如果是字符串，先转换为数组
+                    $ports = array_filter(array_map('trim', explode(',', $data['operation_ports'])));
+                }
+                
                 if (!empty($ports)) {
                     // 验证店铺是否已被使用（通过店铺名称验证）
                     $channel = $data['channel'] ?? '';
@@ -304,13 +318,12 @@ class Auth extends Common
                     }
                     $data['operation_ports'] = implode(',', $ports);
                 } else {
+                    // 如果过滤后为空，设置为空字符串
                     $data['operation_ports'] = '';
                 }
             } else {
-                // 如果没有提交端口数据，保持原有值或设为空
-                if (!isset($data['operation_ports'])) {
-                    unset($data['operation_ports']);
-                }
+                // 如果没有提交端口数据或为空字符串，设置为空字符串
+                $data['operation_ports'] = '';
             }
 
             $msg = $this->validate($data, 'app\admin\validate\Admin');
