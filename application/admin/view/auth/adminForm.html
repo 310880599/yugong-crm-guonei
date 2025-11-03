@@ -1,4 +1,29 @@
-{include file="common/head"/}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{:config('sys_name')}后台管理</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
+    <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
+    <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+    <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
+    <script src="/js/jquery.min.js"></script>
+    <script src="/js/layer.js"></script>
+    <script src="/static/admin/js/select.js"></script>
+    <!-- （可选）引入 xmSelect 插件的样式文件，如有 -->
+    <!-- <link rel="stylesheet" href="/static/plugins/layui/css/xm-select.css" media="all"> -->
+    <!-- 引入 LayUI 核心 JS -->
+    <script src="/static/plugins/layui/layui.js"></script>
+    <!-- 引入 xmSelect 多选插件 JS（确保在 LayUI 之后引入） -->
+    <script src="/static/admin/js/xm-select.js"></script>    
+</head>
+<body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
 <style>
     /* 修复运营端口下拉列表被遮挡的问题 */
     #operation_ports_select + .layui-form-select,
@@ -60,6 +85,82 @@
     .layui-form-pane .layui-form-item {
         overflow: visible !important;
     }
+
+    /* 修复多选下拉框选项列表被父容器遮挡的问题 */
+    #operation_ports_select + .layui-form-select,
+    #channel-select + .layui-form-select {
+        position: relative;
+        z-index: 9999;
+    }
+
+    #operation_ports_select + .layui-form-select dl,
+    #channel-select + .layui-form-select dl {
+        position: absolute !important;
+        z-index: 10000 !important;
+        max-height: 300px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #d2d2d2;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    }
+
+    /* 确保多选下拉框的下拉列表在最上层（针对动态添加的容器） */
+    #port-item .layui-form-select,
+    #channel-item .layui-form-select {
+        position: relative;
+        z-index: 9999;
+    }
+
+    #port-item .layui-form-select dl,
+    #channel-item .layui-form-select dl {
+        position: absolute !important;
+        z-index: 10000 !important;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    /* 修复页面其他可能的遮挡问题 */
+    .admin-main {
+        position: relative;
+        z-index: 1;
+        overflow: visible;
+    }
+    .layui-form-item {
+        position: relative;
+        z-index: auto;
+        overflow: visible;
+    }
+
+    /* 确保下拉列表始终在所有元素之上 */
+    .layui-form-select.layui-form-selected dl {
+        z-index: 10001 !important;
+    }
+
+    /* 当表单容器有 overflow 属性时，确保下拉框可以正常显示 */
+    .layui-form-pane {
+        overflow: visible !important;
+    }
+    .layui-form-pane .layui-form-item {
+        overflow: visible !important;
+    }
+
+    /* 确保主要内容容器允许下拉框溢出显示 */
+    .layui-body, .layui-layout-content {
+        overflow: visible !important;
+    }
+    /* （可选）为运营端口下拉容器单独提升层级 */
+    #port-item .layui-form-select {
+        position: relative;
+        z-index: 9999;
+    }
+    #port-item .layui-form-select dl {
+        position: absolute !important;
+        z-index: 10000 !important;
+        max-height: 300px;  /* 与已有样式一致，限制下拉最大高度 */
+        overflow-y: auto;   /* 下拉列表内部可滚动 */
+    }
+
+
 </style>
 <div class="admin-main layui-anim layui-anim-upbit">
     <fieldset class="layui-elem-field layui-field-title">
