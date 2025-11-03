@@ -295,33 +295,38 @@
         // 存储已选择的店铺ID
         var selectedShopIds = [];
         
-        // 获取店铺列表（使用 xmSelect 渲染多选下拉）
+        // 获取店铺列表
         function getShopList(channelValue) {
-            $('#port-item').remove();  // 移除旧的运营端口选择框容器
+            $('#port-item').remove();
             if (!channelValue) {
                 return;
             }
+            
             var adminId = (info && info.admin_id) ? info.admin_id : 0;
             var url = "{:url('getShops')}";
-            // 获取对应的 status_id 和 status_name（如果有）
-            var statusId = 0, statusName = '';
+            
+            // 获取对应的status_id
+            var statusId = 0;
+            var statusName = '';
             if (window.channelDataMap && window.channelDataMap[channelValue]) {
-                statusId = window.channelDataMap[channelValue].status_id || 0;
-                statusName = window.channelDataMap[channelValue].status_name || '';
+                statusId = window.channelDataMap[channelValue].status_id;
+                statusName = window.channelDataMap[channelValue].status_name;
             } else {
-                // 从下拉选项中提取数据备用
+                // 如果没有找到，尝试从select中获取
                 var $channelOption = $('#channel-select option:selected');
                 if ($channelOption.length > 0) {
                     statusId = $channelOption.data('status-id') || 0;
                     statusName = $channelOption.data('status-name') || '';
                 }
             }
-            $.get(url, {
-                channel: channelValue,
+            
+            $.get(url, { 
+                channel: channelValue, 
                 admin_id: adminId,
                 status_id: statusId,
                 status_name: statusName
-            }, function(res) {
+            }, function (res) {
+                // 调试信息
                 if (res.code === 0) {
                     console.log('获取店铺失败:', res.msg);
                     if (res.debug) {
@@ -330,56 +335,78 @@
                     layer.msg(res.msg, { icon: 2, time: 3000 });
                     return;
                 }
+                
                 if (res.code > 0 && res.data && res.data.length > 0) {
-                    // 构造运营端口多选下拉的容器 HTML（使用 xmSelect）
-                    var portHtml = 
-                        '<div class="layui-form-item" id="port-item">' +
-                            '<label class="layui-form-label">运营端口</label>' +
-                            '<div class="layui-input-4">' +
-                                '<div id="operationPortsSelect"></div>' +
-                                '<input type="hidden" name="operation_ports" />' +  // 隐藏域用于提交选中的端口
-                            '</div>' +
-                        '</div>';
-                    // 插入容器到渠道选择框后方
-                    $('#channel-item').after(portHtml);
-                    // 准备 xmSelect 数据
+                    // 创建运营端口选择框HTML
+                    var portHtml = '<div class="layui-form-item" id="port-item">'
+                        + '<label class="layui-form-label">运营端口</label>'
+                        + '<div class="layui-input-4">'
+                        + '<select name="operation_ports[]" id="operation_ports_select" multiple lay-verify="required" lay-search lay-filter="portSelect">';
+                    
+                    // 获取已选中的店铺名称（现在存储的是店铺名称，不是ID）
                     var selectedPorts = [];
                     if (info && info.operation_ports) {
                         selectedPorts = info.operation_ports.split(',').map(function(name) {
-                            return name.trim();
+                            return String(name.trim()); // 店铺名称
                         });
+                        selectedShopIds = selectedPorts; // 存储已选择的店铺名称
+                    } else {
+                        selectedShopIds = [];
                     }
-                    var xmData = [];
-                    $.each(res.data, function(index, item) {
-                        var shopName = String(item.name).trim();
-                        var disabledFlag = false;
-                        var displayName = shopName;
-                        if (item.is_used) {
-                            if (selectedPorts.indexOf(shopName) === -1) {
-                                // 已被其他管理员占用的端口，禁用选择
-                                disabledFlag = true;
-                                displayName = shopName + '（已占用）';
-                            } else {
-                                // 已经分配给当前管理员的端口，允许取消选择（不禁用）
-                                disabledFlag = false;
-                                displayName = shopName;
-                            }
+                    
+                    // 动态添加店铺选项（使用店铺名称作为value）
+                    $.each(res.data, function (index, item) {
+                        var sel = '';
+                        var disabled = '';
+                        var shopName = String(item.name).trim(); // 店铺名称
+                        var itemValue = shopName; // 使用店铺名称作为value
+                        
+                        // 如果当前管理员已选中，则选中
+                        if (selectedPorts.indexOf(shopName) !== -1) {
+                            sel = 'selected';
                         }
-                        xmData.push({ name: displayName, value: shopName, disabled: disabledFlag });
+                        
+                        // 保存原始文本
+                        var originalName = item.name;
+                        
+                        // 如果已被其他管理员使用，禁用并标记
+                        if (item.is_used == 1) {
+                            disabled = 'disabled';
+                            portHtml += '<option ' + sel + ' ' + disabled + ' value="' + itemValue + '" data-shop-name="' + shopName + '" data-original-text="' + originalName + '" title="已被其他管理员使用">' + originalName + '（已占用）</option>';
+                        } else {
+                            // 可用店铺
+                            portHtml += '<option ' + sel + ' value="' + itemValue + '" data-shop-name="' + shopName + '" data-original-text="' + originalName + '">' + originalName + '</option>';
+                        }
                     });
-                    // 默认选中值（将已有端口字符串转换为数组）
-                    var initValue = selectedPorts.length > 0 ? selectedPorts : [];
-                    // 渲染 xmSelect 下拉多选框
-                    window.operationPortsSelectInstance = xmSelect.render({
-                        el: '#operationPortsSelect',      // 容器元素的选择器
-                        name: 'operation_ports',          // 提交字段名
-                        layVerify: 'required',            // 验证规则：必填
-                        tips: '请选择运营端口',             // 占位提示文字
-                        filterable: true,                 // 开启搜索过滤
-                        clickClose: false,                // 多选时点击选项不关闭下拉
-                        initValue: initValue,             // 默认选中值数组
-                        data: xmData                      // 下拉选项数据
+                    
+                    // 初始化时更新可用性状态
+                    setTimeout(function() {
+                        updateShopAvailability();
+                    }, 100);
+                    
+                    portHtml += '</select></div></div>';
+                    
+                    // 插入到渠道选择框后面
+                    $('#channel-item').after(portHtml);
+                    form.render('select'); // 重新渲染表单
+                    
+                    // 渲染后设置z-index，确保下拉列表不被遮挡
+                    setTimeout(function() {
+                        var $portSelect = $('#operation_ports_select').next('.layui-form-select');
+                        if ($portSelect.length > 0) {
+                            $portSelect.css('z-index', '10000');
+                            $portSelect.find('dl').css({
+                                'z-index': '10001',
+                                'position': 'absolute'
+                            });
+                        }
+                    }, 200);
+                    
+                    // 监听店铺选择变化
+                    form.on('select(portSelect)', function(data) {
+                        updateShopAvailability();
                     });
+                    
                 } else {
                     layer.msg('该渠道暂无店铺数据', { icon: 0 });
                 }
@@ -387,7 +414,7 @@
                 layer.msg('获取店铺列表失败', { icon: 2 });
             });
         }
-
+        
         // 更新店铺可用性（选择过的店铺不能再被选择）
         function updateShopAvailability() {
             var $select = $('#operation_ports_select');
@@ -563,26 +590,18 @@
             getShopList(channelValue);
         });
         
-        // 表单提交前，将选中的运营端口数组转为逗号字符串写入隐藏域
-        form.on('submit(submit)', function(data) {
-            if (window.operationPortsSelectInstance) {
-                var selectedNames = window.operationPortsSelectInstance.getValue('value');  // 获取选中项的值数组
-                var portsStr = selectedNames.join(',');  
-                $('input[name="operation_ports"]').val(portsStr);    // 设置隐藏域值
-                data.field.operation_ports = portsStr;               // 确保提交字段为字符串
-            }
-            var loading = layer.load(1, { shade: [0.1, '#fff'] });
-            $.post("", data.field, function(res) {
+        form.on('submit(submit)', function (data) {
+            loading = layer.load(1, { shade: [0.1, '#fff'] });
+            $.post("", data.field, function (res) {
                 layer.close(loading);
                 if (res.code > 0) {
-                    layer.msg(res.msg, { time: 1800, icon: 1 }, function() {
+                    layer.msg(res.msg, { time: 1800, icon: 1 }, function () {
                         location.href = res.url;
                     });
                 } else {
                     layer.msg(res.msg, { time: 1800, icon: 2 });
                 }
             });
-            return false;  // 阻止表单默认提交
         });
 
         //普通图片上传
