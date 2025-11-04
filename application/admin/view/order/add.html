@@ -138,7 +138,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">询盘来源</label>
                 <div class="layui-input-4">
-                    <select name="source" id="source" lay-verify="required" lay-filter="kh_status" lay-search="">
+                    <select name="source" id="source" lay-filter="kh_status" lay-search="">
                         <option value="">请选择询盘来源</option>
                         {volist name='sourceList' id='vo'}
                         <option value="{$vo|htmlentities}">{$vo|htmlentities}</option>
@@ -162,7 +162,7 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <select name="oper_user" lay-search lay-verify="required">
+                    <select name="oper_user" lay-search>
                         <option value="">请选择运营人员</option>
                         {volist name="operUserList" id="user"}
                         <option value="{$user.id}">{$user.name}</option>

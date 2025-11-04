@@ -42,5 +42,5 @@ return [
     // 是否长连接
     'persistent' => false,
     // 缓存前缀（根据需要设定，避免键冲突）
-    'prefix'   => '',
+    'prefix'   => 'crm_in_',
 ];
