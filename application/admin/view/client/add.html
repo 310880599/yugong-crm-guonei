@@ -72,18 +72,17 @@
                     </select>
                 </div>
             </div>
-            <!-- 运营人员：可搜索单选下拉（提交用户ID） -->
+            <!-- 来源端口：可搜索单选下拉（根据询盘来源动态更新） -->
             <div class="layui-form-item">
-                <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>
+                <label class="layui-form-label">来源端口</label>
                 <div class="layui-input-4">
-                    <select name="oper_user" lay-search lay-verify="required">
-                        <option value="">请选择运营人员</option>
-                        {volist name="operUserList" id="user"}
-                        <option value="{$user.id}">{$user.name}</option>
-                        {/volist}
+                    <select name="source_port" lay-search>
+                        <option value="">请先选择询盘来源</option>
                     </select>
                 </div>
             </div>
+          
+          
             <!-- 协同人：可搜索多选下拉（提交ID数组） -->
             <div class="layui-form-item">
                 <label class="layui-form-label">协同人<span style="color:red;">*</span></label>
@@ -157,18 +156,34 @@
             }
             boldCategory($('select[name="product_name"]'));
 
-            // 监听“询盘来源”下拉改变，动态过滤对应的运营人员选项
+            // 监听"询盘来源"下拉改变，动态过滤对应的运营人员和来源端口选项
             var yyList = {$yyList|raw};  // 运营人员分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
+            var shopList = {$shopList|raw};  // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
             form.on('select(kh_status)', function (data) {
                 var sourceName = $(data.elem).find("option:selected").text();  // 获取选中的来源名称
+                
+                // 更新运营人员下拉选项
                 var users = yyList[sourceName] || [];                          // 找到该来源对应的运营人员列表
-                // 重置运营人员下拉选项
                 var $oper = $('select[name="oper_user"]');
                 $oper.empty();
                 $oper.append('<option value="">请选择运营人员</option>');
                 $.each(users, function (index, user) {
                     $oper.append('<option value="' + user.id + '">' + user.name + '</option>');
                 });
+                
+                // 更新来源端口下拉选项
+                var shops = shopList[sourceName] || [];                         // 找到该来源对应的店铺列表
+                var $sourcePort = $('select[name="source_port"]');
+                $sourcePort.empty();
+                if (shops.length > 0) {
+                    $sourcePort.append('<option value="">请选择来源端口</option>');
+                    $.each(shops, function (index, shop) {
+                        $sourcePort.append('<option value="' + shop.id + '">' + shop.name + '</option>');
+                    });
+                } else {
+                    $sourcePort.append('<option value="">该来源暂无店铺数据</option>');
+                }
+                
                 form.render('select', '');  // 重新渲染下拉框
             });
 

@@ -71,15 +71,12 @@
             </div>
         </div>
 
-        <!-- 运营人员（按来源联动） -->
+        <!-- 来源端口：可搜索单选下拉（根据询盘来源动态更新） -->
         <div class="layui-form-item">
-            <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>
+            <label class="layui-form-label">来源端口</label>
             <div class="layui-input-4">
-                <select name="oper_user" lay-search lay-verify="required" id="oper_user_select">
-                    <option value="">请选择运营人员</option>
-                    {volist name="operUserList" id="user"}
-                    <option value="{$user.id}" {eq name="result.oper_user" value="$user.id"}selected{/eq}>{$user.name}</option>
-                    {/volist}
+                <select name="source_port" lay-search>
+                    <option value="">请先选择询盘来源</option>
                 </select>
             </div>
         </div>
@@ -143,30 +140,34 @@ layui.use(['form', 'layer', 'jquery'], function () {
     // 渲染下拉框
     form.render('select');
 
-    // 根据来源联动运营人员（键：来源中文名，与新增一致）
-    var yyList = {$yyList|raw}; // { 来源名称: [ {id,name}, ... ] }
+    // 根据来源联动来源端口（键：来源中文名，与新增一致）
+    var shopList = {$shopList|raw}; // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
 
-    function fillOperUsersBySourceName(sourceName, selectedId) {
-        var users = yyList[sourceName] || [];
-        var $oper = $('#oper_user_select');
-        $oper.empty();
-        $oper.append('<option value="">请选择运营人员</option>');
-        $.each(users, function (i, user) {
-            var sel = (String(selectedId) === String(user.id)) ? ' selected' : '';
-            $oper.append('<option value="' + user.id + '"' + sel + '>' + user.name + '</option>');
-        });
+    function fillSourcePortBySourceName(sourceName, selectedPortId) {
+        var shops = shopList[sourceName] || [];
+        var $sourcePort = $('select[name="source_port"]');
+        $sourcePort.empty();
+        if (shops.length > 0) {
+            $sourcePort.append('<option value="">请选择来源端口</option>');
+            $.each(shops, function (i, shop) {
+                var sel = (String(selectedPortId) === String(shop.id)) ? ' selected' : '';
+                $sourcePort.append('<option value="' + shop.id + '"' + sel + '>' + shop.name + '</option>');
+            });
+        } else {
+            $sourcePort.append('<option value="">该来源暂无店铺数据</option>');
+        }
         form.render('select');
     }
 
-    // 初次按当前来源填充运营人员选项
+    // 初次按当前来源填充来源端口选项
     var initSourceName = $('select[name="kh_status"] option:selected').text();
-    var initOperUserId = "{$result.oper_user|default=''}";
-    fillOperUsersBySourceName(initSourceName, initOperUserId);
+    var initSourcePortId = "{$result.source_port|default=''}";
+    fillSourcePortBySourceName(initSourceName, initSourcePortId);
 
     // 监听来源变化
     form.on('select(kh_status)', function (data) {
         var sourceName = $(data.elem).find("option:selected").text();
-        fillOperUsersBySourceName(sourceName, '');
+        fillSourcePortBySourceName(sourceName, ''); // 切换来源时清空来源端口选择
     });
 
     // 提交保存

@@ -1344,6 +1344,16 @@ class Client extends Common
             $data['product_name'] = Request::param('product_name');
             $data['oper_user']    = Request::param('oper_user');
             $data['remark']       = Request::param('remark', '');
+            
+            // 检查 source_port 字段是否存在，如果存在则添加
+            try {
+                $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
+                if (!empty($columns)) {
+                    $data['source_port'] = Request::param('source_port', '');  // 来源端口
+                }
+            } catch (\Exception $e) {
+                // 如果查询失败，忽略该字段
+            }
 
             // 3) 解析并写入协同人（joint_person），支持 数组 / JSON / 逗号分隔
             $jpRaw = Request::param('joint_person');
@@ -1469,13 +1479,62 @@ class Client extends Common
             ->select();
         $this->assign('productList', $productRows);
 
-        $khStatusList = Db::table('crm_client_status')->select();
+        // 检查shop_names字段是否存在
+        try {
+            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
+            $has_shop_names = !empty($columns);
+        } catch (\Exception $e) {
+            $has_shop_names = false;
+        }
+        
+        // 根据字段是否存在决定查询字段
+        if ($has_shop_names) {
+            $khStatusList = Db::table('crm_client_status')->field('id,status_name,shop_names')->select();
+        } else {
+            $khStatusList = Db::table('crm_client_status')->select();
+        }
         $this->assign('khStatusList', $khStatusList);
 
         $yyData = $this->getYyList();
         $operUserList = $yyData['_yyList'];
         $this->assign('operUserList', $operUserList);
         $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
+
+        // 获取店铺列表，按来源名称分组
+        $shopList = [];
+        foreach ($khStatusList as $status) {
+            $statusName = $status['status_name'];
+            $shops = [];
+            
+            // 检查是否有shop_names字段
+            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
+                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
+                foreach ($shop_names as $index => $shop_name) {
+                    if (!empty($shop_name)) {
+                        $shops[] = [
+                            'id' => md5($status['id'] . '_' . $shop_name),
+                            'name' => $shop_name
+                        ];
+                    }
+                }
+            }
+            
+            // 如果shop_names为空，尝试从crm_operation_shops表获取
+            if (empty($shops)) {
+                $commonShops = $this->getShopsByChannel('', $statusName);
+                foreach ($commonShops as $shop) {
+                    $shops[] = [
+                        'id' => $shop['id'],
+                        'name' => $shop['name']
+                    ];
+                }
+            }
+            
+            if (!empty($shops)) {
+                $shopList[$statusName] = $shops;
+            }
+        }
+        $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
 
         $teamName = session('team_name') ?: '';
         $adminList = Db::name('admin')
@@ -1540,6 +1599,16 @@ class Client extends Common
             $data['oper_user']    = \think\facade\Request::param('oper_user');      // 运营人员ID（与你的 add 保持一致）
             $data['remark']       = \think\facade\Request::param('remark', '');
             $data['ut_time']      = date("Y-m-d H:i:s");
+            
+            // 检查 source_port 字段是否存在，如果存在则添加
+            try {
+                $columns = \think\Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
+                if (!empty($columns)) {
+                    $data['source_port'] = \think\facade\Request::param('source_port', '');  // 来源端口
+                }
+            } catch (\Exception $e) {
+                // 如果查询失败，忽略该字段
+            }
 
             // 3) 解析并写入协同人（joint_person），支持 数组 / JSON / 逗号分隔
             $jpRaw = \think\facade\Request::param('joint_person');
@@ -1728,8 +1797,20 @@ class Client extends Common
             ->select();
         $this->assign('productList', $productRows);
 
+        // 检查shop_names字段是否存在
+        try {
+            $columns = \think\Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
+            $has_shop_names = !empty($columns);
+        } catch (\Exception $e) {
+            $has_shop_names = false;
+        }
+        
         // 询盘来源
-        $khStatusList = \think\Db::table('crm_client_status')->select();
+        if ($has_shop_names) {
+            $khStatusList = \think\Db::table('crm_client_status')->field('id,status_name,shop_names')->select();
+        } else {
+            $khStatusList = \think\Db::table('crm_client_status')->select();
+        }
         $this->assign('khStatusList', $khStatusList);
 
         // 运营人员下拉 + 分组（与 add 一致）
@@ -1737,6 +1818,42 @@ class Client extends Common
         $operUserList = $yyData['_yyList'];   // [{id,name}]
         $this->assign('operUserList', $operUserList);
         $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
+
+        // 获取店铺列表，按来源名称分组（与 add 一致）
+        $shopList = [];
+        foreach ($khStatusList as $status) {
+            $statusName = $status['status_name'];
+            $shops = [];
+            
+            // 检查是否有shop_names字段
+            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
+                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
+                foreach ($shop_names as $index => $shop_name) {
+                    if (!empty($shop_name)) {
+                        $shops[] = [
+                            'id' => md5($status['id'] . '_' . $shop_name),
+                            'name' => $shop_name
+                        ];
+                    }
+                }
+            }
+            
+            // 如果shop_names为空，尝试从crm_operation_shops表获取
+            if (empty($shops)) {
+                $commonShops = $this->getShopsByChannel('', $statusName);
+                foreach ($commonShops as $shop) {
+                    $shops[] = [
+                        'id' => $shop['id'],
+                        'name' => $shop['name']
+                    ];
+                }
+            }
+            
+            if (!empty($shops)) {
+                $shopList[$statusName] = $shops;
+            }
+        }
+        $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
 
         // 协同人选项
         $teamName = session('team_name') ?: '';
@@ -2365,6 +2482,124 @@ class Client extends Common
         if (!$client) {
             return json(['code' => 1, 'msg' => '客户不存在']);
         }
+
+        // 获取主/辅电话（1=主电话，3=辅助电话）
+        $mainPhone = '';
+        $auxPhone = '';
+        $contacts = Db::table('crm_contacts')
+            ->where('is_delete', 0)
+            ->where('leads_id', $clientId)
+            ->whereIn('contact_type', [1, 3])
+            ->order('id', 'asc')
+            ->field('contact_type, contact_value')
+            ->select();
+        foreach ($contacts as $c) {
+            if ($c['contact_type'] == 1 && $mainPhone === '') {
+                $mainPhone = $c['contact_value'];
+            } elseif ($c['contact_type'] == 3 && $auxPhone === '') {
+                $auxPhone = $c['contact_value'];
+            }
+        }
+        $client['main_phone'] = $mainPhone;
+        $client['aux_phone'] = $auxPhone;
+
+        // 获取询盘来源中文名称（如果 kh_status 是 ID）
+        $khStatusValue = $client['kh_status'];
+        $statusName = $khStatusValue;
+        if (is_numeric($khStatusValue)) {
+            $statusInfo = Db::table('crm_client_status')->where('id', $khStatusValue)->find();
+            if ($statusInfo) {
+                $statusName = $statusInfo['status_name'];
+            }
+        }
+        $client['kh_status_name'] = $statusName;
+
+        // 获取客户级别名称（如果 kh_rank 是 ID）
+        $khRankValue = $client['kh_rank'];
+        $rankName = $khRankValue;
+        if (is_numeric($khRankValue)) {
+            $rankInfo = Db::table('crm_client_rank')->where('id', $khRankValue)->find();
+            if ($rankInfo) {
+                $rankName = $rankInfo['rank_name'];
+            }
+        }
+        $client['kh_rank_name'] = $rankName;
+
+        // 获取来源端口名称（如果 source_port 字段存在）
+        $client['source_port_name'] = '';
+        try {
+            $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
+            if (!empty($columns) && !empty($client['source_port'])) {
+                $sourcePortId = $client['source_port'];
+                
+                // 尝试从 crm_operation_shops 表查找店铺名称
+                $shopInfo = Db::table('crm_operation_shops')
+                    ->where('id', $sourcePortId)
+                    ->where('is_active', 1)
+                    ->field('shop_name')
+                    ->find();
+                
+                if ($shopInfo) {
+                    $client['source_port_name'] = $shopInfo['shop_name'];
+                } else {
+                    // 如果表中找不到，尝试从 crm_client_status 的 shop_names 字段查找
+                    // source_port 可能是 md5(id + shop_name) 格式，需要反向查找
+                    if (!empty($statusName)) {
+                        $statusInfo = Db::table('crm_client_status')
+                            ->where('status_name', $statusName)
+                            ->field('id, shop_names')
+                            ->find();
+                        
+                        if ($statusInfo && !empty($statusInfo['shop_names'])) {
+                            $shop_names = array_filter(array_map('trim', explode(',', $statusInfo['shop_names'])));
+                            foreach ($shop_names as $shop_name) {
+                                $expectedId = md5($statusInfo['id'] . '_' . $shop_name);
+                                if ($expectedId === $sourcePortId) {
+                                    $client['source_port_name'] = $shop_name;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 如果还是找不到，显示ID
+                    if (empty($client['source_port_name'])) {
+                        $client['source_port_name'] = $sourcePortId;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // 忽略错误
+        }
+
+        // 解析协同人信息（joint_person）
+        $jointPersonIds = [];
+        $jointPersonNames = [];
+        if (!empty($client['joint_person'])) {
+            $jp = $client['joint_person'];
+            if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                // JSON 数组格式
+                $tmp = json_decode($jp, true);
+                if (is_array($tmp)) {
+                    $jointPersonIds = $tmp;
+                }
+            } else {
+                // 逗号分隔格式
+                $jointPersonIds = array_values(array_filter(explode(',', $jp)));
+            }
+            
+            // 查询协同人用户名
+            if (!empty($jointPersonIds)) {
+                $adminMap = Db::table('admin')
+                    ->whereIn('admin_id', $jointPersonIds)
+                    ->column('username', 'admin_id');
+                foreach ($jointPersonIds as $uid) {
+                    $jointPersonNames[] = $adminMap[$uid] ?? (string)$uid;
+                }
+            }
+        }
+        $client['joint_person_ids'] = $jointPersonIds;
+        $client['joint_person_names'] = implode('、', $jointPersonNames);
 
         // 获取客户的评论记录
         $comments = Db::table('crm_comment')

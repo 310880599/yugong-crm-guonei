@@ -78,6 +78,91 @@
                             $sourceSelect.val('');
                         }
                         layui.form.render('select');
+                        // 如果来源匹配成功，更新运营端口选项并自动选择
+                        if (matched) {
+                            // 使用 setTimeout 确保 layui 已经初始化完成
+                            setTimeout(function() {
+                                // 触发 select 事件以更新运营端口选项列表
+                                $sourceSelect.trigger('change');
+                                
+                                // 如果有返回的来源端口值，自动选择
+                                var sourcePortValue = result['msg']['source_port'] || '';
+                                if (sourcePortValue && typeof window.fillSourcePortBySourceName === 'function') {
+                                    // 先更新选项列表
+                                    window.fillSourcePortBySourceName(sourceValue);
+                                    
+                                    // 然后选择对应的端口
+                                    setTimeout(function() {
+                                        var $sourcePort = $('#source_port');
+                                        // 尝试通过值匹配
+                                        var portMatched = false;
+                                        $sourcePort.find('option').each(function() {
+                                            if ($(this).val() === sourcePortValue || $(this).val() === String(sourcePortValue)) {
+                                                $sourcePort.val(sourcePortValue);
+                                                portMatched = true;
+                                                return false;
+                                            }
+                                        });
+                                        if (portMatched) {
+                                            layui.form.render('select');
+                                        }
+                                    }, 200);
+                                } else {
+                                    // 如果没有来源端口值，只更新选项列表
+                                    if (typeof window.fillSourcePortBySourceName === 'function') {
+                                        window.fillSourcePortBySourceName(sourceValue);
+                                    }
+                                }
+                            }, 100);
+                        }
+                        
+                        // 自动填充团队名称
+                        var teamName = result['msg']['team_name'] || '';
+                        if (teamName) {
+                            var $teamSelect = $('#team_name');
+                            // 尝试通过值匹配团队名称
+                            var teamMatched = false;
+                            $teamSelect.find('option').each(function() {
+                                if ($(this).val() === teamName || $(this).text() === teamName) {
+                                    $teamSelect.val($(this).val());
+                                    teamMatched = true;
+                                    return false;
+                                }
+                            });
+                            if (teamMatched) {
+                                layui.form.render('select');
+                            }
+                        }
+                        
+                        // 自动填充协同人
+                        var jointPersonIds = result['msg']['joint_person'] || [];
+                        if (jointPersonIds && jointPersonIds.length > 0) {
+                            // 确保协同人ID是字符串或数字格式
+                            var jointPersonValues = jointPersonIds.map(function(id) {
+                                return String(id);
+                            });
+                            // 使用 setTimeout 确保 xmSelect 已初始化
+                            setTimeout(function() {
+                                // 重新渲染 xmSelect 组件，设置初始值
+                                if (window.collaboratorSelectInstance) {
+                                    // 销毁旧实例
+                                    if (window.collaboratorSelectInstance.destroy) {
+                                        window.collaboratorSelectInstance.destroy();
+                                    }
+                                    // 重新渲染并设置初始值
+                                    window.collaboratorSelectInstance = xmSelect.render({
+                                        el: '#collaboratorSelect',
+                                        name: 'joint_person',
+                                        layVerify: 'required',
+                                        tips: '请选择协同人员',
+                                        filterable: true,
+                                        clickClose: false,
+                                        initValue: jointPersonValues,
+                                        data: window.collaboratorData || []
+                                    });
+                                }
+                            }, 200);
+                        }
                     }
                     $('#checklabel').html(result['msg']['msg']);
                 },
@@ -146,6 +231,15 @@
                     </select>
                 </div>
             </div>
+            <!-- 运营端口：可搜索单选下拉（根据询盘来源动态更新） -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">运营端口</label>
+                <div class="layui-input-4">
+                    <select name="source_port" id="source_port" lay-search>
+                        <option value="">请先选择询盘来源</option>
+                    </select>
+                </div>
+            </div>
             <!-- 收款账户 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">收款账户</label>
@@ -158,18 +252,7 @@
                     </select>
                 </div>
             </div>
-            <!-- 运营人员 -->
-            <div class="layui-form-item">
-                <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>
-                <div class="layui-input-4">
-                    <select name="oper_user" lay-search>
-                        <option value="">请选择运营人员</option>
-                        {volist name="operUserList" id="user"}
-                        <option value="{$user.id}">{$user.name}</option>
-                        {/volist}
-                    </select>
-                </div>
-            </div>
+           
             <!-- 协同人多选下拉 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">协同人<span style="color:red;">*</span></label>
@@ -382,7 +465,10 @@
             });
             // 初始化协同人多选下拉
             var collaboratorData = {$collaboratorList|raw};
-            xmSelect.render({
+            // 将协同人数据保存到全局，以便 changeyewu 函数可以访问
+            window.collaboratorData = collaboratorData;
+            // 将 xmSelect 实例保存到全局，以便 changeyewu 函数可以访问
+            window.collaboratorSelectInstance = xmSelect.render({
                 el: '#collaboratorSelect',
                 name: 'joint_person',
                 layVerify: 'required',
@@ -412,8 +498,26 @@
         // 对初始产品名称下拉选项调用 boldCategory，使分类名加粗
         boldCategory($('select[name="product_name[]"]'));
 
-        // 动态根据询盘来源过滤运营人员选项
+        // 动态根据询盘来源过滤运营人员和运营端口选项
         var yyList = {$yyList|raw};
+        var shopList = {$shopList|raw};  // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
+        
+        // 将函数定义到全局作用域，以便 changeyewu 函数可以访问
+        window.fillSourcePortBySourceName = function(sourceName) {
+            var shops = shopList[sourceName] || [];
+            var $sourcePort = $('#source_port');
+            $sourcePort.empty();
+            if (shops.length > 0) {
+                $sourcePort.append('<option value="">请选择运营端口</option>');
+                $.each(shops, function (index, shop) {
+                    $sourcePort.append('<option value="' + shop.id + '">' + shop.name + '</option>');
+                });
+            } else {
+                $sourcePort.append('<option value="">该来源暂无店铺数据</option>');
+            }
+            form.render('select');
+        };
+        
         form.on('select(kh_status)', function (data) {
             var sourceName = $(data.elem).find("option:selected").text();
             var users = yyList[sourceName] || [];
@@ -422,6 +526,10 @@
             $.each(users, function (index, user) {
                 $oper.append('<option value="' + user.id + '">' + user.name + '</option>');
             });
+            // 更新运营端口选项
+            if (typeof window.fillSourcePortBySourceName === 'function') {
+                window.fillSourcePortBySourceName(sourceName);
+            }
             form.render('select');
         });
 

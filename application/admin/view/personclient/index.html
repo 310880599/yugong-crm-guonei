@@ -150,6 +150,14 @@
                     <span id="follow-contact"></span>
                 </div>
                 <div class="info-item">
+                    <span class="info-label">主电话:</span>
+                    <span id="follow-main-phone"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">辅助电话:</span>
+                    <span id="follow-aux-phone"></span>
+                </div>
+                <div class="info-item">
                     <span class="info-label">地区:</span>
                     <span id="follow-area"></span>
                 </div>
@@ -158,12 +166,20 @@
                     <span id="follow-source"></span>
                 </div>
                 <div class="info-item">
+                    <span class="info-label">来源端口:</span>
+                    <span id="follow-source-port"></span>
+                </div>
+                <div class="info-item">
                     <span class="info-label">客户级别:</span>
                     <span id="follow-rank"></span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">负责人:</span>
                     <span id="follow-user"></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">协同人:</span>
+                    <span id="follow-joint-person"></span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">创建时间:</span>
@@ -284,14 +300,18 @@ layui.use(['table','form','upload','util','laydate'], function () {
                     var comments = res.data.comments;
                     
                     // 填充客户信息
-                    $('#follow-client-id').text(clientData.id);
-                    $('#follow-client-name').text(clientData.kh_name);
-                    $('#follow-contact').text(clientData.kh_contact);
-                    $('#follow-area').text(clientData.xs_area);
-                    $('#follow-source').text(clientData.kh_status);
-                    $('#follow-rank').text(clientData.kh_rank);
-                    $('#follow-user').text(clientData.pr_user);
-                    $('#follow-create-time').text(clientData.at_time);
+                    $('#follow-client-id').text(clientData.id || '');
+                    $('#follow-client-name').text(clientData.kh_name || '');
+                    $('#follow-contact').text(clientData.kh_contact || '');
+                    $('#follow-main-phone').text(clientData.main_phone || '暂无');
+                    $('#follow-aux-phone').text(clientData.aux_phone || '暂无');
+                    $('#follow-area').text(clientData.xs_area || '');
+                    $('#follow-source').text(clientData.kh_status_name || clientData.kh_status || '');
+                    $('#follow-source-port').text(clientData.source_port_name || clientData.source_port || '暂无');
+                    $('#follow-rank').text(clientData.kh_rank_name || clientData.kh_rank || '');
+                    $('#follow-user').text(clientData.pr_user || '');
+                    $('#follow-joint-person').text(clientData.joint_person_names || '暂无');
+                    $('#follow-create-time').text(clientData.at_time || '');
                     $('#follow-last-time').text(clientData.last_up_time || '暂无');
                     $('#follow-last-record').val(clientData.last_up_records || '暂无记录');
                     $('#leads_id').val(clientData.id);
