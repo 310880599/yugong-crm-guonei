@@ -1089,7 +1089,7 @@ class Client extends Common
     private function checkDataNew(&$contact)
     {
         // 主电话（支持 数组 / JSON字符串 / 逗号或空白分隔）
-        $mainPhones = $this->parsePhones(Request::param('phone'));
+        $mainPhones = $this->parsePhones(Request::param('more_phones'));  
         // 辅助电话（单个）
         $aux = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
 
@@ -1220,7 +1220,7 @@ class Client extends Common
     // 多主电话 + 辅号查重，仅在 crm_contacts.contact_value 上检查（忽略 contact_extra）
     private function checkDuplicateNew($data)
     {
-        $mainPhones = $this->parsePhones(Request::param('phone'));
+        $mainPhones = $this->parsePhones(Request::param('more_phones'));
         $aux        = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
         $phones     = $mainPhones;
         if ($aux !== '') $phones[] = $aux;
@@ -1429,7 +1429,7 @@ class Client extends Common
             }
 
             // 7) 解析主/辅电话（主电话支持多个；全部保留纯数字）
-            $mainPhones = $this->parsePhones(Request::param('phone'));   // 多个主电话
+            $mainPhones = $this->parsePhones(Request::param('more_phones'));   // 支持多个主电话输入
             $auxPhone   = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
 
             Db::startTrans();
@@ -1444,7 +1444,7 @@ class Client extends Common
                 // b) 新增联系方式（主电话=1，可多条；辅助=3，单条）
                 $now = date("Y-m-d H:i:s", time());
                 $contactsToInsert = [];
-
+                // 循环处理所有主电话，每个作为一条联系记录
                 foreach ($mainPhones as $mp) {
                     $contactsToInsert[] = [
                         'leads_id'      => $id,
@@ -1456,6 +1456,7 @@ class Client extends Common
                         'created_at'    => $now,
                     ];
                 }
+                // 如果存在辅助电话，则一并加入待插入列表
                 if ($auxPhone !== '') {
                     $contactsToInsert[] = [
                         'leads_id'      => $id,
@@ -1467,6 +1468,7 @@ class Client extends Common
                         'created_at'    => $now,
                     ];
                 }
+                // 批量插入所有联系方式
                 if (!empty($contactsToInsert)) {
                     Db::table('crm_contacts')->insertAll($contactsToInsert);
                 }

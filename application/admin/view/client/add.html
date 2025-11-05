@@ -102,14 +102,16 @@
             <!-- 电话 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">电话<span style="color:red;">*</span></label>
-                <div class="layui-input-4">
+                <div class="layui-input-4" id="mainPhoneBox">
                     <div class="input-row">
                         <div class="phone">
-                            <input type="text" name="phone" lay-verify="phone" placeholder="电话" class="layui-input">
+                            <!-- 统一改为 more_phones[]，作为主电话数组的第一项 -->
+                            <input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input">
                         </div>
                         <button type="button" class="add-btn">+</button>
                     </div>
                 </div>
+                <div class="layui-form-mid layui-word-aux" style="margin-left:110px;">可点击“+”添加多个主电话，所有主电话都会按主电话存入。</div>
             </div>
             <!-- 辅助电话 -->
             <div class="layui-form-item">
@@ -282,6 +284,48 @@
 
             // 监听表单提交
             form.on('submit(submit)', function (data) {
+                // 1) 采集并清洗所有主电话
+                var phones = [];
+                $('input[name="more_phones[]"]').each(function () {
+                    var v = $.trim($(this).val()).replace(/\D/g, '');
+                    if (v) phones.push(v);
+                });
+
+
+                console.log($('input[name="more_phones[]"]').first().val() || $('input[name="phone"]').val());
+                console.log($('input[name="phone2"]').val());
+                return false;
+
+
+                // 去重并仅保留11位数字
+                phones = Array.from(new Set(phones.filter(function (v) { return /^\d{11}$/.test(v); })));
+
+
+                // 至少一个有效主电话
+                if (phones.length === 0) {
+                    layer.msg('请至少填写一个11位主电话');
+                    return false;
+                }
+
+                // 2) 校验辅助电话，并确保与主电话不同
+                var aux = $.trim($('input[name="phone2"]').val()).replace(/\D/g, '');
+                if (aux && !/^\d{11}$/.test(aux)) {
+                    layer.msg('辅助电话必须为11位数字');
+                    return false;
+                }
+                if (aux && phones.indexOf(aux) > -1) {
+                    layer.msg('主电话与辅助电话不能相同');
+                    return false;
+                }
+
+                // 3) 将主电话以 JSON 数组方式提交，后端 parsePhones 支持 JSON / 数组
+                data.field.more_phones = JSON.stringify(phones);
+
+                // 4) 清理可能存在的旧字段，避免干扰（容错）
+                delete data.field['more_phones[]'];
+                delete data.field['phone'];
+
+                // 5) 提交
                 $.post("{:url('Client/add')}", data.field, function (res) {
                     if (res.code === 0) {
                         layer.msg(res.msg, { time: 2000 }, function () {
@@ -292,6 +336,7 @@
                         layer.msg(res.msg, { time: 2000 });
                     }
                 }, 'json');
+
                 return false;  // 阻止默认提交跳转
             });
         });
