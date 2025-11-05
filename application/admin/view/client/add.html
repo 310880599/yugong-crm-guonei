@@ -20,6 +20,72 @@
     <script src="/static/plugins/layui/layui.js"></script>
     <!-- 引入 xmSelect 多选插件 JS（确保在 LayUI 之后引入） -->
     <script src="/static/admin/js/xm-select.js"></script>
+        <style>
+        .layui-form-pane .layui-form-label {
+            width: 110px;
+            padding: 8px 15px;
+            height: 38px;
+            line-height: 20px;
+            border-width: 0px;
+            border-style: none;
+            border-radius: 2px 0 0 2px;
+            text-align: center;
+            background-color: #FBFBFB;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* 确保“电话输入 + 加号按钮”的总宽度 = 客户名称输入框宽度 */
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;           /* 控制输入框与按钮间距 */
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+
+        .add-btn {
+            background-color: #009688;
+            color: #fff;
+        }
+
+        .layui-layer-btn .layui-layer-btn0 {
+            background-color: #009688 !important;
+        }
+
+        .remove-btn {
+            background-color: #FF5722;
+            color: #fff;
+        }
+
+        .add-btn,
+        .remove-btn {
+            height: 38px;        /* 与 .layui-input 高度一致 */
+            line-height: 38px;
+            padding: 0 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .phone {
+            display: flex;
+            align-items: center;
+            flex: 1 1 auto;      /* 占满剩余空间 */
+            min-width: 0;        /* 防止在 flex 布局里溢出 */
+        }
+
+        .phone .layui-input {
+            width: 100%;
+        }
+
+        .phone_code {
+            width: 80px;
+            margin-right: 10px;
+        }
+    </style>
 </head>
 
 <body class="skin-<?php echo !empty($_COOKIE['skin'])?$_COOKIE['skin']:'0'; setcookie('skin','0'); ?>">
@@ -37,7 +103,12 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">电话<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" name="phone" lay-verify="phone" placeholder="电话" class="layui-input">
+                    <div class="input-row">
+                        <div class="phone">
+                            <input type="text" name="phone" lay-verify="phone" placeholder="电话" class="layui-input">
+                        </div>
+                        <button type="button" class="add-btn">+</button>
+                    </div>
                 </div>
             </div>
             <!-- 辅助电话 -->
@@ -139,6 +210,27 @@
                     }
                 }
             });
+
+        /* 多行（新增/删除） */
+        $(document).on('click', '.add-btn', function (e) {
+            e.preventDefault();
+            var $container = $(this).closest('.layui-input-4');
+            var $newRow = $(
+                '<div class="input-row">' +
+                    '<div class="phone">' +
+                        // 额外电话不覆盖主电话 name，避免影响后端接收
+                        '<input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input">' +
+                    '</div>' +
+                    '<button type="button" class="remove-btn">-</button>' +
+                '</div>'
+            );
+            $container.append($newRow);
+        });
+
+        $(document).on('click', '.remove-btn', function (e) {
+            e.preventDefault();
+            $(this).closest('.input-row').remove();
+        });
 
             // 渲染下拉框（产品名称、询盘来源、运营人员）
             form.render('select');

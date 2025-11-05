@@ -1085,46 +1085,42 @@ class Client extends Common
 
 
 
-    // 放在 Client 控制器内，替代原 checkData 的用途
+    // 支持多个主电话的校验
     private function checkDataNew(&$contact)
     {
-        // 读取并规范化（仅保留数字）
-        $main = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone', ''));
-        $aux  = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone2', ''));
+        // 主电话（支持 数组 / JSON字符串 / 逗号或空白分隔）
+        $mainPhones = $this->parsePhones(Request::param('phone'));
+        // 辅助电话（单个）
+        $aux = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
 
-        // 主电话必填
-        if ($main === '') {
+        // 主电话必填（至少一个）
+        if (empty($mainPhones)) {
             return [false, '主电话不能为空'];
         }
 
-        // 格式：11位数字
-        if (!preg_match('/^\d{11}$/', $main)) {
-            return [false, '主电话必须为11位数字'];
-        }
+        // 辅助电话格式校验（可选/11位）
         if ($aux !== '' && !preg_match('/^\d{11}$/', $aux)) {
             return [false, '辅助电话必须为11位数字'];
         }
 
         // 主/辅不能相同
-        if ($aux !== '' && $main === $aux) {
+        if ($aux !== '' && in_array($aux, $mainPhones, true)) {
             return [false, '主电话与辅助电话不能相同'];
         }
 
-        // 组装 contact（仅用 CONTACT_MAP['phone']），供 assemblyData() 落库
-        $numbers = array_values(array_unique(array_filter([$main, $aux], function ($v) {
-            return $v !== '';
-        })));
+        // 组装 contact['phone']，供后续流程使用（主多条+辅单条）
         $contact = [];
-        if (!empty($numbers)) {
-            $contact['phone'] = $numbers; // assemblyData 会逐条写入 crm_contacts（contact_extra 为空，vdigits 为纯数字）
+        $numbersForContact = $mainPhones;
+        if ($aux !== '') {
+            $numbersForContact[] = $aux;
         }
+        $contact['phone'] = $numbersForContact;
 
-        // 提供给 checkDuplicate 的去重集合（vdigits 匹配）
-        $require_check = $numbers;
+        // 提供给查重的集合
+        $require_check = $numbersForContact;
 
         return [true, $require_check];
     }
-
 
 
     //数据校验
@@ -1221,42 +1217,75 @@ class Client extends Common
         return [true, ''];
     }
 
-    // 根据 add.html 的手机号字段（phone、phone2）做查重
-    // 逻辑：仅在 crm_contacts.contact_value 上检查，不拼接 contact_extra；
-    // 返回值与原函数保持一致：[bool, msg]
+    // 多主电话 + 辅号查重，仅在 crm_contacts.contact_value 上检查（忽略 contact_extra）
     private function checkDuplicateNew($data)
     {
-        $whereContacts = [
-            ['is_delete', '=', 0],
-            ['contact_type', '=', self::CONTACT_MAP['phone']],
-        ];
-        if (isset($data['id'])) {
-            $whereContacts[] = ['leads_id', '<>', $data['id']];
-        }
-
-        $request = request();
-        $p1 = preg_replace('/\D/', '', (string)$request->param('phone', ''));
-        $p2 = preg_replace('/\D/', '', (string)$request->param('phone2', ''));
-        $phones = array_values(array_unique(array_filter([$p1, $p2], function ($v) {
-            return $v !== '';
-        })));
+        $mainPhones = $this->parsePhones(Request::param('phone'));
+        $aux        = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
+        $phones     = $mainPhones;
+        if ($aux !== '') $phones[] = $aux;
 
         if (empty($phones)) {
-            // 无需查重（由上游校验控制是否必填）
             return [true, ''];
         }
 
-        $contactExist = Db::table('crm_contacts')
-            ->where($whereContacts)
-            ->whereIn('contact_value', $phones)
-            ->find();
+        $query = Db::table('crm_contacts')
+            ->where('is_delete', 0)
+            ->whereIn('contact_value', $phones);
 
+        if (!empty($data['id'])) {
+            // 编辑场景：排除自身
+            $query->where('leads_id', '<>', $data['id']);
+        }
+
+        $contactExist = $query->find();
         if ($contactExist) {
             $find = Db::table('crm_leads')->where('id', $contactExist['leads_id'])->find();
-            return [false, $contactExist['contact_value'] . '客户信息已存在,当前所属人' . $find['pr_user']];
+            $owner = $find ? $find['pr_user'] : '';
+            return [false, $contactExist['contact_value'] . '客户信息已存在，当前所属人' . $owner];
         }
 
         return [true, ''];
+    }
+
+    
+    // 解析主电话：支持 数组 / JSON字符串 / 逗号或空白分隔；仅保留11位纯数字并去重
+    private function parsePhones($raw): array
+    {
+        $phones = [];
+        if (is_array($raw)) {
+            $phones = $raw;
+        } else if (is_string($raw)) {
+            $str = trim($raw);
+            if ($str !== '') {
+                // JSON数组
+                if ($str[0] === '[') {
+                    $tmp = json_decode($str, true);
+                    if (is_array($tmp)) {
+                        $phones = $tmp;
+                    } else {
+                        $phones = [$str];
+                    }
+                } else {
+                    // 常见分隔符归一化
+                    $str = str_replace(["，", "、", "；", ";", "|", "\r\n", "\n", "\t"], ',', $str);
+                    $phones = preg_split('/[\\s,]+/', $str);
+                }
+            }
+        } else if ($raw !== null) {
+            $phones = [(string)$raw];
+        }
+
+        // 仅保留数字、11位、去空去重
+        $phones = array_map(function ($v) {
+            return preg_replace('/\\D/', '', (string)$v);
+        }, $phones);
+
+        $phones = array_values(array_unique(array_filter($phones, function ($v) {
+            return $v !== '' && preg_match('/^\\d{11}$/', $v);
+        })));
+
+        return $phones;
     }
 
     /**
@@ -1320,7 +1349,7 @@ class Client extends Common
         if (request()->isPost()) {
             $this->redisLock();
 
-            // 1) 基础校验（主电话必填、11位；辅号可选且11位；两者不能相同）
+            // 1) 基础校验（主电话允许多个且至少一个；每个11位；辅号可选且11位；主/辅不能相同）
             $contact = [];
             list($res, $require_check) = $this->checkDataNew($contact);
             if (!$res) {
@@ -1332,30 +1361,29 @@ class Client extends Common
             $khName = Request::param('kh_name');
             $existingLead = Db::table('crm_leads')->where('kh_name', $khName)->find();
             if ($existingLead) {
-                // 若客户名称重复，则释放锁并返回失败信息
                 $this->redisUnLock();
                 return fail('客户名称重复，请更换客户名称');
             }
 
-            // 2) 组装 leads 数据
+            // 3) 组装 leads 数据
             $data['kh_name']      = Request::param('kh_name');
             $data['kh_contact']   = Request::param('kh_contact');
             $data['kh_status']    = Request::param('kh_status');
             $data['product_name'] = Request::param('product_name');
             $data['oper_user']    = Request::param('oper_user');
             $data['remark']       = Request::param('remark', '');
-            
+
             // 检查 source_port 字段是否存在，如果存在则添加
             try {
                 $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
                 if (!empty($columns)) {
-                    $data['source_port'] = Request::param('source_port', '');  // 来源端口
+                    $data['source_port'] = Request::param('source_port', '');
                 }
             } catch (\Exception $e) {
-                // 如果查询失败，忽略该字段
+                // 忽略查询失败
             }
 
-            // 3) 解析并写入协同人（joint_person），支持 数组 / JSON / 逗号分隔
+            // 4) 解析并写入协同人（joint_person），支持 数组 / JSON / 逗号分隔
             $jpRaw = Request::param('joint_person');
             $jpIds = [];
             if (is_array($jpRaw)) {
@@ -1378,14 +1406,13 @@ class Client extends Common
                 return $v !== '';
             })));
             $jpStr = implode(',', $jpIds);
-            // 若你的 joint_person 仍为 varchar(30)，做长度保护（推荐把字段扩为 varchar(255)）
             if (strlen($jpStr) > 30) {
                 $this->redisUnLock();
                 return fail('协同人过多，超出存储限制（请减少选择或扩大 joint_person 字段长度）');
             }
             $data['joint_person'] = $jpStr;
 
-            // 4) 系统字段
+            // 5) 系统字段
             $data['at_user']     = Session::get('username');
             $data['pr_user']     = Session::get('username');
             $data['pr_user_bef'] = Session::get('username');
@@ -1394,16 +1421,16 @@ class Client extends Common
             $data['status']      = 1;
             $data['ispublic']    = 3;
 
-            // 5) 查重（按 contact_value 直接查）
+            // 6) 查重（按 crm_contacts.contact_value 直接查）
             list($res, $msg) = $this->checkDuplicateNew($data);
             if (!$res) {
                 $this->redisUnLock();
                 return fail($msg);
             }
 
-            // 6) 获取主/辅电话（保留纯数字）
-            $mainPhone = preg_replace('/\D/', '', (string)Request::param('phone', ''));
-            $auxPhone  = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
+            // 7) 解析主/辅电话（主电话支持多个；全部保留纯数字）
+            $mainPhones = $this->parsePhones(Request::param('phone'));   // 多个主电话
+            $auxPhone   = preg_replace('/\D/', '', (string)Request::param('phone2', ''));
 
             Db::startTrans();
             try {
@@ -1414,16 +1441,17 @@ class Client extends Common
                     throw new \Exception('客户信息插入失败');
                 }
 
-                // b) 新增联系方式（严格按你的要求设置 contact_type）
+                // b) 新增联系方式（主电话=1，可多条；辅助=3，单条）
                 $now = date("Y-m-d H:i:s", time());
                 $contactsToInsert = [];
-                if ($mainPhone !== '') {
+
+                foreach ($mainPhones as $mp) {
                     $contactsToInsert[] = [
                         'leads_id'      => $id,
                         'contact_type'  => 1,                 // 主电话 = 1
                         'contact_extra' => '',
-                        'contact_value' => $mainPhone,
-                        'vdigits'       => $mainPhone,
+                        'contact_value' => $mp,
+                        'vdigits'       => $mp,
                         'is_delete'     => 0,
                         'created_at'    => $now,
                     ];
@@ -1449,7 +1477,7 @@ class Client extends Common
                     '新增客户',
                     [
                         '运营人员' => $data['oper_user'],
-                        '联系方式' => ['主电话' => $mainPhone, '辅助电话' => $auxPhone],
+                        '联系方式' => ['主电话' => $mainPhones, '辅助电话' => $auxPhone],
                         '协同人'  => $jpIds
                     ]
                 );
@@ -1464,7 +1492,7 @@ class Client extends Common
             }
         }
 
-        // GET：渲染新增页面所需下拉数据
+        // GET：渲染新增页面所需下拉数据（保持不变）
         $currentAdmin = \app\admin\model\Admin::getMyInfo();
         $where = [];
         if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
@@ -1486,7 +1514,7 @@ class Client extends Common
         } catch (\Exception $e) {
             $has_shop_names = false;
         }
-        
+
         // 根据字段是否存在决定查询字段
         if ($has_shop_names) {
             $khStatusList = Db::table('crm_client_status')->field('id,status_name,shop_names')->select();
@@ -1500,16 +1528,15 @@ class Client extends Common
         $this->assign('operUserList', $operUserList);
         $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
 
-        // 获取店铺列表，按来源名称分组
+        // 获取店铺列表，按来源名称分组（保持不变）
         $shopList = [];
         foreach ($khStatusList as $status) {
             $statusName = $status['status_name'];
             $shops = [];
-            
-            // 检查是否有shop_names字段
+
             if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
                 $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
-                foreach ($shop_names as $index => $shop_name) {
+                foreach ($shop_names as $shop_name) {
                     if (!empty($shop_name)) {
                         $shops[] = [
                             'id' => md5($status['id'] . '_' . $shop_name),
@@ -1518,8 +1545,7 @@ class Client extends Common
                     }
                 }
             }
-            
-            // 如果shop_names为空，尝试从crm_operation_shops表获取
+
             if (empty($shops)) {
                 $commonShops = $this->getShopsByChannel('', $statusName);
                 foreach ($commonShops as $shop) {
@@ -1529,7 +1555,7 @@ class Client extends Common
                     ];
                 }
             }
-            
+
             if (!empty($shops)) {
                 $shopList[$statusName] = $shops;
             }
@@ -1551,7 +1577,7 @@ class Client extends Common
         $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
 
         return $this->fetch('client/add');
-    }
+    }  
 
 
 
