@@ -1675,22 +1675,26 @@ class Client extends Common
             }
 
             // 5) 获取主/辅电话（保留纯数字）
-            $mainPhones = $this->parsePhones(Request::param('more_phones'));   // 支持多个主电话输入
+            // [替换] 统一解析前端 more_phones[] 主电话输入，支持数组或 JSON 字符串
+            $mainPhones = $this->parsePhones(Request::param('more_phones'));   // 主电话数组（支持多个）
             $auxPhone  = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone2', ''));
 
 
             // ** 新增：检查主电话和辅助电话在其他客户中是否存在重复（全局唯一） **
-            $phonesToCheck = array_values(array_filter(array_unique([$mainPhones, $auxPhone]), function ($v) {
+            // [替换] 构建去重检查列表（展开多个主电话）
+            $phonesToCheck = $mainPhones;
+            if ($auxPhone !== '') {
+                $phonesToCheck[] = $auxPhone;
+            }
+            $phonesToCheck = array_values(array_unique(array_filter($phonesToCheck, function ($v) {
                 return $v !== '';
-            }));
-
+            })));
             if (!empty($phonesToCheck)) {
                 $duplicateContact = \think\Db::table('crm_contacts')
                     ->where('is_delete', 0)
                     ->where('leads_id', '<>', $id)
                     ->whereIn('contact_value', $phonesToCheck)
                     ->find();
-
                 if ($duplicateContact) {
                     $this->redisUnLock();
                     return json([
@@ -1710,59 +1714,111 @@ class Client extends Common
 
                 
                 // 读取当前有效（is_delete=0）的主/辅号码
-                $current = \think\Db::table('crm_contacts')
+                // [替换] 获取当前所有主电话和辅电话
+                $existingMainPhones = \think\Db::table('crm_contacts')
                     ->where('leads_id', $id)
-                    ->whereIn('contact_type', [1, 3])
+                    ->where('contact_type', 1)
                     ->where('is_delete', 0)
-                    ->column('contact_value', 'contact_type');   // [1 => '主号', 3 => '辅号']
-
-                $oldMain = $current[1] ?? '';
-                $oldAux  = $current[3] ?? '';
+                    ->column('contact_value');
+                $oldAux = \think\Db::table('crm_contacts')
+                    ->where('leads_id', $id)
+                    ->where('contact_type', 3)
+                    ->where('is_delete', 0)
+                    ->value('contact_value');
+                $oldAux = $oldAux ?? '';  // 若没有辅号则设为空字符串
 
                 $now = date("Y-m-d H:i:s");
                 $contactsToInsert = [];
 
-                // 主电话：仅当发生变化时，才软删旧号并插入新号
-                if ($mainPhones !== '' && $mainPhones !== $oldMain) {
-                    if ($oldMain !== '') {
-                        \think\Db::table('crm_contacts')
-                            ->where('leads_id', $id)
-                            ->where('contact_type', 1)
-                            ->where('is_delete', 0)
-                            ->update(['is_delete' => 1]);
+                // 主电话更新逻辑
+                // [替换] 计算需要“硬删除”的主电话和需要新增的主电话
+                $toRemove = array_diff($existingMainPhones, $mainPhones);  // 被用户删除的旧主号码
+                $toAdd    = array_diff($mainPhones, $existingMainPhones);  // 新增的主号码
+                // [新增] 硬删除被移除的主电话（从数据库物理删除）
+                if (!empty($toRemove)) {
+                    \think\Db::table('crm_contacts')
+                        ->where('leads_id', $id)
+                        ->where('contact_type', 1)
+                        ->whereIn('contact_value', $toRemove)
+                        ->delete();
+                }
+                // [新增] 插入新增的主电话，每个号码一条记录
+                foreach ($toAdd as $newPhone) {
+                    // 如果存在已软删的相同号码，则复用更新，否则插入新记录
+                    $findDeleted = \think\Db::table('crm_contacts')
+                        ->where(['is_delete' => 1, 'contact_value' => $newPhone])
+                        ->find();
+                    if ($findDeleted) {
+                        \think\Db::table('crm_contacts')->where('id', $findDeleted['id'])->update([
+                            'leads_id'      => $id,
+                            'contact_type'  => 1,
+                            'contact_extra' => '',
+                            'contact_value' => $newPhone,
+                            'vdigits'       => $newPhone,
+                            'is_delete'     => 0,
+                            'created_at'    => $now,
+                        ]);
+                    } else {
+                        $contactsToInsert[] = [
+                            'leads_id'      => $id,
+                            'contact_type'  => 1,               // 主电话类型
+                            'contact_extra' => '',
+                            'contact_value' => $newPhone,
+                            'vdigits'       => $newPhone,
+                            'is_delete'     => 0,
+                            'created_at'    => $now,
+                        ];
                     }
-                    $contactsToInsert[] = [
-                        'leads_id'      => $id,
-                        'contact_type'  => 1,
-                        'contact_extra' => '',
-                        'contact_value' => $mainPhones,
-                        'vdigits'       => $mainPhones,
-                        'is_delete'     => 0,
-                        'created_at'    => $now,
-                    ];
                 }
 
-                // 辅助电话：仅当发生变化时，才软删旧号并插入新号
-                if ($auxPhone !== '' && $auxPhone !== $oldAux) {
+
+                // 辅助电话更新逻辑
+                // [替换] 处理辅助电话的删除或更新
+                if ($auxPhone === '' && $oldAux !== '') {
+                    // [新增] 用户删除了原有辅号，直接删除数据库中的辅号记录
+                    \think\Db::table('crm_contacts')
+                        ->where('leads_id', $id)
+                        ->where('contact_type', 3)
+                        ->where('is_delete', 0)
+                        ->delete();
+                } else if ($auxPhone !== '' && $auxPhone !== $oldAux) {
+                    // 用户提供了新的辅号（包括原本无辅号的情况）
                     if ($oldAux !== '') {
+                        // [新增] 删除旧辅号记录
                         \think\Db::table('crm_contacts')
                             ->where('leads_id', $id)
                             ->where('contact_type', 3)
                             ->where('is_delete', 0)
-                            ->update(['is_delete' => 1]);
+                            ->delete();
                     }
-                    $contactsToInsert[] = [
-                        'leads_id'      => $id,
-                        'contact_type'  => 3,
-                        'contact_extra' => '',
-                        'contact_value' => $auxPhone,
-                        'vdigits'       => $auxPhone,
-                        'is_delete'     => 0,
-                        'created_at'    => $now,
-                    ];
+                    // [新增] 插入新辅号记录（或复用软删记录）
+                    $findDeletedAux = \think\Db::table('crm_contacts')
+                        ->where(['is_delete' => 1, 'contact_value' => $auxPhone])
+                        ->find();
+                    if ($findDeletedAux) {
+                        \think\Db::table('crm_contacts')->where('id', $findDeletedAux['id'])->update([
+                            'leads_id'      => $id,
+                            'contact_type'  => 3,
+                            'contact_extra' => '',
+                            'contact_value' => $auxPhone,
+                            'vdigits'       => $auxPhone,
+                            'is_delete'     => 0,
+                            'created_at'    => $now,
+                        ]);
+                    } else {
+                        $contactsToInsert[] = [
+                            'leads_id'      => $id,
+                            'contact_type'  => 3,               // 辅助电话类型
+                            'contact_extra' => '',
+                            'contact_value' => $auxPhone,
+                            'vdigits'       => $auxPhone,
+                            'is_delete'     => 0,
+                            'created_at'    => $now,
+                        ];
+                    }
                 }
 
-                // 有变化才批量插入
+                // 批量插入新联系方式记录
                 if (!empty($contactsToInsert)) {
                     \think\Db::table('crm_contacts')->insertAll($contactsToInsert);
                 }
@@ -1796,8 +1852,9 @@ class Client extends Common
         $result = \think\Db::table('crm_leads')->where(['id' => $id])->find();
 
         // 主/辅电话：1 主、3 辅
-        $mainPhones = '';
-        $auxPhone  = '';
+        // [替换] 初始化主电话数组，支持多个主号
+        $mainPhones = [];
+        $auxPhone   = '';
         $contacts = \think\Db::table('crm_contacts')
             ->where('is_delete', 0)
             ->where('leads_id', $id)
@@ -1806,8 +1863,13 @@ class Client extends Common
             ->field('contact_type, contact_value')
             ->select();
         foreach ($contacts as $c) {
-            if ($c['contact_type'] == 1 && $mainPhones === '') $mainPhones = $c['contact_value'];
-            if ($c['contact_type'] == 3 && $auxPhone === '') $auxPhone  = $c['contact_value'];
+            if ($c['contact_type'] == 1) {
+                // [替换] 收集所有主电话
+                $mainPhones[] = $c['contact_value'];
+            }
+            if ($c['contact_type'] == 3 && $auxPhone === '') {
+                $auxPhone = $c['contact_value'];
+            }
         }
 
         // 产品列表（与 add 一致）
@@ -1915,7 +1977,7 @@ class Client extends Common
 
         // 页面回填
         $this->assign('result', $result);
-        $this->assign('mainPhones', $mainPhones);
+        $this->assign('mainPhones', json_encode($mainPhones, JSON_UNESCAPED_UNICODE));
         $this->assign('auxPhone',  $auxPhone);
 
         return $this->fetch('client/edit');

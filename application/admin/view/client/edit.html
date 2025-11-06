@@ -265,6 +265,40 @@ layui.use(['form', 'layer', 'jquery'], function () {
         fillSourcePortBySourceName(sourceName, ''); // 切换来源时清空来源端口选择
     });
 
+    /* =========================
+    [新增] 编辑页主电话“回填渲染”
+    要求：后端把 $mainPhones 以 JSON 传入（见控制器替换）
+    ========================= */
+    (function prefillMainPhones(){
+        var initMainPhones = {$mainPhones|raw}; // 形如 ["13800000000","13900000000"]
+        if (!Array.isArray(initMainPhones)) {
+            try { initMainPhones = JSON.parse(initMainPhones || '[]'); } catch (e) { initMainPhones = []; }
+        }
+
+        var $box = $('#mainPhoneBox');
+        var $firstRow   = $box.find('.input-row').first();
+        var $firstInput = $firstRow.find('.multiple_telephone').first();
+
+        if (initMainPhones.length > 0) {
+            // 第一个主电话填入第一行
+            $firstInput.val(initMainPhones[0]);
+        }
+
+        // 其余主电话一行一个，并带“-”删除按钮
+        for (var i = 1; i < initMainPhones.length; i++) {
+            var phone = initMainPhones[i];
+            var $row = $(
+                '<div class="input-row">' +
+                    '<div class="phone">' +
+                        '<input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input multiple_telephone" value="' + phone + '">' +
+                    '</div>' +
+                    '<button type="button" class="remove-btn">-</button>' +
+                '</div>'
+            );
+            $box.append($row);
+        }
+    })();
+
     // 提交保存
     form.on('submit(submit)', function (data) {
 
