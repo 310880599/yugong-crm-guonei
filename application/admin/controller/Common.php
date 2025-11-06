@@ -97,7 +97,7 @@ class Common extends Controller
     {
         $redis_name  = md5(request()->path() . json_encode(request()->param()));
         $redis = new \Redis();
-        $redis->connect('127.0.0.1', 6379);
+        $redis->connect('127.0.0.1', 26739);
         if ($redis->get($redis_name)) return $this->result([], 500, '操作过于频繁，请稍后再试');
         $redis->setex($redis_name, 30, 1);
     }
@@ -107,7 +107,7 @@ class Common extends Controller
     {
         $redis_name  = md5(request()->path() . json_encode(request()->param()));
         $redis = new \Redis();
-        $redis->connect('127.0.0.1', 6379);
+        $redis->connect('127.0.0.1', 26739);
         $redis->del($redis_name);
     }
 
