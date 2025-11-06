@@ -277,11 +277,17 @@ class Client extends Common
                 foreach ($contacts as $c) {
                     $lid = $c['leads_id'];
                     if (!isset($phoneMap[$lid])) $phoneMap[$lid] = ['main' => '', 'aux' => ''];
-                    if ($c['contact_type'] == 1 && $phoneMap[$lid]['main'] === '') {
-                        $phoneMap[$lid]['main'] = $c['contact_value'];
+
+                    if ($c['contact_type'] == 1) {
+                        if ($phoneMap[$lid]['main'] === '') {
+                            $phoneMap[$lid]['main'] = $c['contact_value'];
+                        } else {
+                            $phoneMap[$lid]['main'] .= ',' . $c['contact_value'];
+                        }
                     } elseif ($c['contact_type'] == 3 && $phoneMap[$lid]['aux'] === '') {
                         $phoneMap[$lid]['aux'] = $c['contact_value'];
                     }
+
                 }
             }
 
@@ -396,11 +402,17 @@ class Client extends Common
                     if (!isset($phoneMap[$lid])) {
                         $phoneMap[$lid] = ['main' => '', 'aux' => ''];
                     }
-                    if ($c['contact_type'] == 1 && $phoneMap[$lid]['main'] === '') {
-                        $phoneMap[$lid]['main'] = $c['contact_value'];
+
+                    if ($c['contact_type'] == 1) {
+                        if ($phoneMap[$lid]['main'] === '') {
+                            $phoneMap[$lid]['main'] = $c['contact_value'];
+                        } else {
+                            $phoneMap[$lid]['main'] .= ',' . $c['contact_value'];
+                        }
                     } elseif ($c['contact_type'] == 3 && $phoneMap[$lid]['aux'] === '') {
                         $phoneMap[$lid]['aux'] = $c['contact_value'];
                     }
+
                 }
             }
 
