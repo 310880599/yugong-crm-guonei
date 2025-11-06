@@ -2899,34 +2899,34 @@ class Client extends Common
 
 
     //冲突查询
-    public function conflictOld()
-    {
-        $keyword = Request::param('keyword');
-        $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
-        if (Request::isAjax()) {
-            if (empty($keyword)) return success();
+    // public function conflictOld()
+    // {
+    //     $keyword = Request::param('keyword');
+    //     $keyword = trim(preg_replace('/[+\-\s]/', '', $keyword));
+    //     if (Request::isAjax()) {
+    //         if (empty($keyword)) return success();
 
-            $query = Db::name('crm_leads')
-                ->alias('l')
-                ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
-                ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time,l.pr_gh_type,l.pr_user')
-                ->group('l.id');
-            $query->where(function ($q) use ($keyword) {
-                $q->where('l.kh_name', 'like', "%{$keyword}%")
-                    ->whereOr(function ($q2) use ($keyword) {
-                        $q2->where('c.contact_value', $keyword)
-                            ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) = '{$keyword}'");
-                    });
-            });
+    //         $query = Db::name('crm_leads')
+    //             ->alias('l')
+    //             ->leftJoin('crm_contacts c', 'l.id = c.leads_id AND c.is_delete = 0')
+    //             ->field('l.kh_name,l.xs_area,l.kh_rank,l.kh_status,l.at_user,l.at_time,l.pr_gh_type,l.pr_user')
+    //             ->group('l.id');
+    //         $query->where(function ($q) use ($keyword) {
+    //             $q->where('l.kh_name', 'like', "%{$keyword}%")
+    //                 ->whereOr(function ($q2) use ($keyword) {
+    //                     $q2->where('c.contact_value', $keyword)
+    //                         ->whereOrRaw("CONCAT(c.contact_extra, c.contact_value) = '{$keyword}'");
+    //                 });
+    //         });
 
-            $page = Request::param('page/d', 1);
-            $pageSize = Request::param('limit/d', 10);
-            $list = $query->paginate($pageSize, false, ['page' => $page])->items();
-            return success($list);
-        }
-        $this->assign('keyword', $keyword);
-        return $this->fetch('client/conflict');
-    }
+    //         $page = Request::param('page/d', 1);
+    //         $pageSize = Request::param('limit/d', 10);
+    //         $list = $query->paginate($pageSize, false, ['page' => $page])->items();
+    //         return success($list);
+    //     }
+    //     $this->assign('keyword', $keyword);
+    //     return $this->fetch('client/conflict');
+    // }
 
     // //冲突查询
     // public function conflict()
@@ -3033,7 +3033,7 @@ class Client extends Common
             ];
             // 将任务数据推送到Redis队列
             $redis = new \Redis();
-            $redis->connect('127.0.0.1', 6379);
+            $redis->connect('127.0.0.1', 26739);
             // 若Redis设置了密码，可使用 $redis->auth('密码');
             $redis->rPush('waimao_conflict_queue', json_encode($jobData));  // 推送任务到外贸专用队列
             // 返回任务已创建的响应，携带任务ID
@@ -3057,7 +3057,7 @@ class Client extends Common
         }
 
         $redis = new \Redis();
-        $redis->connect('127.0.0.1', 6379);
+        $redis->connect('127.0.0.1', 26739);
         // $redis->auth('your_redis_password'); // 如有密码请取消注释
 
         $statusKey = 'waimao_conflict_status:' . $taskId;
