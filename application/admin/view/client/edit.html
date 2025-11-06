@@ -14,6 +14,72 @@
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
     <script src="/static/plugins/layui/layui.js"></script>
     <script src="/static/admin/js/xm-select.js"></script>
+    <style>
+        .layui-form-pane .layui-form-label {
+            width: 110px;
+            padding: 8px 15px;
+            height: 38px;
+            line-height: 20px;
+            border-width: 0px;
+            border-style: none;
+            border-radius: 2px 0 0 2px;
+            text-align: center;
+            background-color: #FBFBFB;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* 确保“电话输入 + 加号按钮”的总宽度 = 客户名称输入框宽度 */
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;           /* 控制输入框与按钮间距 */
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+
+        .add-btn {
+            background-color: #009688;
+            color: #fff;
+        }
+
+        .layui-layer-btn .layui-layer-btn0 {
+            background-color: #009688 !important;
+        }
+
+        .remove-btn {
+            background-color: #FF5722;
+            color: #fff;
+        }
+
+        .add-btn,
+        .remove-btn {
+            height: 38px;        /* 与 .layui-input 高度一致 */
+            line-height: 38px;
+            padding: 0 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .phone {
+            display: flex;
+            align-items: center;
+            flex: 1 1 auto;      /* 占满剩余空间 */
+            min-width: 0;        /* 防止在 flex 布局里溢出 */
+        }
+
+        .phone .layui-input {
+            width: 100%;
+        }
+
+        .phone_code {
+            width: 80px;
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body class="skin-<?php echo !empty($_COOKIE['skin'])?$_COOKIE['skin']:'0'; setcookie('skin','0'); ?>">
 
@@ -32,9 +98,16 @@
         <!-- 主电话 -->
         <div class="layui-form-item">
             <label class="layui-form-label">电话<span style="color:red;">*</span></label>
-            <div class="layui-input-4">
-                <input type="text" name="phone" lay-verify="phone" placeholder="电话" class="layui-input" value="{$mainPhone|default=''}">
+            <div class="layui-input-4" id="mainPhoneBox">
+                <div class="input-row">
+                    <div class="phone">
+                        <!-- 统一改为 more_phones[]，作为主电话数组的第一项 -->
+                        <input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input multiple_telephone">
+                    </div>
+                    <button type="button" class="add-btn">+</button>
+                </div>
             </div>
+            <div class="layui-form-mid layui-word-aux" style="margin-left:110px;">可点击“+”添加多个主电话，所有主电话都会按主电话存入。</div>
         </div>
 
         <!-- 辅助电话 -->
@@ -137,6 +210,28 @@ layui.use(['form', 'layer', 'jquery'], function () {
         }
     });
 
+    /* 多行（新增/删除） */
+    $(document).on('click', '.add-btn', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.layui-input-4');
+        var $newRow = $(
+            '<div class="input-row">' +
+                '<div class="phone">' +
+                    // 额外电话不覆盖主电话 name，避免影响后端接收
+                    '<input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input multiple_telephone">' +
+                '</div>' +
+                '<button type="button" class="remove-btn">-</button>' +
+            '</div>'
+        );
+        $container.append($newRow);
+    });
+
+    $(document).on('click', '.remove-btn', function (e) {
+        e.preventDefault();
+        $(this).closest('.input-row').remove();
+    });
+
+
     // 渲染下拉框
     form.render('select');
 
@@ -172,6 +267,48 @@ layui.use(['form', 'layer', 'jquery'], function () {
 
     // 提交保存
     form.on('submit(submit)', function (data) {
+
+        // 1) 采集并清洗所有主电话
+        var phones = [];
+        $('.multiple_telephone').each(function () {
+            var v = $.trim($(this).val()).replace(/\D/g, '');
+            if (v) phones.push(v);
+        });
+
+
+        // console.log($('.multiple_telephone').first().val());
+        // console.log($('input[name="phone2"]').val());
+        // return false;
+
+
+        // 去重并仅保留11位数字
+        phones = Array.from(new Set(phones.filter(function (v) { return /^\d{11}$/.test(v); })));
+
+
+        //至少一个有效主电话
+        if (phones.length === 0) {
+            layer.msg('请至少填写一个11位主电话');
+            return false;
+        }
+
+        // 2) 校验辅助电话，并确保与主电话不同
+        var aux = $.trim($('input[name="phone2"]').val()).replace(/\D/g, '');
+        if (aux && !/^\d{11}$/.test(aux)) {
+            layer.msg('辅助电话必须为11位数字');
+            return false;
+        }
+        if (aux && phones.indexOf(aux) > -1) {
+            layer.msg('主电话与辅助电话不能相同');
+            return false;
+        }
+
+        // 3) 将主电话以 JSON 数组方式提交，后端 parsePhones 支持 JSON / 数组
+        data.field.more_phones = JSON.stringify(phones);
+
+        // 4) 清理可能存在的旧字段，避免干扰（容错）
+        delete data.field['more_phones[]'];
+        delete data.field['phone'];
+
         $.post("{:url('Client/edit')}", data.field, function (res) {
             if (res.code === 0) {
                 layer.msg(res.msg, { time: 1500 }, function () {

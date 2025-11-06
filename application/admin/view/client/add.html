@@ -20,7 +20,7 @@
     <script src="/static/plugins/layui/layui.js"></script>
     <!-- 引入 xmSelect 多选插件 JS（确保在 LayUI 之后引入） -->
     <script src="/static/admin/js/xm-select.js"></script>
-        <style>
+    <style>
         .layui-form-pane .layui-form-label {
             width: 110px;
             padding: 8px 15px;
@@ -213,26 +213,26 @@
                 }
             });
 
-        /* 多行（新增/删除） */
-        $(document).on('click', '.add-btn', function (e) {
-            e.preventDefault();
-            var $container = $(this).closest('.layui-input-4');
-            var $newRow = $(
-                '<div class="input-row">' +
-                    '<div class="phone">' +
-                        // 额外电话不覆盖主电话 name，避免影响后端接收
-                        '<input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input multiple_telephone">' +
-                    '</div>' +
-                    '<button type="button" class="remove-btn">-</button>' +
-                '</div>'
-            );
-            $container.append($newRow);
-        });
+            /* 多行（新增/删除） */
+            $(document).on('click', '.add-btn', function (e) {
+                e.preventDefault();
+                var $container = $(this).closest('.layui-input-4');
+                var $newRow = $(
+                    '<div class="input-row">' +
+                        '<div class="phone">' +
+                            // 额外电话不覆盖主电话 name，避免影响后端接收
+                            '<input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input multiple_telephone">' +
+                        '</div>' +
+                        '<button type="button" class="remove-btn">-</button>' +
+                    '</div>'
+                );
+                $container.append($newRow);
+            });
 
-        $(document).on('click', '.remove-btn', function (e) {
-            e.preventDefault();
-            $(this).closest('.input-row').remove();
-        });
+            $(document).on('click', '.remove-btn', function (e) {
+                e.preventDefault();
+                $(this).closest('.input-row').remove();
+            });
 
             // 渲染下拉框（产品名称、询盘来源、运营人员）
             form.render('select');

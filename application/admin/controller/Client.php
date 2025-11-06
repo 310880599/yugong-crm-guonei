@@ -1675,12 +1675,12 @@ class Client extends Common
             }
 
             // 5) 获取主/辅电话（保留纯数字）
-            $mainPhone = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone', ''));
+            $mainPhones = $this->parsePhones(Request::param('more_phones'));   // 支持多个主电话输入
             $auxPhone  = preg_replace('/\D/', '', (string)\think\facade\Request::param('phone2', ''));
 
 
             // ** 新增：检查主电话和辅助电话在其他客户中是否存在重复（全局唯一） **
-            $phonesToCheck = array_values(array_filter(array_unique([$mainPhone, $auxPhone]), function ($v) {
+            $phonesToCheck = array_values(array_filter(array_unique([$mainPhones, $auxPhone]), function ($v) {
                 return $v !== '';
             }));
 
@@ -1723,7 +1723,7 @@ class Client extends Common
                 $contactsToInsert = [];
 
                 // 主电话：仅当发生变化时，才软删旧号并插入新号
-                if ($mainPhone !== '' && $mainPhone !== $oldMain) {
+                if ($mainPhones !== '' && $mainPhones !== $oldMain) {
                     if ($oldMain !== '') {
                         \think\Db::table('crm_contacts')
                             ->where('leads_id', $id)
@@ -1735,8 +1735,8 @@ class Client extends Common
                         'leads_id'      => $id,
                         'contact_type'  => 1,
                         'contact_extra' => '',
-                        'contact_value' => $mainPhone,
-                        'vdigits'       => $mainPhone,
+                        'contact_value' => $mainPhones,
+                        'vdigits'       => $mainPhones,
                         'is_delete'     => 0,
                         'created_at'    => $now,
                     ];
@@ -1774,7 +1774,7 @@ class Client extends Common
                     '编辑客户',
                     [
                         '运营人员' => $data['oper_user'],
-                        '联系方式' => ['主电话' => $mainPhone, '辅助电话' => $auxPhone],
+                        '联系方式' => ['主电话' => $mainPhones, '辅助电话' => $auxPhone],
                         '协同人'  => $jpIds
                     ]
                 );
@@ -1796,7 +1796,7 @@ class Client extends Common
         $result = \think\Db::table('crm_leads')->where(['id' => $id])->find();
 
         // 主/辅电话：1 主、3 辅
-        $mainPhone = '';
+        $mainPhones = '';
         $auxPhone  = '';
         $contacts = \think\Db::table('crm_contacts')
             ->where('is_delete', 0)
@@ -1806,7 +1806,7 @@ class Client extends Common
             ->field('contact_type, contact_value')
             ->select();
         foreach ($contacts as $c) {
-            if ($c['contact_type'] == 1 && $mainPhone === '') $mainPhone = $c['contact_value'];
+            if ($c['contact_type'] == 1 && $mainPhones === '') $mainPhones = $c['contact_value'];
             if ($c['contact_type'] == 3 && $auxPhone === '') $auxPhone  = $c['contact_value'];
         }
 
@@ -1915,7 +1915,7 @@ class Client extends Common
 
         // 页面回填
         $this->assign('result', $result);
-        $this->assign('mainPhone', $mainPhone);
+        $this->assign('mainPhones', $mainPhones);
         $this->assign('auxPhone',  $auxPhone);
 
         return $this->fetch('client/edit');
