@@ -292,7 +292,7 @@
                 });
 
 
-                console.log($('input[name="more_phones[]"]').first().val() || $('input[name="phone"]').val());
+                console.log($('input[name="more_phones[]"]').first().val());
                 console.log($('input[name="phone2"]').val());
                 return false;
 
@@ -301,7 +301,7 @@
                 phones = Array.from(new Set(phones.filter(function (v) { return /^\d{11}$/.test(v); })));
 
 
-                // 至少一个有效主电话
+                至少一个有效主电话
                 if (phones.length === 0) {
                     layer.msg('请至少填写一个11位主电话');
                     return false;
