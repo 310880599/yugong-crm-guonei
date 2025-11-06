@@ -106,7 +106,7 @@
                     <div class="input-row">
                         <div class="phone">
                             <!-- 统一改为 more_phones[]，作为主电话数组的第一项 -->
-                            <input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input">
+                            <input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input multiple_telephone">
                         </div>
                         <button type="button" class="add-btn">+</button>
                     </div>
@@ -221,7 +221,7 @@
                 '<div class="input-row">' +
                     '<div class="phone">' +
                         // 额外电话不覆盖主电话 name，避免影响后端接收
-                        '<input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input">' +
+                        '<input type="text" name="more_phones[]" lay-verify="phone" placeholder="电话" class="layui-input multiple_telephone">' +
                     '</div>' +
                     '<button type="button" class="remove-btn">-</button>' +
                 '</div>'
@@ -286,22 +286,22 @@
             form.on('submit(submit)', function (data) {
                 // 1) 采集并清洗所有主电话
                 var phones = [];
-                $('input[name="more_phones[]"]').each(function () {
+                $('.multiple_telephone').each(function () {
                     var v = $.trim($(this).val()).replace(/\D/g, '');
                     if (v) phones.push(v);
                 });
 
 
-                console.log($('input[name="more_phones[]"]').first().val());
-                console.log($('input[name="phone2"]').val());
-                return false;
+                // console.log($('.multiple_telephone').first().val());
+                // console.log($('input[name="phone2"]').val());
+                // return false;
 
 
                 // 去重并仅保留11位数字
                 phones = Array.from(new Set(phones.filter(function (v) { return /^\d{11}$/.test(v); })));
 
 
-                至少一个有效主电话
+                //至少一个有效主电话
                 if (phones.length === 0) {
                     layer.msg('请至少填写一个11位主电话');
                     return false;
