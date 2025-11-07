@@ -5,8 +5,8 @@ return [
     'default'    => 'default',      // 默认队列名称
     'host'       => '127.0.0.1',
     'port'       => 26739,          // 外贸CRM使用Redis自定义端口26739
-    'password'   => '',             // 如有密码，在此设置
-    'select'     => 0,              // 使用第0个Redis数据库
+    'password'   => 'csE88ifakDGC8PfH',             // 如有密码，在此设置
+    'select'     => 1,              // 使用第0个Redis数据库
     'timeout'    => 0,              // 超时时间（0表示无限阻塞）
     'persistent' => false,          // 是否使用长连接
 ];
