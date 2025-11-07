@@ -26,8 +26,8 @@ class Redis extends Connector
         'default'    => 'default',
         'host'       => '127.0.0.1',
         'port'       => 26739,
-        'password'   => '',
-        'select'     => 0,
+        'password'   => 'csE88ifakDGC8PfH',
+        'select'     => 1,
         'timeout'    => 0,
         'persistent' => false,
     ];
