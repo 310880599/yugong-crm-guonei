@@ -34,9 +34,9 @@ return [
     // 端口
     'port'     => 26739,
     // 密码（如果有的话）
-    'password' => '',
+    'password' => 'csE88ifakDGC8PfH',
     // 默认使用的 Redis 数据库索引
-    'select'   => 0,
+    'select'   => 1,
     // 全局缓存有效期（0表示永久有效）
     'expire'   => 0,
     // 是否长连接
