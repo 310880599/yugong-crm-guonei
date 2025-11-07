@@ -5,7 +5,7 @@ require __DIR__ . '/thinkphp/base.php';
 
 // 使用 Redis 扩展连接Redis队列
 $redis = new \Redis();
-$redis->connect('127.0.0.1', 6379);
+$redis->connect('127.0.0.1', 26739;
 // 如有密码，请取消下面注释并设置密码
 // $redis->auth('YOUR_REDIS_PASSWORD');
 

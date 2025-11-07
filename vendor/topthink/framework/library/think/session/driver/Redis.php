@@ -20,7 +20,7 @@ class Redis implements SessionHandlerInterface
     protected $handler = null;
     protected $config  = [
         'host'         => '127.0.0.1', // redis主机
-        'port'         => 6379, // redis端口
+        'port'         => 26739, // redis端口
         'password'     => '', // 密码
         'select'       => 0, // 操作库
         'expire'       => 3600, // 有效期(秒)
