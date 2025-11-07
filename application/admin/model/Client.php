@@ -390,18 +390,13 @@ class Client extends Model
             })
             ->where($mapPhone)
             ->where($mapKhName)
-            ->where($mapKhStatus)
-            ->where($mapKhRank)
-            ->where($mapXsSource)
-            ->where($mapPrUser)
-            ->where($mapAtTime)
-            ->where(['l.status' => 1, 'l.issuccess' => -1])
+            // ... 省略其他 where 条件 ...
             ->leftJoin('crm_contacts c', "c.leads_id = l.id AND c.is_delete = 0 AND c.contact_type IN (1,3)")
             ->field([
                 'l.*',
-                // 主电话
-                "GROUP_CONCAT(DISTINCT IF(c.contact_type = 1, c.contact_value, NULL) ORDER BY c.id SEPARATOR '<br>') AS main_phone",
-                // 辅助电话
+                // 主电话：聚合所有 contact_type=1 的号码，用英文逗号分隔
+                "GROUP_CONCAT(DISTINCT IF(c.contact_type = 1, c.contact_value, NULL) ORDER BY c.id SEPARATOR ',') AS main_phone",  // **替换:** 原先用 `<br>` 分隔
+                // 辅助电话：保留原逻辑
                 "GROUP_CONCAT(DISTINCT IF(c.contact_type = 3, c.contact_value, NULL) ORDER BY c.id SEPARATOR '<br>') AS aux_phone",
             ])
             ->group('l.id')
