@@ -63,7 +63,7 @@
                     <div class="layui-inline">
                         <label class="layui-form-label">客户来源：</label>
                         <div class="layui-input-inline">
-                            <select name="kh_status" id="kh_status">
+                            <select name="kh_status" id="kh_status" lay-filter="kh_status">
                                 <option value="">请选择客户来源</option>
                                 {volist name='khStatusList' id='vo'}
                                 <!-- 同理，这里也用 ID -->
@@ -91,6 +91,15 @@
                         <label class="layui-form-label">运营人员：</label>
                         <div class="layui-input-4">
                             <input type="text" id="oper_user_input" name="oper_user" placeholder="请选择运营人员" class="layui-input">
+                        </div>
+                    </div>
+
+                    <div class="layui-inline">
+                        <label class="layui-form-label">来源端口：</label>
+                        <div class="layui-input-inline">
+                            <select name="source_port" id="source_port" lay-search>
+                                <option value="">请先选择客户来源</option>
+                            </select>
                         </div>
                     </div>
 
@@ -251,6 +260,7 @@ layui.use(['table','form','upload','util','laydate'], function () {
             return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + (res.kh_name || '') + "</a>";
         }},
         { field: 'kh_status_name', title: '询盘来源' },
+        { field: 'source_port_name', title: '来源端口' },
         { field: 'main_phone', title: '主电话' },
         { field: 'aux_phone', title: '辅助电话' },
         { field: 'joint_person_names', title: '协同人' },
@@ -575,6 +585,30 @@ layui.use(['table','form','upload','util','laydate'], function () {
 
     // 运营人员下拉（保持你原来的 EditableSelect 用法）
     const khSelect = new EditableSelect(document.getElementById('oper_user_input'), {$_yyList|raw}, '运营人员', '', 'name');
+
+    // 来源端口联动逻辑
+    var shopList = {$shopList|raw}; // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
+    
+    function fillSourcePortBySourceName(sourceName) {
+        var shops = shopList[sourceName] || [];
+        var $sourcePort = $('#source_port');
+        $sourcePort.empty();
+        if (shops.length > 0) {
+            $sourcePort.append('<option value="">请选择来源端口</option>');
+            $.each(shops, function (index, shop) {
+                $sourcePort.append('<option value="' + shop.id + '">' + shop.name + '</option>');
+            });
+        } else {
+            $sourcePort.append('<option value="">该来源暂无店铺数据</option>');
+        }
+        form.render('select');
+    }
+
+    // 监听客户来源变化，动态更新来源端口选项
+    form.on('select(kh_status)', function (data) {
+        var sourceName = $(data.elem).find("option:selected").text();
+        fillSourcePortBySourceName(sourceName);
+    });
 
     // 导入
     upload.render({

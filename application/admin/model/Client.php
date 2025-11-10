@@ -178,7 +178,12 @@ class Client extends Model
             $mapXsSource = ['xs_source' => $keyword['xs_source']];
         }
 
-        // 当前登录用户，只取“我作为协同人”的客户，且不是我负责
+        $mapSourcePort = []; // 来源端口
+        if (!empty($keyword['source_port'])) {
+            $mapSourcePort = ['source_port' => $keyword['source_port']];
+        }
+
+        // 当前登录用户，只取"我作为协同人"的客户，且不是我负责
         $currentUsername = session('username');
         $currentAdminId  = session('aid');
 
@@ -188,6 +193,7 @@ class Client extends Model
             ->where($mapKhStatus)
             ->where($mapKhRank)
             ->where($mapXsSource)
+            ->where($mapSourcePort)
             ->where($mapAtTime)
             ->where($where)
             ->where(['status' => 1, 'issuccess' => -1])                  // 仅有效客户且未成交
@@ -249,12 +255,18 @@ class Client extends Model
             $mapXsSource =  ['xs_source' => $keyword['xs_source']];
         }
 
+        $mapSourcePort = []; // 来源端口
+        if (!empty($keyword['source_port'])) {
+            $mapSourcePort = ['source_port' => $keyword['source_port']];
+        }
+
         $result  = Db::table('crm_leads')
             ->where($mapPhone)
             ->where($mapKhName)
             ->where($mapKhStatus)
             ->where($mapKhRank)
             ->where($mapXsSource)
+            ->where($mapSourcePort)
             ->where($mapAtTime)
             ->where($where)
             ->where(['status' => 1, 'issuccess' => -1]) //0 线索，1客户，2公海
@@ -369,6 +381,11 @@ class Client extends Model
         if ($keyword['xs_source'] !== '' && $keyword['xs_source'] !== null) $mapXsSource = ['xs_source' => $keyword['xs_source']];
         if (!empty($keyword['pr_user'])) $mapPrUser = [['pr_user', 'like', '%' . $keyword['pr_user'] . '%']];
 
+        $mapSourcePort = []; // 来源端口
+        if (!empty($keyword['source_port'])) {
+            $mapSourcePort = ['l.source_port' => $keyword['source_port']];
+        }
+
         $current_admin = Admin::getMyInfo();
         $team_name = $current_admin['team_name'] ?? '';
         $a_where = [];
@@ -390,7 +407,12 @@ class Client extends Model
             })
             ->where($mapPhone)
             ->where($mapKhName)
-            // ... 省略其他 where 条件 ...
+            ->where($mapKhStatus)
+            ->where($mapKhRank)
+            ->where($mapXsSource)
+            ->where($mapSourcePort)
+            ->where($mapAtTime)
+            ->where($mapPrUser)
             ->leftJoin('crm_contacts c', "c.leads_id = l.id AND c.is_delete = 0 AND c.contact_type IN (1,3)")
             ->field([
                 'l.*',
