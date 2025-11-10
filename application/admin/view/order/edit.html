@@ -121,6 +121,15 @@
                     </select>
                 </div>
             </div>
+            <!-- 来源端口 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">来源端口</label>
+                <div class="layui-input-4">
+                    <select name="source_port" id="source_port" lay-search>
+                        <option value="">请先选择询盘来源</option>
+                    </select>
+                </div>
+            </div>
             <!-- 收款账户 (Receiving Account) -->
             <div class="layui-form-item">
                 <label class="layui-form-label">收款账户</label>
@@ -431,7 +440,38 @@
                 data: collaboratorData
             });
 
+            // 来源端口联动逻辑
+            var shopList = {$shopList|raw}; // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
+            var currentSourcePort = "{$orderInfo.source_port|default=''}"; // 当前订单的来源端口值（MD5加密）
+            
+            function fillSourcePortBySourceName(sourceName, selectedPortId) {
+                var shops = shopList[sourceName] || [];
+                var $sourcePort = $('#source_port');
+                $sourcePort.empty();
+                if (shops.length > 0) {
+                    $sourcePort.append('<option value="">请选择来源端口</option>');
+                    $.each(shops, function (i, shop) {
+                        var sel = (String(selectedPortId) === String(shop.id)) ? ' selected' : '';
+                        $sourcePort.append('<option value="' + shop.id + '"' + sel + '>' + shop.name + '</option>');
+                    });
+                } else {
+                    $sourcePort.append('<option value="">该来源暂无店铺数据</option>');
+                }
+                form.render('select');
+                fixSelectAlign(); // 渲染后调整下拉框对齐
+            }
 
+            // 初次按当前询盘来源填充来源端口选项
+            var initSourceName = $('select[name="source"] option:selected').text();
+            if (initSourceName && initSourceName !== '请选择询盘来源') {
+                fillSourcePortBySourceName(initSourceName, currentSourcePort);
+            }
+
+            // 监听询盘来源变化，动态更新来源端口选项
+            form.on('select(kh_status)', function (data) {
+                var sourceName = $(data.elem).find("option:selected").text();
+                fillSourcePortBySourceName(sourceName, ''); // 切换来源时清空来源端口选择
+            });
 
             // 渲染表单
             form.render('select');

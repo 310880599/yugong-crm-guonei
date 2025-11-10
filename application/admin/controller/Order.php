@@ -598,6 +598,17 @@ class Order extends Common
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username'); // 客户负责人（默认当前用户）
             $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['team_name']        = Request::param('team_name');      // 团队名称
+            
+            // 检查 source_port 字段是否存在，如果存在则添加
+            try {
+                $columns = Db::query("SHOW COLUMNS FROM `crm_client_order` LIKE 'source_port'");
+                if (!empty($columns)) {
+                    $data['source_port'] = Request::param('source_port', '');  // 来源端口
+                }
+            } catch (\Exception $e) {
+                // 如果查询失败，忽略该字段
+            }
+            
             $data['order_time']       = Request::param('order_time');     // 成交时间
             $data['shipping_cost']    = Request::param('shipping_cost');  // 估算运费
             $data['invoice_amount']   = Request::param('invoice_amount'); // 开票金额
@@ -842,6 +853,102 @@ class Order extends Common
             ->order('username', 'asc')
             ->select();
         $this->assign('managerList', $managerList);
+
+        // 获取来源端口列表（按来源名称分组，与订单新增页一致）
+        $khStatusList = Db::name('crm_client_status')->select();
+        $has_shop_names = false;
+        try {
+            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
+            if (!empty($columns)) {
+                $has_shop_names = true;
+            }
+        } catch (\Exception $e) {
+            $has_shop_names = false;
+        }
+        if ($has_shop_names) {
+            $khStatusList = Db::name('crm_client_status')->field('id,status_name,shop_names')->select();
+        }
+        $shopList = [];
+        foreach ($khStatusList as $status) {
+            $statusName = $status['status_name'];
+            $shops = [];
+            
+            // 检查是否有shop_names字段
+            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
+                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
+                foreach ($shop_names as $shop_name) {
+                    if (!empty($shop_name)) {
+                        $shops[] = [
+                            'id' => md5($status['id'] . '_' . $shop_name),
+                            'name' => $shop_name
+                        ];
+                    }
+                }
+            }
+            
+            // 如果shop_names为空，尝试从crm_operation_shops表获取
+            if (empty($shops)) {
+                $commonShops = $this->getShopsByChannel('', $statusName);
+                foreach ($commonShops as $shop) {
+                    $shops[] = [
+                        'id' => $shop['id'],
+                        'name' => $shop['name']
+                    ];
+                }
+            }
+            
+            if (!empty($shops)) {
+                $shopList[$statusName] = $shops;
+            }
+        }
+        $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
+
+        // 根据订单的 contact 字段，从 crm_leads 表获取 source_port 值
+        $orderSourcePort = '';
+        if (!empty($order['contact'])) {
+            try {
+                // 通过联系方式查找 crm_contacts 表
+                $custphone = trim($order['contact']);
+                $coninfo = Db::name('crm_contacts')->where('is_delete', 0)->where(function ($query) use ($custphone) {
+                    $_custphone = trim(preg_replace('/[+\-\s]/', '', $custphone));
+                    $query->whereRaw("CONCAT(contact_extra, contact_value) = '{$custphone}'")
+                        ->whereOr('contact_value', $custphone);
+                    if ($custphone != $_custphone) {
+                        $query->whereOr('contact_value', $_custphone)
+                            ->whereOrRaw("CONCAT(contact_extra, contact_value) = '{$_custphone}'");
+                    }
+                })->find();
+                
+                if ($coninfo && !empty($coninfo['leads_id'])) {
+                    // 从 crm_leads 表获取 source_port
+                    $custinfo = Db::name('crm_leads')->where('id', $coninfo['leads_id'])->find();
+                    if ($custinfo) {
+                        // 检查 source_port 字段是否存在
+                        $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
+                        if (!empty($columns) && isset($custinfo['source_port']) && !empty($custinfo['source_port'])) {
+                            $orderSourcePort = $custinfo['source_port'];
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                // 忽略错误，保持为空
+            }
+        }
+        
+        // 如果订单表本身有 source_port 字段，优先使用订单表的（如果订单表字段存在且不为空）
+        if (empty($orderSourcePort)) {
+            try {
+                $columns = Db::query("SHOW COLUMNS FROM `crm_client_order` LIKE 'source_port'");
+                if (!empty($columns) && isset($order['source_port']) && !empty($order['source_port'])) {
+                    $orderSourcePort = $order['source_port'];
+                }
+            } catch (\Exception $e) {
+                // 忽略错误
+            }
+        }
+        
+        // 将 source_port 值添加到订单信息中
+        $order['source_port'] = $orderSourcePort;
 
         // 将订单主表和明细数据分配给模板
         $this->assign('orderInfo', $order);
