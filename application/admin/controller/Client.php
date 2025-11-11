@@ -1818,6 +1818,7 @@ class Client extends Common
             $khStatusList = Db::table('crm_client_status')->select();
         }
         $this->assign('khStatusList', $khStatusList);
+        //print_r($khStatusList);
 
         $yyData = $this->getYyList();
         $operUserList = $yyData['_yyList'];
@@ -1857,6 +1858,8 @@ class Client extends Common
             }
         }
         $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
+
+        //print_r($shopList);
 
         $teamName = session('team_name') ?: '';
         $adminList = Db::name('admin')
