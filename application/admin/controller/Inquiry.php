@@ -12,21 +12,21 @@ class Inquiry extends Common
     public function index()
     {
         if (request()->isPost()) {
-            return $this->categorySearch();
+            return $this->inquirySearch();
         }
         return $this->fetch();
     }
 
-    public function categorySearch()
+    public function inquirySearch()
     {
         $current_admin = Admin::getMyInfo();
-        $category_name = Request::param('category_name');
+        $inquiry_name = Request::param('inquiry_name');
         $pageSize = Request::param('limit', 10);
         $page = Request::param('page', 1);
-        $query = Db::name('crm_product_category');
+        $query = Db::name('crm_inquiry');
 
-        if (!empty($category_name)) {
-            $query->where('category_name', 'like', '%' . $category_name . '%');
+        if (!empty($inquiry_name)) {
+            $query->where('inquiry_name', 'like', '%' . $inquiry_name . '%');
         }
 
         $list = $query->where([$this->getOrgWhere($current_admin['org'])])->order('id desc')->paginate([
@@ -46,30 +46,30 @@ class Inquiry extends Common
     public function add()
     {
         if (request()->isPost()) {
-            $category_name = Request::param('category_name');
+            $inquiry_name = Request::param('inquiry_name');
             $current_admin = Admin::getMyInfo();
-            if (empty($category_name)) {
-                return $this->result([], 500, '供应商不能为空');
+            if (empty($inquiry_name)) {
+                return $this->result([], 500, '询盘来源不能为空');
             }
 
             $current_admin = Admin::getMyInfo();
-            $exists = Db::name('crm_product_category')
-                ->where('category_name', $category_name)
+            $exists = Db::name('crm_inquiry')
+                ->where('inquiry_name', $inquiry_name)
                 ->where([$this->getOrgWhere($current_admin['org'])])
                 ->find();
 
             if (!$exists) {
                 $data = [
-                    'category_name' => $category_name,
+                    'inquiry_name' => $inquiry_name,
                     'org' => $current_admin['org'],
                     'add_time' => time(),
                     'edit_time' => time(),
                     'submit_person' => $current_admin['username']
                 ];
-                Db::name('crm_product_category')->insert($data);
+                Db::name('crm_inquiry')->insert($data);
                 return $this->result([], 200, '操作成功');
             } else {
-                return $this->result([], 500, '供应商已存在');
+                return $this->result([], 500, '询盘来源已存在');
             }
         }
         return $this->fetch();
@@ -82,7 +82,7 @@ class Inquiry extends Common
             return $this->result([], 500, '参数错误');
         }
 
-        $result = Db::name('crm_product_category')->where('id', $id)->find();
+        $result = Db::name('crm_inquiry')->where('id', $id)->find();
         if (empty($result)) {
             return $this->result([], 500, '参数错误');
         }
@@ -93,32 +93,32 @@ class Inquiry extends Common
         $isSuper = (session('aid') == 1) || ($current_admin['username'] === 'admin');
 
         if (request()->isPost()) {
-            $category_name = Request::param('category_name');
-            if (empty($category_name)) {
-                return $this->result([], 500, '供应商不能为空');
+            $inquiry_name = Request::param('inquiry_name');
+            if (empty($inquiry_name)) {
+                return $this->result([], 500, '询盘来源不能为空');
             }
 
             $current_admin = Admin::getMyInfo();
-            $exists = Db::name('crm_product_category')
-                ->where('category_name', $category_name)
+            $exists = Db::name('crm_inquiry')
+                ->where('inquiry_name', $inquiry_name)
                 ->where('id', '<>', $id)
                 ->where([$this->getOrgWhere($current_admin['org'])])
                 ->find();
 
             if ($exists) {
-                return $this->result([], 500, '供应商已存在');
+                return $this->result([], 500, '询盘来源已存在');
             }
 
             $current_time = time();
 
             // 非超管：限制只能修改自己提交的记录
-            $updateQuery = Db::name('crm_product_category')->where('id', $id);
+            $updateQuery = Db::name('crm_inquiry')->where('id', $id);
             if (!$isSuper) {
                 $updateQuery->where('submit_person', $current_admin['username']);
             }
 
             $aff = $updateQuery->update([
-                'category_name' => $category_name,
+                'inquiry_name' => $inquiry_name,
                 'edit_time'    => $current_time
             ]);
 
@@ -154,7 +154,7 @@ class Inquiry extends Common
         $isSuper = (session('aid') == 1) || (($current_admin['username'] ?? '') === 'admin');
 
         // 查记录 + 按权限限制
-        $rowQuery = \think\Db::name('crm_product_category')->where('id', $id);
+        $rowQuery = \think\Db::name('crm_inquiry')->where('id', $id);
         if (!$isSuper) {
             $rowQuery->where('submit_person', $current_admin['username']);
         }
@@ -163,17 +163,17 @@ class Inquiry extends Common
             return $this->result([], 500, '无权限或记录不存在');
         }
 
-        // 被产品引用则禁止删除，并提示供应商名称
-        $hasProduct = \think\Db::name('crm_products')->where('category_id', $id)->limit(1)->value('id');
+        // 被运营端口引用则禁止删除，并提示询盘来源名称
+        $hasProduct = \think\Db::name('crm_inquiry_port')->where('inquiry_id', $id)->limit(1)->value('id');
         if ($hasProduct) {
-            $name = $row['category_name'] ?: ('ID#' . $id);
+            $name = $row['inquiry_name'] ?: ('ID#' . $id);
             return $this->result([
                 'blocked_ids'   => [$id],
                 'blocked_names' => [$name],
-            ], 500, '该供应商下存在产品，禁止删除：' . $name);
+            ], 500, '该询盘来源下存在运营端口，禁止删除：' . $name);
         }
 
-        $aff = \think\Db::name('crm_product_category')->where('id', $id)->delete();
+        $aff = \think\Db::name('crm_inquiry')->where('id', $id)->delete();
         return $aff ? $this->result([], 200, '删除成功')
             : $this->result([], 500, '删除失败');
     }
@@ -200,22 +200,22 @@ class Inquiry extends Common
 
         try {
             // 1) 按权限过滤：只保留“存在且自己提交（或超管）”的ID
-            $base = \think\Db::name('crm_product_category')->whereIn('id', $ids);
+            $base = \think\Db::name('crm_inquiry')->whereIn('id', $ids);
             if (!$isSuper) {
                 $base->where('submit_person', $current_admin['username']);
             }
-            // id => category_name
-            $allowedMap = $base->column('category_name', 'id');
+            // id => inquiry_name
+            $allowedMap = $base->column('inquiry_name', 'id');
             $allowedIds = array_map('intval', array_keys($allowedMap));
             if (empty($allowedIds)) {
                 return json(['code' => -200, 'msg' => '无可删除的记录（仅能删除本人提交的记录）']);
             }
 
-            // 2) 找出被产品引用的分类（这些不得删除）
-            $usedMap = \think\Db::name('crm_products')
-                ->whereIn('category_id', $allowedIds)
-                ->group('category_id')
-                ->column('COUNT(1)', 'category_id'); // [category_id => cnt]
+            // 2) 找出被运营端口引用的询盘来源（这些不得删除）
+            $usedMap = \think\Db::name('crm_inquiry_port')
+                ->whereIn('inquiry_id', $allowedIds)
+                ->group('inquiry_id')
+                ->column('COUNT(1)', 'inquiry_id'); // [inquiry_id => cnt]
             $usedIds = array_map('intval', array_keys($usedMap));
 
             // 被阻止的名称（完整）
@@ -240,7 +240,7 @@ class Inquiry extends Common
             // 4) 执行删除
             $deleted = 0;
             if (!empty($deletableIds)) {
-                $deleted = \think\Db::name('crm_product_category')->whereIn('id', $deletableIds)->delete();
+                $deleted = \think\Db::name('crm_inquiry')->whereIn('id', $deletableIds)->delete();
             }
 
             // 5) 统计与消息
@@ -250,7 +250,7 @@ class Inquiry extends Common
             $parts = [];
             $parts[] = '删除成功：' . $deleted . ' 条';
             if ($skippedUsed > 0) {
-                $p = '跳过(存在产品)：' . $skippedUsed . ' 条';
+                $p = '跳过(存在运营端口)：' . $skippedUsed . ' 条';
                 if ($blockedPreviewText !== '') {
                     // 名称预览附在消息里；完整数组放 data
                     if ($hasMoreBlocked) {
@@ -288,7 +288,7 @@ class Inquiry extends Common
     // 导入页（弹窗）
     public function import()
     {
-        // 渲染 view/product_category/import.html
+        // 渲染 view/inquiry/import.html
         return $this->fetch();
     }
 
@@ -309,7 +309,7 @@ class Inquiry extends Common
         $tmpPath = $info['tmp_name'];
         $ext     = strtolower(pathinfo($info['name'], PATHINFO_EXTENSION));
 
-        // 解析为二维数组 rows: [category_name, org(optional)]
+        // 解析为二维数组 rows: [inquiry_name, org(optional)]
         $rows = [];
         try {
             if ($ext === 'csv') {
@@ -333,14 +333,14 @@ class Inquiry extends Common
                 $lineNo = 0;
                 while (($data = fgetcsv($tmp)) !== false) {
                     $lineNo++;
-                    // 首行含“供应/所属”视作表头
+                    // 首行含“询盘/所属”视作表头
                     $joined = implode('', $data);
-                    if ($lineNo === 1 && (mb_strpos($joined, '供应') !== false || mb_strpos($joined, '所属') !== false)) {
+                    if ($lineNo === 1 && (mb_strpos($joined, '询盘') !== false || mb_strpos($joined, '所属') !== false)) {
                         continue;
                     }
                     $data = array_pad($data, 2, '');
                     $rows[] = [
-                        trim((string)$data[0]), // category_name
+                        trim((string)$data[0]), // inquiry_name
                         trim((string)$data[1]), // org (optional)
                     ];
                 }
@@ -361,7 +361,7 @@ class Inquiry extends Common
                     (string)$sheet->getCell('A1')->getValue(),
                     (string)$sheet->getCell('B1')->getValue(),
                 ];
-                $hasHeader = (mb_strpos(implode('', $firstRow), '供应') !== false) || (mb_strpos(implode('', $firstRow), '所属') !== false);
+                $hasHeader = (mb_strpos(implode('', $firstRow), '询盘') !== false) || (mb_strpos(implode('', $firstRow), '所属') !== false);
                 $start = $hasHeader ? 2 : 1;
 
                 for ($r = $start; $r <= $highestRow; $r++) {
@@ -400,9 +400,9 @@ class Inquiry extends Common
         };
 
         foreach ($rows as $row) {
-            list($category_name, $orgFromFile) = $row;
+            list($inquiry_name, $orgFromFile) = $row;
 
-            if ($category_name === '') {
+            if ($inquiry_name === '') {
                 $skippedEmpty++;
                 continue;
             }
@@ -411,8 +411,8 @@ class Inquiry extends Common
             if ($orgToUse === '') $orgToUse = $loginOrg;
 
             // 去重：同组织 + 同供应商名称
-            $exists = \think\Db::name('crm_product_category')
-                ->where('category_name', $category_name)
+            $exists = \think\Db::name('crm_inquiry')
+                ->where('inquiry_name', $inquiry_name)
                 ->where([$this->getOrgWhere($orgToUse)])
                 ->find();
             if ($exists) {
@@ -420,8 +420,8 @@ class Inquiry extends Common
                 continue;
             }
 
-            $ok = \think\Db::name('crm_product_category')->insert([
-                'category_name' => $category_name,
+            $ok = \think\Db::name('crm_inquiry')->insert([
+                'inquiry_name' => $inquiry_name,
                 'org'           => $orgToUse,
                 'add_time'      => $now,
                 'edit_time'     => $now,
@@ -447,7 +447,7 @@ class Inquiry extends Common
     // 下载导入模板（CSV）
     public function tpl()
     {
-        $filename = '供应商导入模板_' . date('Ymd_His') . '.csv';
+        $filename = '询盘来源导入模板_' . date('Ymd_His') . '.csv';
 
         $csvLine = function (array $cols) {
             $safe = array_map(function ($v) {
@@ -458,8 +458,8 @@ class Inquiry extends Common
             return implode(',', $safe) . "\r\n";
         };
 
-        // A=供应商名称（必填），B=所属组织（可选；为空则按当前登录人的组织）
-        $header   = ['供应商名称', '所属组织(可选)'];
+        // A=询盘来源名称（必填），B=所属组织（可选；为空则按当前登录人的组织）
+        $header   = ['询盘来源名称', '所属组织(可选)'];
         $examples = [
             ['喷播机供应商', '豫工'],
             ['A厂家',        '豫工'],

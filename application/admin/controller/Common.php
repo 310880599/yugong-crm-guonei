@@ -188,6 +188,18 @@ class Common extends Controller
     }
 
 
+    //判断是否存在运营端口,条件是指定的询盘来源
+    public function checkPortInquiry($port_name, $inquiry_id)
+    {
+        if (!$port_name) return true;
+        $current_admin = Admin::getMyInfo();
+        $where = [['port_name', '=', $port_name]];
+        if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = $this->getOrgWhere($current_admin['org']);
+        $res = Db::name('crm_inquiry_port')->where($where)->where('inquiry_id','=',$inquiry_id)->find();
+        return $res;
+    }
+
+
     //产品列表
     public function getProductList()
     {
@@ -315,6 +327,16 @@ class Common extends Controller
         $where = [];
         if ($current_admin['org'] && strpos($current_admin['org'], 'admin') === false) $where[] = $this->getOrgWhere($current_admin['org']);
         $list = Db::name('crm_product_category')->where($where)->select();
+        return $list;
+    }
+
+    //询盘来源列表
+    public function getInquiryList()
+    {
+        $current_admin = Admin::getMyInfo();
+        $where = [];
+        if ($current_admin['org'] && strpos($current_admin['org'], 'admin') === false) $where[] = $this->getOrgWhere($current_admin['org']);
+        $list = Db::name('crm_inquiry')->where($where)->select();
         return $list;
     }
 
