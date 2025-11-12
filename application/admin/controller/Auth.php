@@ -629,8 +629,8 @@ class Auth extends Common
 
     // 根据渠道获取店铺列表（从crm_client_status表的shop_names字段读取）
     public function getShops() {
-        $inquiry_id = input('inquiry_id/d', 0);    // 获取渠道ID
-        $admin_id   = input('admin_id/d', 0);      // 当前操作的管理员ID（编辑状态）
+        $inquiry_id = input('inquiry_id/d', 0);   // 获取渠道ID
+        $admin_id   = input('admin_id/d', 0);     // 当前操作的管理员ID（编辑时）
         if (empty($inquiry_id)) {
             return json(['code' => 0, 'msg' => '渠道ID不能为空', 'data' => []]);
         }
@@ -644,7 +644,7 @@ class Auth extends Common
             if (!$portList) {
                 return json(['code' => 0, 'msg' => '该渠道暂无端口数据', 'data' => []]);
             }
-            // 获取当前管理员已选端口ID列表（编辑时用于解禁自己已选端口）
+            // 获取当前管理员已选的端口ID列表（编辑时用来解禁自己已选的端口）
             $currentPortIds = [];
             if ($admin_id) {
                 $currentAdmin = Admin::get($admin_id);
@@ -652,17 +652,17 @@ class Auth extends Common
                     $currentPortIds = array_filter(explode(',', $currentAdmin['port_id']));
                 }
             }
-            // 收集同一渠道下其他管理员已占用的端口ID
+            // 收集同渠道下其他管理员已占用的端口ID
             $usedPortIds = [];
-            $otherAdmins = Db::name('admin')
-                ->where('group_id', $this->yygid)           // 只针对运营组用户
+            $otherAdminsQuery = Db::name('admin')
+                ->where('group_id', $this->yygid)           // 只针对运营组用户检查
                 ->where('inquiry_id', $inquiry_id)
                 ->where('port_id', '<>', '')
                 ->where('port_id', '<>', null);
             if ($admin_id) {
-                $otherAdmins->where('admin_id', '<>', $admin_id);
+                $otherAdminsQuery->where('admin_id', '<>', $admin_id);
             }
-            $otherList = $otherAdmins->field('port_id')->select();
+            $otherList = $otherAdminsQuery->field('port_id')->select();
             foreach ($otherList as $admin) {
                 $ids = array_filter(explode(',', $admin['port_id']));
                 foreach ($ids as $pid) {
@@ -671,7 +671,7 @@ class Auth extends Common
                     }
                 }
             }
-            // 标记端口是否已被占用；如果是当前管理员已拥有的端口，则不标记占用
+            // 整理输出数据，标记哪些端口已被占用（当前管理员已拥有的端口不算占用）
             $data = [];
             foreach ($portList as $port) {
                 $id = (string)$port['id'];
