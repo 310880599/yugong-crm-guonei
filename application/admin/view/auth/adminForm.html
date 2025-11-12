@@ -441,66 +441,45 @@
         }
         
         function getChannelList(ele) {
-            // 发送请求获取渠道列表
-            url = "{:url('getChannels')}";
-            $.get(url, function (res) {
+            var url = "{:url('getChannels')}";
+            $.get(url, function(res) {
                 if (res.code > 0) {
-                    // 创建渠道选择框HTML
+                    // 构建“所属渠道”下拉选择框 HTML
                     var channelHtml = '<div class="layui-form-item" id="channel-item">'
                         + '<label class="layui-form-label">所属渠道</label>'
                         + '<div class="layui-input-4">'
-                        + '<select name="channel" id="channel-select" lay-verify="required" lay-filter="channelSelect">'
+                        + '<select name="inquiry_id" id="channel-select" lay-verify="required" lay-filter="channelSelect">'
                         + '<option value="">请选择渠道</option>';
-
-                    // 动态添加渠道选项，保存status_id、status_name和店铺列表
+                    // 动态添加渠道选项（仅 status=0 的渠道）
                     var selectedChannel = '';
-                    var channelDataMap = {}; // 存储渠道对应的数据
-                    $.each(res.data, function (index, item) {
-                        sel = '';
-                        if ((info && item.name == info.channel) || (channel && item.name == channel)) {
+                    $.each(res.data, function(index, item) {
+                        var sel = '';
+                        if (info && item.id == info.inquiry_id) {
                             sel = 'selected class="layui-this"';
-                            selectedChannel = item.name;
+                            selectedChannel = item.id;  // 记录选中的渠道ID
                         }
-                        // 保存渠道数据（包含店铺列表）
-                        channelDataMap[item.name] = {
-                            status_id: item.status_id || item.id,
-                            status_name: item.status_name,
-                            shop_names: item.shop_names || '' // 店铺名称字符串
-                        };
-                        channelHtml += '<option ' + sel + ' value="' + item.name + '" data-status-id="' + (item.status_id || item.id) + '" data-status-name="' + (item.status_name || '') + '" data-shop-names="' + (item.shop_names || '') + '">' + item.name + '</option>';
+                        channelHtml += '<option ' + sel + ' value="' + item.id + '">' + item.name + '</option>';
                     });
-                    
-                    // 将渠道数据映射存储到全局变量
-                    window.channelDataMap = channelDataMap;
-
                     channelHtml += '</select></div></div>';
-                    // 先插入渠道选择框，再插入职位单选框
+                    // 插入渠道选择框并渲染表单
                     $(ele).after(channelHtml);
                     form.val("form", info.org);
-                    form.render('select', 'channel'); // 重新渲染表单
-                    
-                    // 渲染后设置z-index，确保下拉列表不被遮挡
+                    form.render('select');  // 渲染下拉框
+                    // 确保下拉列表不被遮挡
                     setTimeout(function() {
-                        var $channelSelect = $('#channel-select').next('.layui-form-select');
-                        if ($channelSelect.length > 0) {
-                            $channelSelect.css('z-index', '9999');
-                            $channelSelect.find('dl').css({
-                                'z-index': '10000',
-                                'position': 'absolute'
-                            });
-                        }
+                        $('#channel-select').next('.layui-form-select').css('z-index', '9999')
+                            .find('dl').css({ 'z-index': '10000', 'position': 'absolute' });
                     }, 200);
-                    
-                    // 如果已有选中的渠道，自动加载店铺列表
+                    // 如果已有选中的渠道，则自动加载对应端口列表
                     if (selectedChannel) {
                         getShopList(selectedChannel);
                     }
                 } else {
-                    layer.msg('获取渠道列表失败', { icon: 2 });
+                    layer.msg('获取渠道列表失败', {icon: 2});
                 }
             });
-
         }
+
 
 
         // 监听用户组选择框
@@ -566,23 +545,23 @@
         // 表单提交前，将选中的运营端口数组转为逗号字符串写入隐藏域
         form.on('submit(submit)', function(data) {
             if (window.operationPortsSelectInstance) {
-                var selectedNames = window.operationPortsSelectInstance.getValue('value');  // 获取选中项的值数组
-                var portsStr = selectedNames.join(',');  
-                $('input[name="operation_ports"]').val(portsStr);    // 设置隐藏域值
-                data.field.operation_ports = portsStr;               // 确保提交字段为字符串
+                var selectedValues = window.operationPortsSelectInstance.getValue('value');  // 获取选中端口的值（ID数组）
+                var portsStr = selectedValues.join(',');
+                $('input[name="port_id"]').val(portsStr);    // 设置隐藏域 port_id 的值
+                data.field.port_id = portsStr;               // 确保提交数据包含 port_id 字段
             }
             var loading = layer.load(1, { shade: [0.1, '#fff'] });
             $.post("", data.field, function(res) {
                 layer.close(loading);
                 if (res.code > 0) {
-                    layer.msg(res.msg, { time: 1800, icon: 1 }, function() {
+                    layer.msg(res.msg, {time:1800, icon:1}, function() {
                         location.href = res.url;
                     });
                 } else {
-                    layer.msg(res.msg, { time: 1800, icon: 2 });
+                    layer.msg(res.msg, {time:1800, icon:2});
                 }
             });
-            return false;  // 阻止表单默认提交
+            return false; // 阻止默认提交
         });
 
         //普通图片上传

@@ -119,32 +119,34 @@ class Auth extends Common
             if($data['org'])$data['org'] = $this->org_fgx . implode($this->org_fgx , $data['org']) .$this->org_fgx  ;
             
             // 处理运营端口数据（现在存储的是店铺名称，不是ID）
-            if (isset($data['operation_ports']) && !empty($data['operation_ports'])) {
-                // 支持字符串和数组两种格式
-                if (is_array($data['operation_ports'])) {
-                    $ports = array_filter(array_map('trim', $data['operation_ports'])); // 过滤空值并去空格
-                } else {
-                    // 如果是字符串，先转换为数组
-                    $ports = array_filter(array_map('trim', explode(',', $data['operation_ports'])));
-                }
-                
+            if (isset($data['port_id']) && !empty($data['port_id'])) {
+                // 支持数组或逗号分隔字符串两种格式
+                $ports = is_array($data['port_id'])
+                    ? array_filter(array_map('trim', $data['port_id']))
+                    : array_filter(array_map('trim', explode(',', $data['port_id'])));
                 if (!empty($ports)) {
-                    // 验证店铺是否已被使用（通过店铺名称验证）
-                    $channel = $data['channel'] ?? '';
-                    if (!empty($channel)) {
-                        $used_ports = $this->checkPortsUsed($ports, $channel, 0);
-                        if (!empty($used_ports)) {
-                            return ['code' => 0, 'msg' => '以下店铺已被其他管理员使用：' . implode('、', $used_ports)];
+                    $inquiryId = $data['inquiry_id'] ?? 0;
+                    if (!empty($inquiryId)) {
+                        $used = $this->checkPortsUsed($ports, $inquiryId, 0);
+                        if (!empty($used)) {
+                            // 查询端口名称用于错误提示
+                            $portNames = Db::name('crm_inquiry_port')->whereIn('id', $used)->column('port_name');
+                            return ['code' => 0, 'msg' => '以下端口已被其他管理员使用：' . implode('、', $portNames)];
                         }
                     }
-                    $data['operation_ports'] = implode(',', $ports);
+                    $data['port_id'] = implode(',', $ports);
                 } else {
-                    $data['operation_ports'] = '';
+                    $data['port_id'] = '';
                 }
             } else {
-                $data['operation_ports'] = '';
+                $data['port_id'] = '';
             }
             
+            // 新增: 若选择了渠道，将渠道名称赋值到旧 channel 字段（兼容旧逻辑）
+            if (!empty($data['inquiry_id'])) {
+                $data['channel'] = Db::name('crm_inquiry')->where('id', $data['inquiry_id'])->value('inquiry_name') ?? '';
+            }
+
             //验证
             $msg = $this->validate($data, 'app\admin\validate\Admin');
             if ($msg != 'true') {
@@ -298,32 +300,30 @@ class Auth extends Common
             }
 
             // 处理运营端口数据（现在存储的是店铺名称，不是ID）
-            if (isset($data['operation_ports']) && $data['operation_ports'] !== '') {
-                // 支持字符串和数组两种格式
-                if (is_array($data['operation_ports'])) {
-                    $ports = array_filter(array_map('trim', $data['operation_ports'])); // 过滤空值并去空格
-                } else {
-                    // 如果是字符串，先转换为数组
-                    $ports = array_filter(array_map('trim', explode(',', $data['operation_ports'])));
-                }
-                
+            if (isset($data['port_id']) && $data['port_id'] !== '') {
+                $ports = is_array($data['port_id'])
+                    ? array_filter(array_map('trim', $data['port_id']))
+                    : array_filter(array_map('trim', explode(',', $data['port_id'])));
                 if (!empty($ports)) {
-                    // 验证店铺是否已被使用（通过店铺名称验证）
-                    $channel = $data['channel'] ?? '';
-                    if (!empty($channel)) {
-                        $used_ports = $this->checkPortsUsed($ports, $channel, $data['admin_id']);
-                        if (!empty($used_ports)) {
-                            return ['code' => 0, 'msg' => '以下店铺已被其他管理员使用：' . implode('、', $used_ports)];
+                    $inquiryId = $data['inquiry_id'] ?? 0;
+                    if (!empty($inquiryId)) {
+                        $used = $this->checkPortsUsed($ports, $inquiryId, $data['admin_id']);
+                        if (!empty($used)) {
+                            $portNames = Db::name('crm_inquiry_port')->whereIn('id', $used)->column('port_name');
+                            return ['code' => 0, 'msg' => '以下端口已被其他管理员使用：' . implode('、', $portNames)];
                         }
                     }
-                    $data['operation_ports'] = implode(',', $ports);
+                    $data['port_id'] = implode(',', $ports);
                 } else {
-                    // 如果过滤后为空，设置为空字符串
-                    $data['operation_ports'] = '';
+                    $data['port_id'] = '';
                 }
             } else {
-                // 如果没有提交端口数据或为空字符串，设置为空字符串
-                $data['operation_ports'] = '';
+                $data['port_id'] = '';
+            }
+
+            // 新增: 若提交了渠道ID，查询渠道名称并赋值到 channel 字段
+            if (!empty($data['inquiry_id'])) {
+                $data['channel'] = Db::name('crm_inquiry')->where('id', $data['inquiry_id'])->value('inquiry_name') ?? '';
             }
 
             $msg = $this->validate($data, 'app\admin\validate\Admin');
@@ -387,7 +387,15 @@ class Auth extends Common
                 }
             }
             $result['is_yy'] = $current_admin['group_id'] == $this->yygid ? 1 : 0;
-            $result['channel'] = $current_admin['channel'] ?? "";
+            $result['channel'] = '';  // 默认空渠道名
+            if (!empty($info['inquiry_id'])) {
+                // 根据 inquiry_id 获取渠道名称
+                $result['channel'] = Db::name('crm_inquiry')->where('id', $info['inquiry_id'])->value('inquiry_name') ?? '';
+            } elseif (!empty($info['channel'])) {
+                // 退一步使用旧 channel 字段
+                $result['channel'] = $info['channel'];
+            }
+            $result['inquiry_id'] = $info['inquiry_id'] ?? 0;
             $result['is_admin'] = $current_admin['group_id'] == 1 ? 1 : 0;
             $result['is_position'] = $current_admin['position'] == 1 ? 1 : 0;
             $info['org'] = $this->getOrg($info['org']);
@@ -606,229 +614,112 @@ class Auth extends Common
     }
 
 
-    public function getChannels()
-    {
-        // 查询crm_client_status表，包含店铺字段
-        // 先检查shop_names字段是否存在
-        try {
-            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
-            $has_shop_names = !empty($columns);
-        } catch (\Exception $e) {
-            $has_shop_names = false;
-        }
-        
-        // 根据字段是否存在决定查询字段
-        if ($has_shop_names) {
-            $list = Db::name('crm_client_status')->field('id,status_name,shop_names')->select();
-        } else {
-            // 如果字段不存在，只查询基本字段
-            $list = Db::name('crm_client_status')->field('id,status_name')->select();
-        }
-        
+    public function getChannels() {
+        // 查询 crm_inquiry 表中 status=0 的渠道
+        $list = Db::name('crm_inquiry')->where('status', 0)->field('id, inquiry_name')->select();
         $channels = [];
         foreach ($list as $li) {
-            $name = strtolower($li['status_name']);
-            if (empty($this->channel_map[$name])) {
-                continue;
-            }
-            // 返回渠道信息，包含原始status_name和映射后的渠道名称，以及店铺列表
             $channels[] = [
-                'id' => $li['id'], 
-                'name' => $this->channel_map[$name],
-                'status_name' => $li['status_name'],
-                'status_id' => $li['id'],
-                'shop_names' => ($has_shop_names && isset($li['shop_names'])) ? $li['shop_names'] : '' // 店铺名称字符串（逗号分隔）
+                'id'   => $li['id'],
+                'name' => $li['inquiry_name']
             ];
         }
-
         return json(['code' => 1, 'msg' => '获取成功!', 'data' => $channels]);
     }
 
     // 根据渠道获取店铺列表（从crm_client_status表的shop_names字段读取）
-    public function getShops()
-    {
+    public function getShops() {
+        $inquiry_id = input('inquiry_id/d', 0);    // 获取渠道ID
+        $admin_id   = input('admin_id/d', 0);      // 当前操作的管理员ID（编辑状态）
+        if (empty($inquiry_id)) {
+            return json(['code' => 0, 'msg' => '渠道ID不能为空', 'data' => []]);
+        }
         try {
-            $channel = input('channel', '');
-            $status_id = input('status_id', 0); // 获取status_id参数
-            
-            if (empty($channel)) {
-                return json(['code' => 0, 'msg' => '渠道参数不能为空', 'data' => []]);
-            }
-
-            // 获取当前管理员ID（用于排除已选中的店铺）
-            $current_admin_id = input('admin_id', 0);
-            
-            // 获取对应的status_id和status_name
-            $status_info = null;
-            if ($status_id > 0) {
-                // 如果提供了status_id，直接从crm_client_status表查询（明确指定字段）
-                $status_info = Db::name('crm_client_status')
-                    ->where('id', $status_id)
-                    ->field('id,status_name,shop_names')
-                    ->find();
-            } else {
-                // 如果没有status_id，通过渠道名称反向查找
-                foreach ($this->channel_map as $key => $value) {
-                    if ($value === $channel) {
-                        // 先尝试精确匹配
-                        $status_info = Db::name('crm_client_status')
-                            ->where('status_name', $key)
-                            ->field('id,status_name,shop_names')
-                            ->find();
-                        if (!$status_info) {
-                            // 尝试模糊匹配
-                            $status_info = Db::name('crm_client_status')
-                                ->where('status_name', 'like', '%' . $key . '%')
-                                ->field('id,status_name,shop_names')
-                                ->find();
-                        }
-                        if ($status_info) {
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (!$status_info) {
-                return json(['code' => 0, 'msg' => '未找到对应的渠道信息，渠道名称：' . $channel, 'data' => []]);
-            }
-            
-            // 从crm_client_status表的shop_names字段获取店铺列表
-            $shop_names_str = '';
-            if (isset($status_info['shop_names'])) {
-                $shop_names_str = trim($status_info['shop_names']);
-            }
-            
-            // 如果字段为空，返回提示信息
-            if (empty($shop_names_str)) {
-                return json([
-                    'code' => 0, 
-                    'msg' => '该渠道（' . $status_info['status_name'] . '）暂无店铺数据，请执行SQL：UPDATE crm_client_status SET shop_names = \'店铺1,店铺2,店铺3\' WHERE id = ' . $status_info['id'], 
-                    'data' => []
-                ]);
-            }
-            
-            // 解析店铺名称（逗号分隔）
-            $shop_names = array_filter(array_map('trim', explode(',', $shop_names_str)));
-            if (empty($shop_names)) {
-                return json(['code' => 0, 'msg' => '该渠道暂无店铺数据', 'data' => []]);
-            }
-            
-            // 构建店铺列表（使用店铺名称作为唯一标识）
-            $shops = [];
-            foreach ($shop_names as $index => $shop_name) {
-                if (!empty($shop_name)) {
-                    $shops[] = [
-                        'id' => md5($status_info['id'] . '_' . $shop_name), // 生成唯一ID
-                        'name' => $shop_name,
-                        'channel' => $channel,
-                        'shop_name' => $shop_name, // 保留原始店铺名称用于匹配
-                        'status_id' => $status_info['id']
-                    ];
-                }
-            }
-            
-            if (empty($shops)) {
-                return json(['code' => 0, 'msg' => '该渠道暂无店铺数据', 'data' => []]);
-            }
-            
-            // 获取已被其他管理员使用的店铺名称（operation_ports字段存储的是店铺名称）
-            $used_shop_names = [];
-            $current_shop_names = [];
-            
-            if (!empty($current_admin_id)) {
-                // 编辑时，获取当前管理员的店铺
-                $current_admin = Admin::get($current_admin_id);
-                if ($current_admin && !empty($current_admin['operation_ports'])) {
-                    $current_shop_names = array_filter(array_map('trim', explode(',', $current_admin['operation_ports'])));
-                }
-            }
-            
-            // 查询同渠道下其他管理员使用的店铺
-            $other_admins = Db::name('admin')
-                ->where('group_id', $this->yygid)
-                ->where('channel', $channel)
-                ->where('operation_ports', '<>', '')
-                ->where('operation_ports', '<>', null)
-                ->field('admin_id, operation_ports')
+            // 查询指定渠道下 status=0 的端口列表
+            $portList = Db::name('crm_inquiry_port')
+                ->where('inquiry_id', $inquiry_id)
+                ->where('status', 0)
+                ->field('id, port_name')
                 ->select();
-            
-            foreach ($other_admins as $admin) {
-                if (!empty($admin['operation_ports'])) {
-                    $admin_shops = array_filter(array_map('trim', explode(',', $admin['operation_ports'])));
-                    foreach ($admin_shops as $shop_name) {
-                        if (!empty($shop_name) && !isset($used_shop_names[$shop_name])) {
-                            $used_shop_names[$shop_name] = $admin['admin_id'];
-                        }
+            if (!$portList) {
+                return json(['code' => 0, 'msg' => '该渠道暂无端口数据', 'data' => []]);
+            }
+            // 获取当前管理员已选端口ID列表（编辑时用于解禁自己已选端口）
+            $currentPortIds = [];
+            if ($admin_id) {
+                $currentAdmin = Admin::get($admin_id);
+                if ($currentAdmin && !empty($currentAdmin['port_id'])) {
+                    $currentPortIds = array_filter(explode(',', $currentAdmin['port_id']));
+                }
+            }
+            // 收集同一渠道下其他管理员已占用的端口ID
+            $usedPortIds = [];
+            $otherAdmins = Db::name('admin')
+                ->where('group_id', $this->yygid)           // 只针对运营组用户
+                ->where('inquiry_id', $inquiry_id)
+                ->where('port_id', '<>', '')
+                ->where('port_id', '<>', null);
+            if ($admin_id) {
+                $otherAdmins->where('admin_id', '<>', $admin_id);
+            }
+            $otherList = $otherAdmins->field('port_id')->select();
+            foreach ($otherList as $admin) {
+                $ids = array_filter(explode(',', $admin['port_id']));
+                foreach ($ids as $pid) {
+                    if ($pid !== '' && !in_array($pid, $usedPortIds)) {
+                        $usedPortIds[] = $pid;
                     }
                 }
             }
-            
-            // 标记店铺是否已被使用（通过店铺名称匹配）
-            foreach ($shops as &$shop) {
-                $shop_name = $shop['shop_name'];
-                // 检查是否被其他管理员使用
-                $shop['is_used'] = isset($used_shop_names[$shop_name]) ? 1 : 0;
-                
-                // 如果是编辑模式，且当前管理员已选中该店铺，则标记为可用
-                if ($shop['is_used'] && !empty($current_admin_id) && !empty($current_shop_names)) {
-                    if (in_array($shop_name, $current_shop_names)) {
-                        $shop['is_used'] = 0;
-                    }
+            // 标记端口是否已被占用；如果是当前管理员已拥有的端口，则不标记占用
+            $data = [];
+            foreach ($portList as $port) {
+                $id = (string)$port['id'];
+                $is_used = in_array($id, $usedPortIds) ? 1 : 0;
+                if ($is_used && in_array($id, $currentPortIds)) {
+                    $is_used = 0;  // 自己已选的端口视为可用
                 }
+                $data[] = [
+                    'id'        => $port['id'],
+                    'port_name' => $port['port_name'],
+                    'is_used'   => $is_used
+                ];
             }
-            
-            return json(['code' => 1, 'msg' => '获取成功!', 'data' => $shops]);
+            return json(['code' => 1, 'msg' => '获取成功!', 'data' => $data]);
         } catch (\Exception $e) {
-            // 直接返回错误信息，无需记录日志
-            return json(['code' => 0, 'msg' => '获取店铺列表失败：' . $e->getMessage(), 'data' => []]);
+            return json(['code' => 0, 'msg' => '获取端口列表失败:' . $e->getMessage(), 'data' => []]);
         }
     }
 
     // 检查店铺（店铺名称）是否已被使用
-    private function checkPortsUsed($shop_names, $channel, $exclude_admin_id = 0)
-    {
-        if (empty($shop_names) || empty($channel)) {
+    private function checkPortsUsed($portIds, $inquiry_id, $exclude_admin_id = 0) {
+        if (empty($portIds) || empty($inquiry_id)) {
             return [];
         }
-        
-        // 确保是数组格式，并去除空格
-        $shop_names = is_array($shop_names) ? array_filter(array_map('trim', $shop_names)) : [];
-        if (empty($shop_names)) {
+        // 确保是数组并去除空白
+        $portIds = is_array($portIds) ? array_filter(array_map('trim', $portIds)) : array();
+        if (empty($portIds)) {
             return [];
         }
-        
-        $used_ports = [];
-        
-        // 查询同渠道下其他管理员的店铺使用情况
+        $used = [];
+        // 查询同渠道下其他管理员的端口占用情况
         $query = Db::name('admin')
             ->where('group_id', $this->yygid)
-            ->where('channel', $channel)
-            ->where('operation_ports', '<>', '')
-            ->where('operation_ports', '<>', null);
-        
+            ->where('inquiry_id', $inquiry_id)
+            ->where('port_id', '<>', '')
+            ->where('port_id', '<>', null);
         if ($exclude_admin_id > 0) {
             $query->where('admin_id', '<>', $exclude_admin_id);
         }
-        
-        $other_admins = $query->field('admin_id, operation_ports, username')->select();
-        
-        // 检查每个店铺名称是否已被使用
-        foreach ($shop_names as $shop_name) {
-            foreach ($other_admins as $admin) {
-                if (!empty($admin['operation_ports'])) {
-                    $admin_shops = array_filter(array_map('trim', explode(',', $admin['operation_ports'])));
-                    if (in_array($shop_name, $admin_shops)) {
-                        // 店铺已被使用
-                        if (!in_array($shop_name, $used_ports)) {
-                            $used_ports[] = $shop_name;
-                        }
-                        break; // 找到一个就够了
-                    }
+        $otherAdmins = $query->field('port_id')->select();
+        foreach ($otherAdmins as $admin) {
+            $ids = array_filter(explode(',', $admin['port_id']));
+            foreach ($ids as $pid) {
+                if ($pid !== '' && in_array($pid, $portIds)) {
+                    $used[] = $pid;
                 }
             }
         }
-        
-        return $used_ports;
+        return $used;
     }
 }
