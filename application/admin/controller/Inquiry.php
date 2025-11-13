@@ -45,49 +45,53 @@ class Inquiry extends Common
 
     public function add()
     {
-        if (request()->isPost()) {
-            $inquiry_name = Request::param('inquiry_name');
-            $current_admin = Admin::getMyInfo();
-            if (empty($inquiry_name)) {
-                return $this->result([], 500, '询盘来源不能为空');
-            }
-
-            $current_admin = Admin::getMyInfo();
-            $exists = Db::name('crm_inquiry')
-                ->where('inquiry_name', $inquiry_name)
-                ->where([$this->getOrgWhere($current_admin['org'])])
-                ->find();
-
-
-            if (!$exists) {
-                $data = [
-                    'inquiry_name' => $inquiry_name,
-                    'org' => $current_admin['org'],
-                    'add_time' => time(),
-                    'edit_time' => time(),
-                    'submit_person' => $current_admin['username']
-                ];
-                Db::name('crm_inquiry')->insert($data);
-                return $this->result([], 200, '操作成功');
-            } else {
-
-                if($exists['status'] == -1){
-
-                    Db::name('crm_inquiry')->where('id', $exists['id'])->update([
-                        'status' => 0,
-                        'edit_time' => time()
-                    ]);
-                    return $this->result([], 200, '操作成功');
-                }else{
-
-                    return $this->result([], 500, '询盘来源已存在');
-
-                }
-                
-            }
+        if (!request()->isPost()) {
+            return $this->fetch();
         }
-        return $this->fetch();
+
+        $inquiry_name  = trim((string)Request::param('inquiry_name'));
+        $current_admin = Admin::getMyInfo();
+
+        if ($inquiry_name === '') {
+            return $this->result([], 500, '询盘来源不能为空');
+        }
+
+        // 同组织 + 同名：包含已软删除的记录，一并参与判断
+        $exists = Db::name('crm_inquiry')
+            ->where('inquiry_name', $inquiry_name)
+            ->where([$this->getOrgWhere($current_admin['org'])])
+            ->find();
+
+        if (!$exists) {
+            // 不存在：插入新记录
+            $data = [
+                'inquiry_name'  => $inquiry_name,
+                'org'           => $current_admin['org'],
+                'status'        => 0,               // 明确写入正常状态
+                'add_time'      => time(),
+                'edit_time'     => time(),
+                'submit_person' => $current_admin['username']
+            ];
+            Db::name('crm_inquiry')->insert($data);
+            return $this->result([], 200, '操作成功');
+        }
+
+        // 已存在
+        if ((int)$exists['status'] === -1) {
+            // 复活：不改 add_time，只更新状态与编辑时间
+            Db::name('crm_inquiry')
+                ->where('id', (int)$exists['id'])
+                ->update([
+                    'status'    => 0,
+                    'edit_time' => time()
+                ]);
+            return $this->result([], 200, '操作成功（已恢复已删除的同名记录）');
+        }
+
+        // 已存在且为正常
+        return $this->result([], 500, '询盘来源已存在');
     }
+
 
     public function edit()
     {
@@ -116,56 +120,13 @@ class Inquiry extends Common
             $exists = Db::name('crm_inquiry')
                 ->where('inquiry_name', $inquiry_name)
                 ->where('id', '<>', $id)
+                ->where('status', 0)
                 ->where([$this->getOrgWhere($current_admin['org'])])
                 ->find();
 
 
             if ($exists) {
-
-                if($exists['status'] == -1){
-                    
-
-                    $current_time = time();
-
-                    // 非超管：限制只能修改自己提交的记录
-                    $updateQuery = Db::name('crm_inquiry')->where('id', $id);
-                    if (!$isSuper) {
-                        $updateQuery->where('submit_person', $current_admin['username']);
-                    }
-
-                    $aff = $updateQuery->update([
-                        'inquiry_name' => $inquiry_name,
-                        'edit_time'    => $current_time
-                    ]);
-
-                    if ($aff) {
-                        return $this->result([], 200, '操作成功');
-                    } else {
-                        // 可能是无权限或未变更
-                        if (!$isSuper && $result['submit_person'] !== $current_admin['username']) {
-                            return $this->result([], 500, '无权限操作他人记录');
-                        }
-                        return $this->result([], 500, '操作失败');
-                    }
-                            
-                    
-                    
-                    Db::name('crm_inquiry')->where('id', $exists['id'])->update([
-                        'status' => 0,
-                        'edit_time' => time()
-                    ]);
-
-
-
-
-
-                    return $this->result([], 200, '操作成功');
-
-                }else{
-
-                    return $this->result([], 500, '询盘来源已存在');
-
-                }
+                return $this->result([], 500, '询盘来源已存在');
             }
 
             $current_time = time();
@@ -475,7 +436,7 @@ class Inquiry extends Common
             $orgToUse = $orgFromFile !== '' ? $normalizeOrg($orgFromFile) : $loginOrg;
             if ($orgToUse === '') $orgToUse = $loginOrg;
 
-            // 去重：同组织 + 同供应商名称
+            // 去重：同组织 + 同询盘来源名称
             $exists = \think\Db::name('crm_inquiry')
                 ->where('inquiry_name', $inquiry_name)
                 ->where('status', 0)
