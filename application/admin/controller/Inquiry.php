@@ -55,7 +55,6 @@ class Inquiry extends Common
             $current_admin = Admin::getMyInfo();
             $exists = Db::name('crm_inquiry')
                 ->where('inquiry_name', $inquiry_name)
-                ->where('status', 0)
                 ->where([$this->getOrgWhere($current_admin['org'])])
                 ->find();
 
@@ -71,7 +70,20 @@ class Inquiry extends Common
                 Db::name('crm_inquiry')->insert($data);
                 return $this->result([], 200, '操作成功');
             } else {
-                return $this->result([], 500, '询盘来源已存在');
+
+                if($exists['status'] == -1){
+
+                    Db::name('crm_inquiry')->where('id', $exists['id'])->update([
+                        'status' => 0,
+                        'edit_time' => time()
+                    ]);
+                    return $this->result([], 200, '操作成功');
+                }else{
+
+                    return $this->result([], 500, '询盘来源已存在');
+
+                }
+                
             }
         }
         return $this->fetch();
@@ -104,13 +116,56 @@ class Inquiry extends Common
             $exists = Db::name('crm_inquiry')
                 ->where('inquiry_name', $inquiry_name)
                 ->where('id', '<>', $id)
-                ->where('status', 0)
                 ->where([$this->getOrgWhere($current_admin['org'])])
                 ->find();
 
 
             if ($exists) {
-                return $this->result([], 500, '询盘来源已存在');
+
+                if($exists['status'] == -1){
+                    
+
+                    $current_time = time();
+
+                    // 非超管：限制只能修改自己提交的记录
+                    $updateQuery = Db::name('crm_inquiry')->where('id', $id);
+                    if (!$isSuper) {
+                        $updateQuery->where('submit_person', $current_admin['username']);
+                    }
+
+                    $aff = $updateQuery->update([
+                        'inquiry_name' => $inquiry_name,
+                        'edit_time'    => $current_time
+                    ]);
+
+                    if ($aff) {
+                        return $this->result([], 200, '操作成功');
+                    } else {
+                        // 可能是无权限或未变更
+                        if (!$isSuper && $result['submit_person'] !== $current_admin['username']) {
+                            return $this->result([], 500, '无权限操作他人记录');
+                        }
+                        return $this->result([], 500, '操作失败');
+                    }
+                            
+                    
+                    
+                    Db::name('crm_inquiry')->where('id', $exists['id'])->update([
+                        'status' => 0,
+                        'edit_time' => time()
+                    ]);
+
+
+
+
+
+                    return $this->result([], 200, '操作成功');
+
+                }else{
+
+                    return $this->result([], 500, '询盘来源已存在');
+
+                }
             }
 
             $current_time = time();
@@ -168,8 +223,12 @@ class Inquiry extends Common
         }
 
         // 被运营端口引用则禁止删除，并提示询盘来源名称
-        $hasProduct = \think\Db::name('crm_inquiry_port')->where('inquiry_id', $id)->limit(1)->value('id');
-        if ($hasProduct) {
+        $hasPort = \think\Db::name('crm_inquiry_port')
+            ->where('inquiry_id', $id)
+            ->where('status', 0)  // 仅统计未删除的运营端口
+            ->limit(1)
+            ->value('id');
+        if ($hasPort) {
             $name = $row['inquiry_name'] ?: ('ID#' . $id);
             return $this->result([
                 'blocked_ids'   => [$id],
@@ -219,8 +278,9 @@ class Inquiry extends Common
             // 2) 找出被运营端口引用的询盘来源（这些不得删除）
             $usedMap = \think\Db::name('crm_inquiry_port')
                 ->whereIn('inquiry_id', $allowedIds)
+                ->where('status', 0)   // 仅统计未删除的运营端口
                 ->group('inquiry_id')
-                ->column('COUNT(1)', 'inquiry_id'); // [inquiry_id => cnt]
+                ->column('COUNT(1)', 'inquiry_id');
             $usedIds = array_map('intval', array_keys($usedMap));
 
             // 被阻止的名称（完整）
