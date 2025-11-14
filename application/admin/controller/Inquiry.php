@@ -23,7 +23,7 @@ class Inquiry extends Common
         $inquiry_name = Request::param('inquiry_name');
         $pageSize = Request::param('limit', 10);
         $page = Request::param('page', 1);
-        $query = Db::name('crm_inquiry')->where('status', 0);
+        $query = Db::name('crm_inquiry');
 
         if (!empty($inquiry_name)) {
             $query->where('inquiry_name', 'like', '%' . $inquiry_name . '%');
@@ -45,53 +45,35 @@ class Inquiry extends Common
 
     public function add()
     {
-        if (!request()->isPost()) {
-            return $this->fetch();
+        if (request()->isPost()) {
+            $inquiry_name = Request::param('inquiry_name');
+            $current_admin = Admin::getMyInfo();
+            if (empty($inquiry_name)) {
+                return $this->result([], 500, '询盘来源不能为空');
+            }
+
+            $current_admin = Admin::getMyInfo();
+            $exists = Db::name('crm_inquiry')
+                ->where('inquiry_name', $inquiry_name)
+                ->where([$this->getOrgWhere($current_admin['org'])])
+                ->find();
+
+            if (!$exists) {
+                $data = [
+                    'inquiry_name' => $inquiry_name,
+                    'org' => $current_admin['org'],
+                    'add_time' => time(),
+                    'edit_time' => time(),
+                    'submit_person' => $current_admin['username']
+                ];
+                Db::name('crm_inquiry')->insert($data);
+                return $this->result([], 200, '操作成功');
+            } else {
+                return $this->result([], 500, '询盘来源已存在');
+            }
         }
-
-        $inquiry_name  = trim((string)Request::param('inquiry_name'));
-        $current_admin = Admin::getMyInfo();
-
-        if ($inquiry_name === '') {
-            return $this->result([], 500, '询盘来源不能为空');
-        }
-
-        // 同组织 + 同名：包含已软删除的记录，一并参与判断
-        $exists = Db::name('crm_inquiry')
-            ->where('inquiry_name', $inquiry_name)
-            ->where([$this->getOrgWhere($current_admin['org'])])
-            ->find();
-
-        if (!$exists) {
-            // 不存在：插入新记录
-            $data = [
-                'inquiry_name'  => $inquiry_name,
-                'org'           => $current_admin['org'],
-                'status'        => 0,               // 明确写入正常状态
-                'add_time'      => time(),
-                'edit_time'     => time(),
-                'submit_person' => $current_admin['username']
-            ];
-            Db::name('crm_inquiry')->insert($data);
-            return $this->result([], 200, '操作成功');
-        }
-
-        // 已存在
-        if ((int)$exists['status'] === -1) {
-            // 复活：不改 add_time，只更新状态与编辑时间
-            Db::name('crm_inquiry')
-                ->where('id', (int)$exists['id'])
-                ->update([
-                    'status'    => 0,
-                    'edit_time' => time()
-                ]);
-            return $this->result([], 200, '操作成功（已恢复已删除的同名记录）');
-        }
-
-        // 已存在且为正常
-        return $this->result([], 500, '询盘来源已存在');
+        return $this->fetch();
     }
-
 
     public function edit()
     {
@@ -100,7 +82,7 @@ class Inquiry extends Common
             return $this->result([], 500, '参数错误');
         }
 
-        $result = Db::name('crm_inquiry')->where('id', $id)->where('status', 0)->find();
+        $result = Db::name('crm_inquiry')->where('id', $id)->find();
         if (empty($result)) {
             return $this->result([], 500, '参数错误');
         }
@@ -120,10 +102,8 @@ class Inquiry extends Common
             $exists = Db::name('crm_inquiry')
                 ->where('inquiry_name', $inquiry_name)
                 ->where('id', '<>', $id)
-                ->where('status', 0)
                 ->where([$this->getOrgWhere($current_admin['org'])])
                 ->find();
-
 
             if ($exists) {
                 return $this->result([], 500, '询盘来源已存在');
@@ -174,7 +154,7 @@ class Inquiry extends Common
         $isSuper = (session('aid') == 1) || (($current_admin['username'] ?? '') === 'admin');
 
         // 查记录 + 按权限限制
-        $rowQuery = \think\Db::name('crm_inquiry')->where('id', $id)->where('status', 0);
+        $rowQuery = \think\Db::name('crm_inquiry')->where('id', $id);
         if (!$isSuper) {
             $rowQuery->where('submit_person', $current_admin['username']);
         }
@@ -184,12 +164,8 @@ class Inquiry extends Common
         }
 
         // 被运营端口引用则禁止删除，并提示询盘来源名称
-        $hasPort = \think\Db::name('crm_inquiry_port')
-            ->where('inquiry_id', $id)
-            ->where('status', 0)  // 仅统计未删除的运营端口
-            ->limit(1)
-            ->value('id');
-        if ($hasPort) {
+        $hasProduct = \think\Db::name('crm_inquiry_port')->where('inquiry_id', $id)->limit(1)->value('id');
+        if ($hasProduct) {
             $name = $row['inquiry_name'] ?: ('ID#' . $id);
             return $this->result([
                 'blocked_ids'   => [$id],
@@ -197,7 +173,7 @@ class Inquiry extends Common
             ], 500, '该询盘来源下存在运营端口，禁止删除：' . $name);
         }
 
-        $aff = \think\Db::name('crm_inquiry')->where('id', $id)->update(['status' => -1]);
+        $aff = \think\Db::name('crm_inquiry')->where('id', $id)->delete();
         return $aff ? $this->result([], 200, '删除成功')
             : $this->result([], 500, '删除失败');
     }
@@ -228,7 +204,6 @@ class Inquiry extends Common
             if (!$isSuper) {
                 $base->where('submit_person', $current_admin['username']);
             }
-            $base->where('status', 0);  // 新增：仅筛选未软删除记录
             // id => inquiry_name
             $allowedMap = $base->column('inquiry_name', 'id');
             $allowedIds = array_map('intval', array_keys($allowedMap));
@@ -239,9 +214,8 @@ class Inquiry extends Common
             // 2) 找出被运营端口引用的询盘来源（这些不得删除）
             $usedMap = \think\Db::name('crm_inquiry_port')
                 ->whereIn('inquiry_id', $allowedIds)
-                ->where('status', 0)   // 仅统计未删除的运营端口
                 ->group('inquiry_id')
-                ->column('COUNT(1)', 'inquiry_id');
+                ->column('COUNT(1)', 'inquiry_id'); // [inquiry_id => cnt]
             $usedIds = array_map('intval', array_keys($usedMap));
 
             // 被阻止的名称（完整）
@@ -266,7 +240,7 @@ class Inquiry extends Common
             // 4) 执行删除
             $deleted = 0;
             if (!empty($deletableIds)) {
-                $deleted = \think\Db::name('crm_inquiry')->whereIn('id', $deletableIds)->update(['status' => -1]);
+                $deleted = \think\Db::name('crm_inquiry')->whereIn('id', $deletableIds)->delete();
             }
 
             // 5) 统计与消息
@@ -436,10 +410,9 @@ class Inquiry extends Common
             $orgToUse = $orgFromFile !== '' ? $normalizeOrg($orgFromFile) : $loginOrg;
             if ($orgToUse === '') $orgToUse = $loginOrg;
 
-            // 去重：同组织 + 同询盘来源名称
+            // 去重：同组织 + 同供应商名称
             $exists = \think\Db::name('crm_inquiry')
                 ->where('inquiry_name', $inquiry_name)
-                ->where('status', 0)
                 ->where([$this->getOrgWhere($orgToUse)])
                 ->find();
             if ($exists) {

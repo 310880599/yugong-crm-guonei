@@ -26,9 +26,7 @@ class InquiryPort extends Common
         $port_name = Request::param('port_name');
         $pageSize = Request::param('limit', 10);
         $page = Request::param('page', 1);
-        $query = Db::name('crm_inquiry_port')->alias('p')
-            ->leftJoin('crm_inquiry c', 'p.inquiry_id = c.id')
-            ->where('p.status', 0);
+        $query = Db::name('crm_inquiry_port p')->leftJoin('crm_inquiry c', 'p.inquiry_id = c.id');
         if (!empty($port_name)) {
             $query->where('p.port_name', 'like', '%' . $port_name . '%');
         }
@@ -93,10 +91,7 @@ class InquiryPort extends Common
         if (empty($id)) {
             return $this->result([], 500, '参数错误');
         }
-        $result = Db::name('crm_inquiry_port')
-            ->where('id', $id)
-            ->where('status', 0)  // 仅获取未删除的记录
-            ->find();
+        $result = Db::name('crm_inquiry_port')->where('id', $id)->find();
         if (empty($result)) {
             return $this->result([], 500, '参数错误');
         }
@@ -185,8 +180,7 @@ class InquiryPort extends Common
             $query->where('submit_person', $current_admin['username']);
         }
 
-        // 将状态置为-1而不物理删除
-        $aff = $query->update(['status' => -1]);
+        $aff = $query->delete();
         if ($aff) {
             return $this->result([], 200, '删除成功');
         } else {
@@ -212,12 +206,9 @@ class InquiryPort extends Common
 
         try {
             if ($isSuper) {
-            // 超管：软删除所有选中记录
-                $updateCount = Db::name('crm_inquiry_port')
-                    ->whereIn('id', $ids)
-                    ->update(['status' => -1]);
-                if ($updateCount > 0) {
-                    return json(['code' => 0, 'msg' => '删除成功', 'data' => ['count' => $updateCount]]);
+                $delCount = Db::name('crm_inquiry_port')->whereIn('id', $ids)->delete();
+                if ($delCount > 0) {
+                    return json(['code' => 0, 'msg' => '删除成功', 'data' => ['count' => $delCount]]);
                 }
                 return json(['code' => -200, 'msg' => '删除失败或记录不存在']);
             } else {
@@ -231,17 +222,13 @@ class InquiryPort extends Common
                     return json(['code' => -200, 'msg' => '无可删除的记录（仅能删除本人提交的记录）']);
                 }
 
-                $updateCount = Db::name('crm_inquiry_port')
-                    ->whereIn('id', $ownIds)
-                    ->update(['status' => -1]);
-                $skipped = count($ids) - $updateCount;
+                $delCount = Db::name('crm_inquiry_port')->whereIn('id', $ownIds)->delete();
+                $skipped  = count($ids) - $delCount;
 
-                if ($updateCount > 0) {
-                    $msg = '删除成功：' . $updateCount . ' 条';
-                    if ($skipped > 0) {
-                        $msg .= '，跳过(非本人记录)：' . $skipped . ' 条';
-                    }
-                    return json(['code' => 0, 'msg' => $msg, 'data' => ['count' => $updateCount, 'skipped' => $skipped]]);
+                if ($delCount > 0) {
+                    $msg = '删除成功：' . $delCount . ' 条';
+                    if ($skipped > 0) $msg .= '，跳过(非本人记录)：' . $skipped . ' 条';
+                    return json(['code' => 0, 'msg' => $msg, 'data' => ['count' => $delCount, 'skipped' => $skipped]]);
                 }
                 return json(['code' => -200, 'msg' => '删除失败或记录不存在（或无权限）']);
             }
