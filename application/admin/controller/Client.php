@@ -1666,6 +1666,12 @@ class Client extends Common
             $data['product_name'] = Request::param('product_name');
             $data['oper_user']    = Request::param('oper_user');
             $data['remark']       = Request::param('remark', '');
+            $data['inquiry_id'] = Request::param('inquiry_id'); // 单选渠道
+            // 多选端口 ID 数组
+            $portIds = Request::param('port_id/a');
+            // 多选端口拼接成 1,2,3,4
+            $data['port_id'] = $portIds ? implode(',', $portIds) : '';
+
 
             // 检查 source_port 字段是否存在，如果存在则添加
             try {
@@ -1875,6 +1881,12 @@ class Client extends Common
         }
         $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
 
+        $channelList = Db::table('crm_inquiry')->where('status', 0)->select();
+        $portList    = Db::table('crm_inquiry_port')->where('status', 0)->select();
+
+        $this->assign('channelList', $channelList);
+        $this->assign('portList', $portList);
+
         return $this->fetch('client/add');
     }  
 
@@ -1924,6 +1936,12 @@ class Client extends Common
             $data['oper_user']    = \think\facade\Request::param('oper_user');      // 运营人员ID（与你的 add 保持一致）
             $data['remark']       = \think\facade\Request::param('remark', '');
             $data['ut_time']      = date("Y-m-d H:i:s");
+            $data['inquiry_id'] = Request::param('inquiry_id'); // 单选渠道
+            // 多选端口 ID 数组
+            $portIds = Request::param('port_id/a');
+            // 多选端口拼接成 1,2,3,4
+            $data['port_id'] = $portIds ? implode(',', $portIds) : '';
+
             
             // 检查 source_port 字段是否存在，如果存在则添加
             try {
@@ -2277,6 +2295,20 @@ class Client extends Common
         $this->assign('mainPhones', json_encode($mainPhones, JSON_UNESCAPED_UNICODE));
         $this->assign('auxPhone',  $auxPhone);
 
+        $channelList = Db::table('crm_inquiry')->where('status', 0)->select();
+        $portList    = Db::table('crm_inquiry_port')->where('status', 0)->select();
+
+        $this->assign('channelList', $channelList);
+        $this->assign('portList', $portList);
+
+        // GET 加载老数据
+        $result = Db::table('crm_leads')->where('id', $id)->find();
+        $this->assign('result', $result);
+
+        // 端口多选回显
+        $selectedPorts = $result ? explode(',', $result['port_id']) : [];
+        $this->assign('selectedPorts', $selectedPorts);
+        
         return $this->fetch('client/edit');
     }
 

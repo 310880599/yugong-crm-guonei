@@ -133,29 +133,30 @@
                     </select>
                 </div>
             </div>
-            <!-- 询盘来源：可搜索单选下拉（提交来源ID） -->
+            <!-- 所属渠道 inquiry_id （单选下拉） -->
             <div class="layui-form-item">
-                <label class="layui-form-label">询盘来源<span style="color:red;">*</span></label>
+                <label class="layui-form-label">所属渠道</label>
                 <div class="layui-input-4">
-                    <select name="kh_status" lay-search lay-filter="kh_status" lay-verify="required">
-                        <option value="">请选择询盘来源</option>
-                        {volist name="khStatusList" id="vo"}
-                        <option value="{$vo.id}">{$vo.status_name}</option>
-                        {/volist}
+                    <select name="inquiry_id" id="inquiry_id">
+                    <option value="">请选择所属渠道</option>
+                    {volist name="channelList" id="ch"} 
+                        <option value="{$ch.id}" {if isset($result) && $result.inquiry_id == $ch.id}selected{/if}>{$ch.inquiry_name}</option>
+                    {/volist}
                     </select>
                 </div>
             </div>
-            <!-- 来源端口：可搜索单选下拉（根据询盘来源动态更新） -->
+            <!-- 运营端口 port_id （多选） -->
             <div class="layui-form-item">
-                <label class="layui-form-label">来源端口</label>
+                <label class="layui-form-label">运营端口</label>
                 <div class="layui-input-4">
-                    <select name="source_port" lay-search>
-                        <option value="">请先选择询盘来源</option>
+                    <select name="port_id[]" id="port_id" multiple>
+                    <option value="">请选择运营端口</option>
+                    {volist name="portList" id="pt"} 
+                        <option value="{$pt.id}" {if isset($selectedPorts) && in_array($pt.id, $selectedPorts)}selected{/if}>{$pt.port_name}</option>
+                    {/volist}
                     </select>
                 </div>
             </div>
-          
-          
             <!-- 协同人：可搜索多选下拉（提交ID数组） -->
             <div class="layui-form-item">
                 <label class="layui-form-label">协同人</label>
