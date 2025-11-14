@@ -138,10 +138,7 @@
                 <select name="inquiry_id" id="inquiry_id">
                 <option value="">请选择所属渠道</option>
                 {volist name="channelList" id="ch"} 
-                    <option value="{$ch.id}" 
-                    {if isset($result) && $result.inquiry_id == $ch.id}selected{/if}>
-                    {$ch.inquiry_name}
-                    </option>
+                    <option value="{$ch.id}" {if isset($result) && $result.inquiry_id == $ch.id}selected{/if}>{$ch.inquiry_name}</option>
                 {/volist}
                 </select>
             </div>
@@ -154,10 +151,7 @@
                 <select name="port_id[]" id="port_id" multiple>
                 <option value="">请选择运营端口</option>
                 {volist name="portList" id="pt"} 
-                    <option value="{$pt.id}" 
-                    {if isset($selectedPorts) && in_array($pt.id, $selectedPorts)}selected{/if}>
-                    {$pt.port_name}
-                    </option>
+                    <option value="{$pt.id}" {if isset($selectedPorts) && in_array($pt.id, $selectedPorts)}selected{/if}>{$pt.port_name}</option>
                 {/volist}
                 </select>
             </div>
