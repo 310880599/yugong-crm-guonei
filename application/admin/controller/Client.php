@@ -86,6 +86,25 @@ class Client extends Common
     }
 
 
+    public function getPortsByInquiry() {
+        if (request()->isAjax()) {
+            $inquiryId = Request::param('inquiry_id');
+            if (!$inquiryId) {
+                // 若未提供渠道ID参数，返回错误信息
+                return json(['code' => 500, 'msg' => '缺少渠道ID', 'data' => []]);
+            }
+            // 查询对应渠道的所有运营端口（仅获取id和port_name字段）
+            $ports = Db::table('crm_inquiry_port')
+                        ->where(['inquiry_id' => $inquiryId, 'status' => 0])
+                        ->field('id, port_name')
+                        ->select();
+            // 返回JSON数据：code为0表示成功，data中是端口列表
+            return json(['code' => 0, 'msg' => '获取成功', 'data' => $ports]);
+        }
+        // 如有需要，可处理非 AJAX 的请求情形
+    }
+
+
     //客户列表
     // public function index()
     // {

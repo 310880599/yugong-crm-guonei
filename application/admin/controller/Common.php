@@ -5,6 +5,7 @@ namespace app\admin\controller;
 use think\Db;
 use think\Controller;
 use app\admin\model\Admin;
+use think\facade\Request;
 
 class Common extends Controller
 {
@@ -411,4 +412,6 @@ class Common extends Controller
             return [];
         }
     }
+
+
 }

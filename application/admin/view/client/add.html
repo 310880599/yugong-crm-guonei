@@ -133,27 +133,27 @@
                     </select>
                 </div>
             </div>
-            <!-- 所属渠道 inquiry_id （单选下拉） -->
+            <!-- 所属渠道 inquiry_id 下拉框 -->
             <div class="layui-form-item">
-                <label class="layui-form-label">所属渠道</label>
+                <label class="layui-form-label">所属渠道<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <select name="inquiry_id" id="inquiry_id">
-                    <option value="">请选择所属渠道</option>
-                    {volist name="channelList" id="ch"} 
-                        <option value="{$ch.id}" {if isset($result) && $result.inquiry_id == $ch.id}selected{/if}>{$ch.inquiry_name}</option>
-                    {/volist}
+                    <select name="inquiry_id" id="inquiry_id" lay-filter="inquiry_id">
+                        <option value="">请选择所属渠道</option>
+                        {volist name="channelList" id="ch"} 
+                            <option value="{$ch.id}" {if isset($result) && $result.inquiry_id == $ch.id}selected{/if}>{$ch.inquiry_name}</option>
+                        {/volist}
                     </select>
                 </div>
             </div>
-            <!-- 运营端口 port_id （多选） -->
+            <!-- 运营端口 port_id 下拉框（多选） -->
             <div class="layui-form-item">
-                <label class="layui-form-label">运营端口</label>
+                <label class="layui-form-label">运营端口<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
                     <select name="port_id[]" id="port_id" multiple>
-                    <option value="">请选择运营端口</option>
-                    {volist name="portList" id="pt"} 
-                        <option value="{$pt.id}" {if isset($selectedPorts) && in_array($pt.id, $selectedPorts)}selected{/if}>{$pt.port_name}</option>
-                    {/volist}
+                        <option value="">请选择运营端口</option>
+                        {volist name="portList" id="pt"} 
+                            <option value="{$pt.id}" {if isset($selectedPorts) && in_array($pt.id, $selectedPorts)}selected{/if}>{$pt.port_name}</option>
+                        {/volist}
                     </select>
                 </div>
             </div>
@@ -282,6 +282,43 @@
                 
                 form.render('select', '');  // 重新渲染下拉框
             });
+
+
+            // 监听“所属渠道”下拉改变，联动更新“运营端口”选项
+            form.on('select(inquiry_id)', function(data) {
+                var inquiryId = data.value;               // 获取选择的渠道ID
+                var $portSelect = $('#port_id');          // 运营端口下拉框元素
+                $portSelect.empty();                     // 清空当前选项
+                if (inquiryId) {
+                    // 发起 AJAX 请求获取该渠道的端口列表
+                    $.get("{:url('Client/getPortsByInquiry')}", { inquiry_id: inquiryId }, function(res) {
+                        // 默认先添加“请选择运营端口”提示选项
+                        $portSelect.append('<option value="">请选择运营端口</option>');
+                        if (res.code === 0) {
+                            var ports = res.data;
+                            if (ports.length > 0) {
+                                // 动态添加返回的端口列表作为选项
+                                $.each(ports, function(index, port) {
+                                    $portSelect.append('<option value="' + port.id + '">' + port.port_name + '</option>');
+                                });
+                            } else {
+                                // 当前渠道没有端口数据时的提示项
+                                $portSelect.append('<option value="">该渠道暂无运营端口</option>');
+                            }
+                        } else {
+                            // 接口返回错误，提示加载失败
+                            layer.msg(res.msg || '获取端口数据失败', {icon: 5});
+                        }
+                        form.render('select');  // 重新渲染下拉框UI
+                    }, 'json');
+                } else {
+                    // 未选择任何渠道时，恢复默认提示选项
+                    $portSelect.append('<option value="">请选择运营端口</option>');
+                    form.render('select');
+                }
+            });
+
+
 
             // 监听表单提交
             form.on('submit(submit)', function (data) {
