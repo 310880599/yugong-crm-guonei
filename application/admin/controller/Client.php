@@ -2935,52 +2935,74 @@ class Client extends Common
         }
         $client['kh_rank_name'] = $rankName;
 
-        // 获取来源端口名称（如果 source_port 字段存在）
-        $client['source_port_name'] = '';
-        try {
-            $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
-            if (!empty($columns) && !empty($client['source_port'])) {
-                $sourcePortId = $client['source_port'];
-                
-                // 尝试从 crm_operation_shops 表查找店铺名称
-                $shopInfo = Db::table('crm_operation_shops')
-                    ->where('id', $sourcePortId)
-                    ->where('is_active', 1)
-                    ->field('shop_name')
-                    ->find();
-                
-                if ($shopInfo) {
-                    $client['source_port_name'] = $shopInfo['shop_name'];
-                } else {
-                    // 如果表中找不到，尝试从 crm_client_status 的 shop_names 字段查找
-                    // source_port 可能是 md5(id + shop_name) 格式，需要反向查找
-                    if (!empty($statusName)) {
-                        $statusInfo = Db::table('crm_client_status')
-                            ->where('status_name', $statusName)
-                            ->field('id, shop_names')
-                            ->find();
-                        
-                        if ($statusInfo && !empty($statusInfo['shop_names'])) {
-                            $shop_names = array_filter(array_map('trim', explode(',', $statusInfo['shop_names'])));
-                            foreach ($shop_names as $shop_name) {
-                                $expectedId = md5($statusInfo['id'] . '_' . $shop_name);
-                                if ($expectedId === $sourcePortId) {
-                                    $client['source_port_name'] = $shop_name;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
-                    // 如果还是找不到，显示ID
-                    if (empty($client['source_port_name'])) {
-                        $client['source_port_name'] = $sourcePortId;
-                    }
-                }
+        // 获取询盘来源名称（如果 inquiry_id 是 ID）  // 新增代码
+        $inquiryValue = $client['inquiry_id'];
+        $inquiryName = $inquiryValue;
+        if (is_numeric($inquiryValue)) {
+            $inquiryInfo = Db::table('crm_inquiry')->where('id', $inquiryValue)->find();
+            if ($inquiryInfo) {
+                $inquiryName = $inquiryInfo['inquiry_name'];
             }
-        } catch (\Exception $e) {
-            // 忽略错误
         }
+        $client['inquiry_name'] = $inquiryName;  // 新增代码
+
+        // 获取运营端口名称（如果 port_id 是 ID）    // 新增代码
+        $portValue = $client['port_id'];
+        $portName = $portValue;
+        if (is_numeric($portValue)) {
+            $portInfo = Db::table('crm_inquiry_port')->where('id', $portValue)->find();
+            if ($portInfo) {
+                $portName = $portInfo['port_name'];
+            }
+        }
+        $client['port_name'] = $portName;  // 新增代码
+
+        // 获取来源端口名称（如果 source_port 字段存在）
+        // $client['source_port_name'] = '';
+        // try {
+        //     $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
+        //     if (!empty($columns) && !empty($client['source_port'])) {
+        //         $sourcePortId = $client['source_port'];
+                
+        //         // 尝试从 crm_operation_shops 表查找店铺名称
+        //         $shopInfo = Db::table('crm_operation_shops')
+        //             ->where('id', $sourcePortId)
+        //             ->where('is_active', 1)
+        //             ->field('shop_name')
+        //             ->find();
+                
+        //         if ($shopInfo) {
+        //             $client['source_port_name'] = $shopInfo['shop_name'];
+        //         } else {
+        //             // 如果表中找不到，尝试从 crm_client_status 的 shop_names 字段查找
+        //             // source_port 可能是 md5(id + shop_name) 格式，需要反向查找
+        //             if (!empty($statusName)) {
+        //                 $statusInfo = Db::table('crm_client_status')
+        //                     ->where('status_name', $statusName)
+        //                     ->field('id, shop_names')
+        //                     ->find();
+                        
+        //                 if ($statusInfo && !empty($statusInfo['shop_names'])) {
+        //                     $shop_names = array_filter(array_map('trim', explode(',', $statusInfo['shop_names'])));
+        //                     foreach ($shop_names as $shop_name) {
+        //                         $expectedId = md5($statusInfo['id'] . '_' . $shop_name);
+        //                         if ($expectedId === $sourcePortId) {
+        //                             $client['source_port_name'] = $shop_name;
+        //                             break;
+        //                         }
+        //                     }
+        //                 }
+        //             }
+                    
+        //             // 如果还是找不到，显示ID
+        //             if (empty($client['source_port_name'])) {
+        //                 $client['source_port_name'] = $sourcePortId;
+        //             }
+        //         }
+        //     }
+        // } catch (\Exception $e) {
+        //     // 忽略错误
+        // }
 
         // 解析协同人信息（joint_person）
         $jointPersonIds = [];
