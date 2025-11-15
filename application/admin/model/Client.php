@@ -153,6 +153,8 @@ class Client extends Model
         $mapKhName   = [];
         $mapXsSource = [];
         $where       = [];
+        $mapInquiry = [];
+        $mapPort    = [];
 
         // 时间范围（控制器已转成 between 等 where 数组）
         if (!empty($keyword['timebucket'])) {
@@ -182,18 +184,23 @@ class Client extends Model
         if (!empty($keyword['source_port'])) {
             $mapSourcePort = ['source_port' => $keyword['source_port']];
         }
-
-        // 当前登录用户，只取"我作为协同人"的客户，且不是我负责
+        if ($keyword['inquiry_id'] !== '' && $keyword['inquiry_id'] !== null) {
+            $mapInquiry = ['inquiry_id' => $keyword['inquiry_id']];
+        }
+        if ($keyword['port_id'] !== '' && $keyword['port_id'] !== null) {
+            $mapPort = ['port_id' => $keyword['port_id']];
+        }
+                // 当前登录用户，只取"我作为协同人"的客户，且不是我负责
         $currentUsername = session('username');
         $currentAdminId  = session('aid');
 
         $result = Db::table('crm_leads')
             ->where($mapPhone)
             ->where($mapKhName)
-            ->where($mapKhStatus)
+            ->where($mapInquiry)      // **新增：按所属渠道筛选**  
             ->where($mapKhRank)
             ->where($mapXsSource)
-            ->where($mapSourcePort)
+            ->where($mapPort)         // **新增：按运营端口筛选**  
             ->where($mapAtTime)
             ->where($where)
             ->where(['status' => 1, 'issuccess' => -1])                  // 仅有效客户且未成交

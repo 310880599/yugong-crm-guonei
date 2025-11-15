@@ -517,7 +517,10 @@ class Client extends Common
             $leadIds = array_column($rows, 'id');
 
             // 准备映射：询盘来源ID -> 中文名称
-            $statusMap = Db::table('crm_client_status')->column('status_name', 'id');
+            //$statusMap = Db::table('crm_client_status')->column('status_name', 'id');
+            // 【替换】不再使用 kh_status/source_port 映射，改为所属渠道/运营端口名称映射  
+            $inquiryMap = Db::table('crm_inquiry')->column('inquiry_name', 'id');
+            $portMap    = Db::table('crm_inquiry_port')->column('port_name', 'id');
 
             // 获取所有选中客户的主/辅电话（contact_type: 1=主电话, 3=辅助电话）
             $phoneMap = [];
@@ -552,9 +555,18 @@ class Client extends Common
             $uidSet = [];
             foreach ($rows as &$row) {
                 // 填充询盘来源中文名称
-                $row['kh_status_name'] = isset($statusMap[$row['kh_status']])
-                    ? $statusMap[$row['kh_status']]
-                    : (string)$row['kh_status'];
+                // $row['kh_status_name'] = isset($statusMap[$row['kh_status']])
+                //     ? $statusMap[$row['kh_status']]
+                //     : (string)$row['kh_status'];
+                // **新增**：所属渠道名称（没有则用自身ID）  
+                $row['inquiry_name'] = isset($inquiryMap[$row['inquiry_id']]) 
+                                    ? $inquiryMap[$row['inquiry_id']] 
+                                    : (string)$row['inquiry_id'];
+                // **新增**：运营端口名称（没有则用自身ID）  
+                $row['port_name'] = isset($portMap[$row['port_id']]) 
+                                    ? $portMap[$row['port_id']] 
+                                    : (string)$row['port_id'];
+
                 // 填充主/辅电话
                 $row['main_phone'] = $phoneMap[$row['id']]['main'] ?? '';
                 $row['aux_phone']  = $phoneMap[$row['id']]['aux']  ?? '';
@@ -594,52 +606,6 @@ class Client extends Common
                 unset($row['_joint_ids']);
 
                 // 处理来源端口（source_port）字段，将MD5加密值转换为店铺名称
-                $row['source_port_name'] = '';
-                try {
-                    $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
-                    if (!empty($columns) && !empty($row['source_port'])) {
-                        $sourcePortId = $row['source_port'];
-                        
-                        // 尝试从 crm_operation_shops 表查找店铺名称
-                        $shopInfo = Db::table('crm_operation_shops')
-                            ->where('id', $sourcePortId)
-                            ->where('is_active', 1)
-                            ->field('shop_name')
-                            ->find();
-                        
-                        if ($shopInfo) {
-                            $row['source_port_name'] = $shopInfo['shop_name'];
-                        } else {
-                            // 如果表中找不到，尝试从 crm_client_status 的 shop_names 字段查找
-                            // source_port 可能是 md5(status_id + '_' + shop_name) 格式，需要反向查找
-                            $statusId = $row['kh_status'];
-                            if (!empty($statusId)) {
-                                $statusInfo = Db::table('crm_client_status')
-                                    ->where('id', $statusId)
-                                    ->field('id, shop_names')
-                                    ->find();
-                                
-                                if ($statusInfo && !empty($statusInfo['shop_names'])) {
-                                    $shop_names = array_filter(array_map('trim', explode(',', $statusInfo['shop_names'])));
-                                    foreach ($shop_names as $shop_name) {
-                                        $expectedId = md5($statusInfo['id'] . '_' . $shop_name);
-                                        if ($expectedId === $sourcePortId) {
-                                            $row['source_port_name'] = $shop_name;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // 如果还是找不到，显示ID
-                            if (empty($row['source_port_name'])) {
-                                $row['source_port_name'] = $sourcePortId;
-                            }
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // 忽略错误
-                }
             }
             unset($row);
 
@@ -655,57 +621,15 @@ class Client extends Common
 
         // 非 POST 请求时，渲染页面所需下拉数据（保持不变）
         $khRankList   = Db::table('crm_client_rank')->select();
-        $khStatusList = Db::table('crm_client_status')->select();
+        $inquiryList  = Db::table('crm_inquiry')->select();    // **新增：所属渠道列表**  
         $xsSourceList = Db::table('crm_clues_source')->select();
         $yyList       = $this->getYyList();
         $this->assign('_yyList', json_encode($yyList['_yyList']));
         $this->assign('khRankList', $khRankList);
-        $this->assign('khStatusList', $khStatusList);
+        $this->assign('inquiryList', $inquiryList);            // **新增：分配所属渠道下拉数据**  
         $this->assign('xsSourceList', $xsSourceList);
 
-        // 获取来源端口列表（按来源名称分组）
-        $shopList = [];
-        try {
-            $has_shop_names = false;
-            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
-            if (!empty($columns)) {
-                $has_shop_names = true;
-            }
-        } catch (\Exception $e) {
-            $has_shop_names = false;
-        }
 
-        foreach ($khStatusList as $status) {
-            $statusName = $status['status_name'];
-            $shops = [];
-
-            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
-                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
-                foreach ($shop_names as $shop_name) {
-                    if (!empty($shop_name)) {
-                        $shops[] = [
-                            'id' => md5($status['id'] . '_' . $shop_name),
-                            'name' => $shop_name
-                        ];
-                    }
-                }
-            }
-
-            if (empty($shops)) {
-                $commonShops = $this->getShopsByChannel('', $statusName);
-                foreach ($commonShops as $shop) {
-                    $shops[] = [
-                        'id' => $shop['id'],
-                        'name' => $shop['name']
-                    ];
-                }
-            }
-
-            if (!empty($shops)) {
-                $shopList[$statusName] = $shops;
-            }
-        }
-        $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
 
         return $this->fetch('jointclient/index');
     }
