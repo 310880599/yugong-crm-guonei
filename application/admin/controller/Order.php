@@ -359,23 +359,26 @@ class Order extends Common
         $teamList = $this->getTeamList();
         $this->assign('teamList', $teamList);
 
-        // 检查shop_names字段是否存在
-        try {
-            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
-            $has_shop_names = !empty($columns);
-        } catch (\Exception $e) {
-            $has_shop_names = false;
+        // 从 crm_inquiry 表获取询盘来源列表（客户渠道）
+        $currentAdmin = \app\admin\model\Admin::getMyInfo();
+        $inquiryWhere = [];
+        if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
+            $inquiryWhere[] = $this->getOrgWhere($currentAdmin['org']);
         }
+        // 只获取启用状态的询盘来源（status = 0）
+        $inquiryQuery = Db::name('crm_inquiry');
+        if (!empty($inquiryWhere)) {
+            $inquiryQuery->where($inquiryWhere);
+        }
+        $inquiryList = $inquiryQuery
+            ->where('status', '=', 0)
+            ->field('id, inquiry_name')
+            ->order('inquiry_name', 'asc')
+            ->select();
         
-        $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
+        // 获取询盘来源名称列表（用于下拉框）
+        $sourceList = array_column($inquiryList, 'inquiry_name');
         $this->assign('sourceList', $sourceList);
-
-        // 获取询盘来源列表（包含shop_names字段）
-        if ($has_shop_names) {
-            $khStatusList = Db::name('crm_client_status')->field('id,status_name,shop_names')->select();
-        } else {
-            $khStatusList = Db::name('crm_client_status')->select();
-        }
 
         $this->assign('customer_type', self::CUSTOMER_TYPE);
 
@@ -392,38 +395,30 @@ class Order extends Common
         $this->assign('operUserList', $operUserList);
         $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
 
-        // 获取店铺列表，按来源名称分组（与 Client 控制器一致）
+        // 从 crm_inquiry_port 表获取端口列表，按询盘来源（inquiry_id）分组
         $shopList = [];
-        foreach ($khStatusList as $status) {
-            $statusName = $status['status_name'];
+        foreach ($inquiryList as $inquiry) {
+            $inquiryName = $inquiry['inquiry_name'];
+            $inquiryId = $inquiry['id'];
+            
+            // 查询该询盘来源对应的所有端口
+            $ports = Db::name('crm_inquiry_port')
+                ->where('inquiry_id', $inquiryId)
+                ->where('status', '=', 0) // 只获取启用状态的端口
+                ->field('id, port_name')
+                ->order('port_name', 'asc')
+                ->select();
+            
             $shops = [];
-            
-            // 检查是否有shop_names字段
-            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
-                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
-                foreach ($shop_names as $index => $shop_name) {
-                    if (!empty($shop_name)) {
-                        $shops[] = [
-                            'id' => md5($status['id'] . '_' . $shop_name),
-                            'name' => $shop_name
-                        ];
-                    }
-                }
-            }
-            
-            // 如果shop_names为空，尝试从crm_operation_shops表获取
-            if (empty($shops)) {
-                $commonShops = $this->getShopsByChannel('', $statusName);
-                foreach ($commonShops as $shop) {
-                    $shops[] = [
-                        'id' => $shop['id'],
-                        'name' => $shop['name']
-                    ];
-                }
+            foreach ($ports as $port) {
+                $shops[] = [
+                    'id' => $port['id'],
+                    'name' => $port['port_name']
+                ];
             }
             
             if (!empty($shops)) {
-                $shopList[$statusName] = $shops;
+                $shopList[$inquiryName] = $shops;
             }
         }
         $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
@@ -510,15 +505,28 @@ class Order extends Common
                     $khStatusValue = $custinfo['kh_status'];
                     $sourceName = $khStatusValue;
                     
-                    // 尝试通过 ID 查找来源名称
+                    // 尝试从 crm_inquiry 表查找来源名称
+                    // 先尝试作为 ID 查找
                     if (is_numeric($khStatusValue)) {
-                        $statusInfo = Db::name('crm_client_status')->where('id', $khStatusValue)->find();
-                        if ($statusInfo) {
-                            $sourceName = $statusInfo['status_name'];
+                        $inquiryInfo = Db::name('crm_inquiry')->where('id', $khStatusValue)->find();
+                        if ($inquiryInfo) {
+                            $sourceName = $inquiryInfo['inquiry_name'];
+                        } else {
+                            // 如果 crm_inquiry 表中找不到，尝试从 crm_client_status 表查找（兼容旧数据）
+                            $statusInfo = Db::name('crm_client_status')->where('id', $khStatusValue)->find();
+                            if ($statusInfo) {
+                                $sourceName = $statusInfo['status_name'];
+                            }
                         }
                     } else {
-                        // 如果已经是名称，直接使用
-                        $sourceName = $khStatusValue;
+                        // 如果已经是名称，先尝试从 crm_inquiry 表验证
+                        $inquiryInfo = Db::name('crm_inquiry')->where('inquiry_name', $khStatusValue)->find();
+                        if ($inquiryInfo) {
+                            $sourceName = $inquiryInfo['inquiry_name'];
+                        } else {
+                            // 如果 crm_inquiry 表中找不到，直接使用原值（可能是 crm_client_status 的名称，兼容旧数据）
+                            $sourceName = $khStatusValue;
+                        }
                     }
                     
                     $res['code'] = 1;
