@@ -163,6 +163,63 @@
                                 }
                             }, 200);
                         }
+                        
+                        // 自动填充历史订单产品信息
+                        var historyProducts = result['msg']['history_products'] || [];
+                        if (historyProducts && historyProducts.length > 0) {
+                            // 使用全局变量或重新获取
+                            var productOptions = window.productOptions || $('select[name="product_name[]"]').first().html();
+                            var managerOptions = window.managerOptions || $('select[name="product_manager[]"]').first().html();
+                            
+                            // 清空所有现有的产品明细行
+                            var $tbody = $('#productTableBody');
+                            $tbody.empty();
+                            
+                            // 为每个历史产品添加一行（第一个产品会填充到第一行）
+                            historyProducts.forEach(function(product) {
+                                if (product.product_name) {
+                                    // 创建新行
+                                    var newRow = document.createElement('tr');
+                                    newRow.innerHTML =
+                                        '<td><select name="product_name[]" lay-search lay-verify="required">' + productOptions + '</select></td>' +
+                                        '<td><select name="product_manager[]" lay-search lay-verify="required">' + managerOptions + '</select></td>' +
+                                        '<td><input type="text" name="spec_model[]" class="layui-input"></td>' +
+                                        '<td><input type="text" name="unit[]" class="layui-input"></td>' +
+                                        '<td><input type="number" name="qty[]" class="layui-input" lay-verify="required|number"></td>' +
+                                        '<td><input type="number" name="unit_price[]" class="layui-input" lay-verify="required|number" step="0.01"></td>' +
+                                        '<td><input type="number" name="total_price[]" class="layui-input" readonly></td>' +
+                                        '<td><input type="number" name="purchase_price[]" class="layui-input" lay-verify="required|number" step="0.01"></td>' +
+                                        '<td><input type="number" name="sub_profit[]" class="layui-input" readonly></td>' +
+                                        '<td><input type="text" name="item_remark[]" class="layui-input"></td>' +
+                                        '<td><button type="button" class="layui-btn layui-btn-danger layui-btn-sm delete-row">删除</button></td>';
+                                    $tbody.append(newRow);
+                                    
+                                    // 设置产品名称
+                                    var $productSelect = $(newRow).find('select[name="product_name[]"]');
+                                    // 尝试通过 product_id 匹配
+                                    if (product.product_id) {
+                                        $productSelect.val(product.product_id);
+                                    } else {
+                                        // 通过产品名称匹配
+                                        $productSelect.find('option').each(function() {
+                                            var optionText = $(this).text();
+                                            if (optionText.indexOf(product.product_name) !== -1) {
+                                                $productSelect.val($(this).val());
+                                                return false;
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                            
+                            // 重新渲染下拉框
+                            layui.form.render('select');
+                            
+                            // 对产品名称下拉选项调用 boldCategory，使分类名加粗
+                            $tbody.find('select[name="product_name[]"]').each(function() {
+                                boldCategory($(this));
+                            });
+                        }
                     }
                     $('#checklabel').html(result['msg']['msg']);
                 },
@@ -534,11 +591,15 @@
         });
 
         // **为新增产品行准备选项HTML** 
-        // 获取初始产品名称下拉的所有选项HTML（包括“请选择”和产品列表）
+        // 获取初始产品名称下拉的所有选项HTML（包括"请选择"和产品列表）
         var productOptions = $('select[name="product_name[]"]').first().html();
+        // 保存到全局作用域，以便 changeyewu 函数可以访问
+        window.productOptions = productOptions;
 
         // 获取初始产品经理下拉的所有选项 HTML  (新增)
         var managerOptions = $('select[name="product_manager[]"]').first().html();
+        // 保存到全局作用域，以便 changeyewu 函数可以访问
+        window.managerOptions = managerOptions;
 
         // 新增一行产品明细
         $('#addRow').on('click', function () {

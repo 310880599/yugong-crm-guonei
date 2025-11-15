@@ -247,6 +247,7 @@ class Order extends Common
             }
 
             // 1次查询构建 id => 产品名称 的映射
+            // 注意：这里不过滤 status，因为历史订单可能引用已删除的产品，需要保留产品名称
             $idNameMap = [];
             if (!empty($idArr)) {
                 $rows = Db::name('crm_products')->alias('p')
@@ -433,9 +434,11 @@ class Order extends Common
         if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
             $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
         }
+        // 只获取启用状态的产品（status = 0）
         $productRows = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id')
             ->where($where)
+            ->where('p.status', '=', 0)
             ->group('p.product_name, c.category_name')
             ->field('MIN(p.id) as id, p.product_name, c.category_name')
             ->order('p.product_name', 'asc')
@@ -564,6 +567,86 @@ class Order extends Common
                     }
                     $res['team_name'] = $teamName;
                     
+                    // 获取该客户的历史订单产品信息
+                    // 1. 通过联系方式查找历史订单（支持多种联系方式格式）
+                    $_custphone = trim(preg_replace('/[+\-\s]/', '', $custphone));
+                    $historyOrders = Db::name('crm_client_order')
+                        ->where(function ($query) use ($custphone, $_custphone) {
+                            $query->where('contact', $custphone)
+                                ->whereOr('contact', $_custphone)
+                                ->whereOr('cphone', $custphone)
+                                ->whereOr('cphone', $_custphone);
+                        })
+                        ->field('id')
+                        ->select();
+                    
+                    $productList = [];
+                    if (!empty($historyOrders)) {
+                        $orderIds = array_column($historyOrders, 'id');
+                        // 2. 从订单明细表中获取产品信息
+                        $orderItems = Db::name('crm_order_item')
+                            ->where('order_id', 'in', $orderIds)
+                            ->field('product_id, product_name')
+                            ->group('product_id, product_name')
+                            ->select();
+                        
+                        // 3. 如果 product_id 存在，从 crm_leads 获取对应的 product_name
+                        // 或者从 crm_products 获取产品信息
+                        foreach ($orderItems as $item) {
+                            $productInfo = [
+                                'product_id' => $item['product_id'],
+                                'product_name' => $item['product_name']
+                            ];
+                            
+                            // 如果 product_id 存在，尝试从 crm_products 获取完整信息
+                            if (!empty($item['product_id'])) {
+                                $product = Db::name('crm_products')
+                                    ->where('id', $item['product_id'])
+                                    ->field('id, product_name')
+                                    ->find();
+                                if ($product) {
+                                    $productInfo['product_id'] = $product['id'];
+                                    $productInfo['product_name'] = $product['product_name'];
+                                }
+                            }
+                            
+                            // 如果 product_name 存在，也尝试从 crm_leads 查找是否有匹配的 product_name
+                            if (!empty($item['product_name'])) {
+                                $leadProduct = Db::name('crm_leads')
+                                    ->where('product_name', $item['product_name'])
+                                    ->where('id', $coninfo['leads_id'])
+                                    ->field('product_name')
+                                    ->find();
+                                if ($leadProduct && !empty($leadProduct['product_name'])) {
+                                    $productInfo['product_name'] = $leadProduct['product_name'];
+                                }
+                            }
+                            
+                            // 避免重复添加
+                            $exists = false;
+                            foreach ($productList as $p) {
+                                if ($p['product_id'] == $productInfo['product_id'] || 
+                                    $p['product_name'] == $productInfo['product_name']) {
+                                    $exists = true;
+                                    break;
+                                }
+                            }
+                            if (!$exists && !empty($productInfo['product_name'])) {
+                                $productList[] = $productInfo;
+                            }
+                        }
+                    }
+                    
+                    // 如果历史订单中没有产品，尝试从 crm_leads 获取 product_name
+                    if (empty($productList) && !empty($custinfo['product_name'])) {
+                        $productList[] = [
+                            'product_id' => '',
+                            'product_name' => $custinfo['product_name']
+                        ];
+                    }
+                    
+                    $res['history_products'] = $productList;
+                    
                     $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $sourceName . ",所属业务员:" . $custinfo['pr_user'] . ",所属运营:" . $custinfo['oper_user'];
                 }
             } else {
@@ -675,6 +758,7 @@ class Order extends Common
             $idNameMap = [];
             if (!empty($idArr)) {
                 // 从产品表获取名称和分类，用于展示和计算
+                // 注意：这里不过滤 status，因为历史订单可能引用已删除的产品，需要保留产品名称
                 $rows = Db::name('crm_products')->alias('p')
                     ->leftJoin('crm_product_category c', 'p.category_id = c.id')
                     ->where('p.id', 'in', $idArr)
@@ -683,6 +767,22 @@ class Order extends Common
                 foreach ($rows as $r) {
                     // 拼接名称和分类（如需）：$r['product_name'].' ('.$r['category_name'].')'
                     $idNameMap[$r['id']] = $r['product_name'];
+                }
+                
+                // 如果某些产品ID查询不到（可能已被删除），尝试从订单明细表中获取产品名称
+                foreach ($idArr as $pid) {
+                    if (!isset($idNameMap[$pid])) {
+                        // 尝试从订单明细表中获取该产品ID对应的产品名称（如果有历史记录）
+                        $item = Db::name('crm_order_item')
+                            ->where('product_id', $pid)
+                            ->where('product_name', '<>', '')
+                            ->order('id desc')
+                            ->field('product_name')
+                            ->find();
+                        if ($item && !empty($item['product_name'])) {
+                            $idNameMap[$pid] = $item['product_name'];
+                        }
+                    }
                 }
             }
 
@@ -809,16 +909,65 @@ class Order extends Common
             // 有组织限制时构造过滤条件
             $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
         }
+        // 只获取启用状态的产品（status = 0）
         $productQuery = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id');
         if (!empty($where)) {
             $productQuery->where($where);
         }
         $productRows = $productQuery
+            ->where('p.status', '=', 0)
             ->group('p.product_name, c.category_name')
             ->field('MIN(p.id) as id, p.product_name, c.category_name')
             ->order('p.product_name', 'asc')
             ->select();
+        
+        // 获取订单中已有的产品ID，检查是否有已删除的产品（status=-1）
+        // 如果有，需要添加到产品列表中以便显示，但标记为已废弃
+        if (isset($items) && !empty($items)) {
+            $existingProductIds = [];
+            foreach ($items as $item) {
+                if (!empty($item['product_id'])) {
+                    $existingProductIds[] = (int)$item['product_id'];
+                }
+            }
+            $existingProductIds = array_unique($existingProductIds);
+            
+            // 检查这些产品是否已被删除（status=-1）
+            if (!empty($existingProductIds)) {
+                // 先查询所有可能的产品（包括已删除的），不受组织限制（因为历史订单需要显示）
+                $allProducts = Db::name('crm_products')->alias('p')
+                    ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+                    ->where('p.id', 'in', $existingProductIds)
+                    ->field('p.id, p.product_name, c.category_name, p.status')
+                    ->select();
+                
+                // 找出已删除的产品（status=-1）
+                foreach ($allProducts as $product) {
+                    if (isset($product['status']) && $product['status'] == -1) {
+                        $product['is_deleted'] = true; // 标记为已删除
+                        $productRows[] = $product;
+                    }
+                }
+                
+                // 对于在订单中存在但查询不到的产品（可能已被物理删除），从订单明细中获取产品名称
+                $foundProductIds = array_column($allProducts, 'id');
+                foreach ($items as $item) {
+                    if (!empty($item['product_id']) && !in_array($item['product_id'], $foundProductIds)) {
+                        // 产品不存在于产品表中，但从订单明细中获取信息
+                        if (!empty($item['product_name'])) {
+                            $productRows[] = [
+                                'id' => $item['product_id'],
+                                'product_name' => $item['product_name'],
+                                'category_name' => '无',
+                                'is_deleted' => true
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+        
         $this->assign('productList', $productRows);
 
         // 协同人列表（xm-select 数据格式）
@@ -1044,6 +1193,7 @@ class Order extends Common
             $idNameMap = [];
             if (!empty($idArr)) {
                 // 从产品表获取名称和分类，用于展示和计算
+                // 注意：这里不过滤 status，因为历史订单可能引用已删除的产品，需要保留产品名称
                 $rows = Db::name('crm_products')->alias('p')
                     ->leftJoin('crm_product_category c', 'p.category_id = c.id')
                     ->where('p.id', 'in', $idArr)
@@ -1052,6 +1202,22 @@ class Order extends Common
                 foreach ($rows as $r) {
                     // 拼接名称和分类（如需）：$r['product_name'].' ('.$r['category_name'].')'
                     $idNameMap[$r['id']] = $r['product_name'];
+                }
+                
+                // 如果某些产品ID查询不到（可能已被删除），尝试从订单明细表中获取产品名称
+                foreach ($idArr as $pid) {
+                    if (!isset($idNameMap[$pid])) {
+                        // 尝试从订单明细表中获取该产品ID对应的产品名称（如果有历史记录）
+                        $item = Db::name('crm_order_item')
+                            ->where('product_id', $pid)
+                            ->where('product_name', '<>', '')
+                            ->order('id desc')
+                            ->field('product_name')
+                            ->find();
+                        if ($item && !empty($item['product_name'])) {
+                            $idNameMap[$pid] = $item['product_name'];
+                        }
+                    }
                 }
             }
 
@@ -1178,16 +1344,65 @@ class Order extends Common
             // 有组织限制时构造过滤条件
             $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
         }
+        // 只获取启用状态的产品（status = 0）
         $productQuery = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id');
         if (!empty($where)) {
             $productQuery->where($where);
         }
         $productRows = $productQuery
+            ->where('p.status', '=', 0)
             ->group('p.product_name, c.category_name')
             ->field('MIN(p.id) as id, p.product_name, c.category_name')
             ->order('p.product_name', 'asc')
             ->select();
+        
+        // 获取订单中已有的产品ID，检查是否有已删除的产品（status=-1）
+        // 如果有，需要添加到产品列表中以便显示，但标记为已废弃
+        if (isset($items) && !empty($items)) {
+            $existingProductIds = [];
+            foreach ($items as $item) {
+                if (!empty($item['product_id'])) {
+                    $existingProductIds[] = (int)$item['product_id'];
+                }
+            }
+            $existingProductIds = array_unique($existingProductIds);
+            
+            // 检查这些产品是否已被删除（status=-1）
+            if (!empty($existingProductIds)) {
+                // 先查询所有可能的产品（包括已删除的），不受组织限制（因为历史订单需要显示）
+                $allProducts = Db::name('crm_products')->alias('p')
+                    ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+                    ->where('p.id', 'in', $existingProductIds)
+                    ->field('p.id, p.product_name, c.category_name, p.status')
+                    ->select();
+                
+                // 找出已删除的产品（status=-1）
+                foreach ($allProducts as $product) {
+                    if (isset($product['status']) && $product['status'] == -1) {
+                        $product['is_deleted'] = true; // 标记为已删除
+                        $productRows[] = $product;
+                    }
+                }
+                
+                // 对于在订单中存在但查询不到的产品（可能已被物理删除），从订单明细中获取产品名称
+                $foundProductIds = array_column($allProducts, 'id');
+                foreach ($items as $item) {
+                    if (!empty($item['product_id']) && !in_array($item['product_id'], $foundProductIds)) {
+                        // 产品不存在于产品表中，但从订单明细中获取信息
+                        if (!empty($item['product_name'])) {
+                            $productRows[] = [
+                                'id' => $item['product_id'],
+                                'product_name' => $item['product_name'],
+                                'category_name' => '无',
+                                'is_deleted' => true
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+        
         $this->assign('productList', $productRows);
 
         // 协同人列表（xm-select 数据格式）
@@ -1550,6 +1765,23 @@ class Order extends Common
                 'page' => $page
             ])
             ->toArray();
+        
+        // 如果订单主表的 product_name 为空，尝试从订单明细表中获取产品名称
+        // 这样可以确保即使产品被删除，订单的产品名称仍然可以显示
+        foreach ($list['data'] as &$order) {
+            if (empty($order['product_name'])) {
+                $firstItem = Db::name('crm_order_item')
+                    ->where('order_id', $order['id'])
+                    ->where('product_name', '<>', '')
+                    ->order('line_no asc')
+                    ->field('product_name')
+                    ->find();
+                if ($firstItem && !empty($firstItem['product_name'])) {
+                    $order['product_name'] = $firstItem['product_name'];
+                }
+            }
+        }
+        unset($order);
 
 
         //成单率

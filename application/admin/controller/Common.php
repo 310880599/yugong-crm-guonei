@@ -183,7 +183,12 @@ class Common extends Controller
         $current_admin = Admin::getMyInfo();
         $where = [['product_name', '=', $product_name]];
         if ($current_admin['org'] && $current_admin['org'] != 'admin') $where[] = $this->getOrgWhere($current_admin['org']);
-        $res = Db::name('crm_products')->where($where)->where('category_id','=',$category_id)->find();
+        // 只检查启用状态的产品（status = 0），不检查已删除的（status = -1）
+        $res = Db::name('crm_products')
+            ->where($where)
+            ->where('category_id','=',$category_id)
+            ->where('status', '=', 0)
+            ->find();
         return $res;
     }
 
@@ -206,7 +211,13 @@ class Common extends Controller
         $current_admin = Admin::getMyInfo();
         $where = [];
         if ($current_admin['org'] && strpos($current_admin['org'], 'admin') === false) $where[] = $this->getOrgWhere($current_admin['org']);
-        $list = Db::name('crm_products')->where($where)->group('product_name')->field('product_name')->select();
+        // 只获取启用状态的产品（status = 0）
+        $list = Db::name('crm_products')
+            ->where($where)
+            ->where('status', '=', 0)
+            ->group('product_name')
+            ->field('product_name')
+            ->select();
         $list = array_column($list, 'product_name');
         return json_encode($list);
     }
@@ -221,9 +232,11 @@ class Common extends Controller
             $where[] = $this->getOrgWhere($current_admin['org'], 'p');
         }
 
+        // 只获取启用状态的产品（status = 0）
         $rows = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id')
             ->where($where)
+            ->where('p.status', '=', 0)
             ->group('p.product_name, c.category_name')
             ->field('p.product_name, c.category_name')
             ->order('p.product_name', 'asc')

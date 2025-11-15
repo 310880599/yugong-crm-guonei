@@ -34,10 +34,15 @@ class Products extends Common
         if (!empty($category_id)) {
             $query->where('p.category_id', $category_id);
         }
-        $list = $query->field('p.*, c.category_name')->where([$this->getOrgWhere($current_admin['org'], 'p')])->order('p.id desc')->paginate([
-            'list_rows' => $pageSize,
-            'page' => $page
-        ])->toArray();
+        // 只显示启用状态的产品（status = 0），不显示已删除的（status = -1）
+        $list = $query->field('p.*, c.category_name')
+            ->where([$this->getOrgWhere($current_admin['org'], 'p')])
+            ->where('p.status', '=', 0)
+            ->order('p.id desc')
+            ->paginate([
+                'list_rows' => $pageSize,
+                'page' => $page
+            ])->toArray();
         return json([
             'code'  => 0,
             'msg'   => '获取成功!',
@@ -57,12 +62,36 @@ class Products extends Common
             if (empty($product_name)) {
                 return $this->result([], 500, '商品名称不能为空');
             }
+            
+            $current_admin = Admin::getMyInfo();
+            
+            // 检查是否存在相同名称且已删除的产品（status = -1）
+            $deletedProduct = Db::name('crm_products')
+                ->where('product_name', $product_name)
+                ->where('category_id', $category_id)
+                ->where([$this->getOrgWhere($current_admin['org'])])
+                ->where('status', -1)
+                ->find();
+            
+            if ($deletedProduct) {
+                // 如果存在已删除的相同产品，恢复它（将 status 改为 0）
+                Db::name('crm_products')
+                    ->where('id', $deletedProduct['id'])
+                    ->update([
+                        'status' => 0,
+                        'edit_time' => time(),
+                        'submit_person' => $current_admin['username']
+                    ]);
+                return $this->result([], 200, '操作成功（已恢复已删除的产品）');
+            }
+            
+            // 检查是否存在相同名称且启用的产品（status = 0）
             $product = $this->checkProductCategory($product_name, $category_id);
             if (!$product) {
-                $current_admin = Admin::getMyInfo();
                 $data['org'] = $current_admin['org'];
                 $data['product_name'] = $product_name;
                 $data['category_id'] = $category_id;
+                $data['status'] = 0; // 明确设置为启用状态
                 $data['add_time'] = time();
                 $data['edit_time'] = time();
                 $data['submit_person'] = $current_admin['username'];
@@ -108,12 +137,13 @@ class Products extends Common
                 return $this->result([], 500, '商品名称不能为空');
             }
 
-            // 同组织 + 同供应商 下产品名不可重复（排除当前ID）
+            // 同组织 + 同供应商 下产品名不可重复（排除当前ID和已删除的记录）
             $exists = Db::name('crm_products')
                 ->where('product_name', $product_name)
                 ->where('category_id', '=', $category_id)
                 ->where([$this->getOrgWhere($current_admin['org'])])
                 ->where('id', '<>', $id)
+                ->where('status', '=', 0) // 只检查启用状态的产品
                 ->find();
             if ($exists) {
                 return $this->result([], 500, '商品已存在');
@@ -180,7 +210,8 @@ class Products extends Common
             $query->where('submit_person', $current_admin['username']);
         }
 
-        $aff = $query->delete();
+        // 软删除：更新 status 为 -1，而不是真正删除记录
+        $aff = $query->update(['status' => -1, 'edit_time' => time()]);
         if ($aff) {
             return $this->result([], 200, '删除成功');
         } else {
@@ -206,7 +237,10 @@ class Products extends Common
 
         try {
             if ($isSuper) {
-                $delCount = Db::name('crm_products')->whereIn('id', $ids)->delete();
+                // 软删除：更新 status 为 -1
+                $delCount = Db::name('crm_products')
+                    ->whereIn('id', $ids)
+                    ->update(['status' => -1, 'edit_time' => time()]);
                 if ($delCount > 0) {
                     return json(['code' => 0, 'msg' => '删除成功', 'data' => ['count' => $delCount]]);
                 }
@@ -222,7 +256,10 @@ class Products extends Common
                     return json(['code' => -200, 'msg' => '无可删除的记录（仅能删除本人提交的记录）']);
                 }
 
-                $delCount = Db::name('crm_products')->whereIn('id', $ownIds)->delete();
+                // 软删除：更新 status 为 -1
+                $delCount = Db::name('crm_products')
+                    ->whereIn('id', $ownIds)
+                    ->update(['status' => -1, 'edit_time' => time()]);
                 $skipped  = count($ids) - $delCount;
 
                 if ($delCount > 0) {
@@ -410,17 +447,41 @@ class Products extends Common
             }
 
             // DB去重：同 org 范围 + category_id + product_name
+            // 先检查是否有已删除的相同产品（status = -1）
+            $deletedProduct = \think\Db::name('crm_products')
+                ->where('product_name', $product_name)
+                ->where('category_id', $category_id)
+                ->where([$this->getOrgWhere($org)])
+                ->where('status', -1)
+                ->find();
+            
+            if ($deletedProduct) {
+                // 如果存在已删除的相同产品，恢复它（将 status 改为 0）
+                \think\Db::name('crm_products')
+                    ->where('id', $deletedProduct['id'])
+                    ->update([
+                        'status' => 0,
+                        'edit_time' => $now,
+                        'submit_person' => $user
+                    ]);
+                $inserted++;
+                $seenKeys[$key] = 1;
+                continue;
+            }
+            
+            // 检查是否存在启用的相同产品（status = 0）
             $exists = \think\Db::name('crm_products')
                 ->where('product_name', $product_name)
                 ->where('category_id', $category_id)
                 ->where([$this->getOrgWhere($org)])
+                ->where('status', 0)
                 ->find();
             if ($exists) {
                 $skippedExist++;
                 continue;
             }
 
-            // 插入
+            // 插入新记录
             $ok = \think\Db::name('crm_products')->insert([
                 'product_name'  => $product_name,
                 'org'           => $org,
