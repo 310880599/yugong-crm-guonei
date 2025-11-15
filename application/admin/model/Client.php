@@ -222,6 +222,8 @@ class Client extends Model
         $mapKhName = []; //客户名称
         $mapXsSource = []; //线索/客户来源
         $where = [];
+        $mapInquiry = [];
+        $mapPort    = [];
 
 
         if (!empty($keyword['timebucket'])) {
@@ -236,6 +238,10 @@ class Client extends Model
         if ($keyword['kh_status'] != '') {
 
             $mapKhStatus =  ['kh_status' => $keyword['kh_status']];
+        }
+
+        if ($keyword['inquiry_id'] != '') {
+            $mapInquiry = ['inquiry_id' => $keyword['inquiry_id']];
         }
 
         if ($keyword['phone'] != '') {
@@ -255,6 +261,10 @@ class Client extends Model
             $mapXsSource =  ['xs_source' => $keyword['xs_source']];
         }
 
+        if ($keyword['port_id'] != '') {
+            $mapPort = ['port_id' => $keyword['port_id']];
+        }
+
         $mapSourcePort = []; // 来源端口
         if (!empty($keyword['source_port'])) {
             $mapSourcePort = ['source_port' => $keyword['source_port']];
@@ -263,10 +273,10 @@ class Client extends Model
         $result  = Db::table('crm_leads')
             ->where($mapPhone)
             ->where($mapKhName)
-            ->where($mapKhStatus)
+            ->where($mapInquiry)     // 使用所属渠道筛选
             ->where($mapKhRank)
             ->where($mapXsSource)
-            ->where($mapSourcePort)
+            ->where($mapPort)        // 使用运营端口筛选
             ->where($mapAtTime)
             ->where($where)
             ->where(['status' => 1, 'issuccess' => -1]) //0 线索，1客户，2公海

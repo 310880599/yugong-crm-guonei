@@ -61,17 +61,18 @@
                     </div>
 
                     <div class="layui-inline">
-                        <label class="layui-form-label">客户来源：</label>
+                        <label class="layui-form-label">所属渠道：</label>
                         <div class="layui-input-inline">
-                            <select name="kh_status" id="kh_status" lay-filter="kh_status">
-                                <option value="">请选择客户来源</option>
-                                {volist name='khStatusList' id='vo'}
-                                <!-- 同理，这里也用 ID -->
-                                <option value="{$vo.id}">{$vo.status_name}</option>
+                            <select name="inquiry_id" id="inquiry_id" lay-filter="inquiry_id">
+                                <option value="">请选择所属渠道</option>
+                                {volist name='inquiryList' id='vo'}
+                                <!-- 使用 inquiry_id 作为选项值，显示 inquiry_name -->
+                                <option value="{$vo.id}">{$vo.inquiry_name}</option>
                                 {/volist}
                             </select>
                         </div>
                     </div>
+
 
                     <div class="layui-inline">
                         <label class="layui-form-label">手机：</label>
@@ -95,10 +96,10 @@
                     </div>
 
                     <div class="layui-inline">
-                        <label class="layui-form-label">来源端口：</label>
+                        <label class="layui-form-label">运营端口：</label>
                         <div class="layui-input-inline">
-                            <select name="source_port" id="source_port" lay-search>
-                                <option value="">请先选择客户来源</option>
+                            <select name="port_id" id="port_id" lay-search>
+                                <option value="">请先选择所属渠道</option>
                             </select>
                         </div>
                     </div>
@@ -171,11 +172,11 @@
                     <span id="follow-area"></span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">客户来源:</span>
+                    <span class="info-label">所属渠道:</span>
                     <span id="follow-source"></span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label">来源端口:</span>
+                    <span class="info-label">运营端口:</span>
                     <span id="follow-source-port"></span>
                 </div>
                 <div class="info-item">
@@ -259,8 +260,8 @@ layui.use(['table','form','upload','util','laydate'], function () {
         { field: 'kh_name', title: '客户名称', sort: true, templet: function(res){
             return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + (res.kh_name || '') + "</a>";
         }},
-        { field: 'kh_status_name', title: '询盘来源' },
-        { field: 'source_port_name', title: '来源端口' },
+        { field: 'inquiry_name', title: '所属渠道' },     // 原“询盘来源”列
+        { field: 'port_name', title: '运营端口' },       // 原“来源端口”列
         { field: 'main_phone', title: '主电话' },
         { field: 'aux_phone', title: '辅助电话' },
         { field: 'joint_person_names', title: '协同人' },
@@ -316,8 +317,8 @@ layui.use(['table','form','upload','util','laydate'], function () {
                     $('#follow-main-phone').text(clientData.main_phone || '暂无');
                     $('#follow-aux-phone').text(clientData.aux_phone || '暂无');
                     $('#follow-area').text(clientData.xs_area || '');
-                    $('#follow-source').text(clientData.kh_status_name || clientData.kh_status || '');
-                    $('#follow-source-port').text(clientData.source_port_name || clientData.source_port || '暂无');
+                    $('#follow-source').text(clientData.inquiry_name || clientData.inquiry_id || '');        // 所属渠道
+                    $('#follow-source-port').text(clientData.port_name || clientData.port_id || '暂无');    // 运营端口
                     $('#follow-rank').text(clientData.kh_rank_name || clientData.kh_rank || '');
                     $('#follow-user').text(clientData.pr_user || '');
                     $('#follow-joint-person').text(clientData.joint_person_names || '暂无');
@@ -587,7 +588,7 @@ layui.use(['table','form','upload','util','laydate'], function () {
     const khSelect = new EditableSelect(document.getElementById('oper_user_input'), {$_yyList|raw}, '运营人员', '', 'name');
 
     // 来源端口联动逻辑
-    var shopList = {$shopList|raw}; // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
+    //var shopList = {$shopList|raw}; // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
     
     function fillSourcePortBySourceName(sourceName) {
         var shops = shopList[sourceName] || [];
@@ -605,10 +606,44 @@ layui.use(['table','form','upload','util','laydate'], function () {
     }
 
     // 监听客户来源变化，动态更新来源端口选项
-    form.on('select(kh_status)', function (data) {
-        var sourceName = $(data.elem).find("option:selected").text();
-        fillSourcePortBySourceName(sourceName);
+    // form.on('select(kh_status)', function (data) {
+    //     var sourceName = $(data.elem).find("option:selected").text();
+    //     fillSourcePortBySourceName(sourceName);
+    // });
+    // 当选择所属渠道后，请求对应的运营端口列表并填充下拉框
+    form.on('select(inquiry_id)', function (data) {
+        var inquiryId = data.value;
+        var $portSelect = $('#port_id');
+        $portSelect.empty();
+        if (!inquiryId) {
+            // 未选择渠道时，提示先选择渠道
+            $portSelect.append('<option value="">请先选择所属渠道</option>');
+            form.render('select');
+            return;
+        }
+        // AJAX获取选定渠道的运营端口列表
+        $.ajax({
+            url: "{:url('Client/getPortsByInquiry')}",
+            type: 'GET',
+            data: { inquiry_id: inquiryId },
+            success: function (res) {
+                if (res.code === 0 && res.data) {
+                    $portSelect.append('<option value="">请选择运营端口</option>');
+                    $.each(res.data, function(index, port) {
+                        $portSelect.append('<option value="' + port.id + '">' + port.port_name + '</option>');
+                    });
+                } else {
+                    $portSelect.append('<option value="">该渠道暂无端口数据</option>');
+                }
+                form.render('select');  // 刷新下拉框渲染
+            },
+            error: function () {
+                $portSelect.append('<option value="">获取端口失败</option>');
+                form.render('select');
+            }
+        });
     });
+
 
     // 导入
     upload.render({
