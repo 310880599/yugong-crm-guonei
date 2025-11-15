@@ -162,19 +162,23 @@ class Order extends Common
             $data['client_company']            = Request::param('client_company'); // 客户公司
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
-            $data['source']           = Request::param('source');         // 询盘来源
+            $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username');
             $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['bank_account']     = Request::param('bank_account');   // 收款账户
             
-            // 检查 source_port 字段是否存在，如果存在则添加
-            try {
-                $columns = Db::query("SHOW COLUMNS FROM `crm_client_order` LIKE 'source_port'");
-                if (!empty($columns)) {
-                    $data['source_port'] = Request::param('source_port', '');  // 运营端口
+            // 处理运营端口：将端口ID转换为端口名称（文字）保存
+            $sourcePortId = Request::param('source_port', '');
+            $data['source_port'] = '';  // 默认为空
+            if (!empty($sourcePortId)) {
+                // 从 crm_inquiry_port 表获取端口名称
+                $portInfo = Db::name('crm_inquiry_port')
+                    ->where('id', $sourcePortId)
+                    ->field('port_name')
+                    ->find();
+                if ($portInfo && !empty($portInfo['port_name'])) {
+                    $data['source_port'] = $portInfo['port_name'];  // 保存端口名称（文字）
                 }
-            } catch (\Exception $e) {
-                // 如果查询失败，忽略该字段
             }
             $data['team_name']        = Request::param('team_name');      // 团队名称
             $data['at_user']          = Session::get('username');         // 创建人
@@ -684,20 +688,24 @@ class Order extends Common
             $data['client_company']   = Request::param('client_company'); // 客户公司
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
-            $data['source']           = Request::param('source');         // 询盘来源
+            $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）
             $data['bank_account']     = Request::param('bank_account');  // 收款账户 ID (as string)
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username'); // 客户负责人（默认当前用户）
             $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['team_name']        = Request::param('team_name');      // 团队名称
             
-            // 检查 source_port 字段是否存在，如果存在则添加
-            try {
-                $columns = Db::query("SHOW COLUMNS FROM `crm_client_order` LIKE 'source_port'");
-                if (!empty($columns)) {
-                    $data['source_port'] = Request::param('source_port', '');  // 来源端口
+            // 处理运营端口：将端口ID转换为端口名称（文字）保存
+            $sourcePortId = Request::param('source_port', '');
+            $data['source_port'] = '';  // 默认为空
+            if (!empty($sourcePortId)) {
+                // 从 crm_inquiry_port 表获取端口名称
+                $portInfo = Db::name('crm_inquiry_port')
+                    ->where('id', $sourcePortId)
+                    ->field('port_name')
+                    ->find();
+                if ($portInfo && !empty($portInfo['port_name'])) {
+                    $data['source_port'] = $portInfo['port_name'];  // 保存端口名称（文字）
                 }
-            } catch (\Exception $e) {
-                // 如果查询失败，忽略该字段
             }
             
             $data['order_time']       = Request::param('order_time');     // 成交时间
@@ -1104,8 +1112,22 @@ class Order extends Common
             }
         }
         
-        // 将 source_port 值添加到订单信息中
-        $order['source_port'] = $orderSourcePort;
+        // 如果 source_port 是端口名称（文字），需要找到对应的端口ID以便前端下拉框能正确选中
+        $orderSourcePortId = '';
+        if (!empty($orderSourcePort)) {
+            // 尝试通过端口名称查找端口ID
+            $portInfo = Db::name('crm_inquiry_port')
+                ->where('port_name', $orderSourcePort)
+                ->field('id')
+                ->find();
+            if ($portInfo && !empty($portInfo['id'])) {
+                $orderSourcePortId = $portInfo['id'];
+            }
+        }
+        
+        // 将 source_port 值（端口名称）和 source_port_id（端口ID，用于前端回显）添加到订单信息中
+        $order['source_port'] = $orderSourcePort;  // 端口名称（文字）
+        $order['source_port_id'] = $orderSourcePortId;  // 端口ID（用于前端下拉框选中）
 
         // 将订单主表和明细数据分配给模板
         $this->assign('orderInfo', $order);

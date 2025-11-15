@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
     <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+    <script src="/js/xlsx.bundle.js"></script>
     <style>
         /* 统一管理样式 */
         .filtrate-warp {
@@ -258,7 +259,7 @@
         <!-- 是否审核通过 -->
     <!-- {//if $Think.session.aid == 1} -->
     <!-- <a class="layui-btn  layui-btn-xs" lay-event="shenhe"><i class="layui-icon">&#xe642;</i>审核通过</a> -->
-    <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
+    <!-- <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a> -->
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
     <!-- {/if} -->
     </script>
@@ -266,6 +267,8 @@
     <script type="text/html" id="topBtn">
         <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i
                 class="layui-icon">&#xe608;</i>添加订单</button>
+        <button type="button" class="layui-btn layui-btn-normal layui-btn-radius layui-btn-sm" id="exportBtn"><i
+                class="layui-icon layui-icon-export"></i>导出数据</button>
     </script>
 
     {include file="common/foot"/}
@@ -273,35 +276,247 @@
         layui.use(['table', 'form', 'upload', 'util', 'laydate', 'element'], function () {
             const { table, form, laydate, $, upload, util, element } = layui;
 
+            // 自定义美化导出函数
+            function exportBeautifiedExcel() {
+                if (typeof XLSX === 'undefined') {
+                    layer.msg('导出功能需要加载 XLSX 库，请刷新页面重试', { icon: 2 });
+                    return;
+                }
+
+                const loading = layer.load(1, { shade: [0.1, '#fff'] });
+                
+                // 通过 AJAX 获取所有数据（不分页）
+                $.ajax({
+                    url: '{:url("index")}',
+                    type: 'POST',
+                    data: {
+                        page: 1,
+                        limit: 999999
+                    },
+                    dataType: 'json',
+                    success: function(res) {
+                        layer.close(loading);
+                        if (res.code === 0 && res.data) {
+                            generateBeautifiedExcel(res.data);
+                        } else {
+                            layer.msg('获取数据失败：' + (res.msg || '未知错误'), { icon: 2 });
+                        }
+                    },
+                    error: function() {
+                        layer.close(loading);
+                        layer.msg('导出失败，请重试', { icon: 2 });
+                    }
+                });
+            }
+
+            // 生成美化的 Excel
+            function generateBeautifiedExcel(data) {
+                // 定义列配置（排除操作列和隐藏的ID列）
+                const columns = [
+                    { field: 'order_no', title: '订单编号', width: 20 },
+                    { field: 'contact', title: '联系方式', width: 15 },
+                    { field: 'cname', title: '客户名称', width: 20 },
+                    { field: 'client_company', title: '客户公司', width: 20 },
+                    { field: 'country', title: '发货详细地址', width: 25 },
+                    { field: 'customer_type', title: '客户性质', width: 15 },
+                    { field: 'product_name', title: '产品名称', width: 20 },
+                    { field: 'money', title: '成交金额(￥)', width: 15, type: 'number' },
+                    { field: 'profit', title: '利润', width: 15, type: 'number' },
+                    { field: 'margin_rate', title: '利润率(%)', width: 15, type: 'number' },
+                    { field: 'ticheng', title: '提成金额', width: 15, type: 'number' },
+                    { field: 'shipping_cost', title: '估算运费', width: 15, type: 'number' },
+                    { field: 'invoice_amount', title: '开票金额', width: 15, type: 'number' },
+                    { field: 'tax_amount', title: '税费金额', width: 15, type: 'number' },
+                    { field: 'debugging_cost', title: '调试费', width: 15, type: 'number' },
+                    { field: 'sales_commission', title: '佣金', width: 15, type: 'number' },
+                    { field: 'split_remarks', title: '分成备注', width: 20 },
+                    { field: 'amount_received', title: '已收款金额', width: 15, type: 'number' },
+                    { field: 'bank_account', title: '收款账户', width: 20 },
+                    { field: 'source', title: '运营渠道', width: 15 },
+                    { field: 'source_port', title: '运营端口', width: 15 },
+                    { field: 'pr_user', title: '负责人', width: 15 },
+                    { field: 'team_name', title: '团队', width: 15 },
+                    { field: 'joint_person', title: '协同人', width: 20 },
+                    { field: 'order_time', title: '成交时间', width: 20, type: 'date' },
+                    { field: 'create_time', title: '创建时间', width: 20, type: 'date' },
+                    { field: 'at_user', title: '创建人', width: 15 },
+                    { field: 'ut_time', title: '更新时间', width: 20, type: 'date' },
+                    { field: 'status', title: '业绩状态', width: 15 },
+                    { field: 'remark', title: '备注', width: 30 }
+                ];
+
+                // 构建表头
+                const headers = columns.map(col => col.title);
+                
+                // 构建数据行
+                const rows = data.map(item => {
+                    return columns.map(col => {
+                        let value = item[col.field] || '';
+                        // 格式化数字
+                        if (col.type === 'number' && value !== '') {
+                            value = parseFloat(value) || 0;
+                        }
+                        // 格式化日期
+                        if (col.type === 'date' && value) {
+                            value = value.toString().substring(0, 19);
+                        }
+                        return value;
+                    });
+                });
+
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                
+                // 创建工作表数据
+                const wsData = [headers, ...rows];
+                
+                // 创建工作表
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 设置列宽
+                ws['!cols'] = columns.map(col => ({ wch: col.width }));
+                
+                // 设置冻结首行（视图选项）
+                ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' };
+                
+                // 设置表头样式（尝试使用 xlsx-js-style 或标准格式）
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                
+                // 遍历表头单元格设置样式和格式
+                for (let col = 0; col < columns.length; col++) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                    if (!ws[cellAddress]) {
+                        ws[cellAddress] = { t: 's', v: headers[col] };
+                    }
+                    
+                    // 设置表头单元格样式（如果支持）
+                    if (ws[cellAddress].s === undefined) {
+                        ws[cellAddress].s = {};
+                    }
+                    
+                    // 尝试设置样式（需要 xlsx-js-style 库支持）
+                    try {
+                        ws[cellAddress].s = {
+                            font: { bold: true, color: { rgb: 'FFFFFF' } },
+                            fill: { fgColor: { rgb: '4472C4' } },
+                            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                            border: {
+                                top: { style: 'thin', color: { rgb: '000000' } },
+                                bottom: { style: 'thin', color: { rgb: '000000' } },
+                                left: { style: 'thin', color: { rgb: '000000' } },
+                                right: { style: 'thin', color: { rgb: '000000' } }
+                            }
+                        };
+                    } catch (e) {
+                        // 如果不支持样式，至少设置格式
+                        ws[cellAddress].s = { font: { bold: true } };
+                    }
+                }
+                
+                // 设置数据行样式和格式
+                for (let row = 1; row <= rows.length; row++) {
+                    for (let col = 0; col < columns.length; col++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+                        if (!ws[cellAddress]) continue;
+                        
+                        const colConfig = columns[col];
+                        
+                        // 设置数字格式
+                        if (colConfig.type === 'number') {
+                            ws[cellAddress].z = '#,##0.00';
+                            // 确保数字类型
+                            if (typeof ws[cellAddress].v === 'string') {
+                                const numVal = parseFloat(ws[cellAddress].v);
+                                if (!isNaN(numVal)) {
+                                    ws[cellAddress].v = numVal;
+                                    ws[cellAddress].t = 'n';
+                                }
+                            }
+                        }
+                        
+                        // 设置单元格样式（如果支持）
+                        if (ws[cellAddress].s === undefined) {
+                            ws[cellAddress].s = {};
+                        }
+                        
+                        try {
+                            ws[cellAddress].s = {
+                                alignment: { 
+                                    horizontal: colConfig.type === 'number' ? 'right' : 'left', 
+                                    vertical: 'center',
+                                    wrapText: true
+                                },
+                                border: {
+                                    top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                                    bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                                    left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                                    right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+                                }
+                            };
+                        } catch (e) {
+                            // 如果不支持样式，至少设置对齐
+                            ws[cellAddress].s = {
+                                alignment: { horizontal: colConfig.type === 'number' ? 'right' : 'left' }
+                            };
+                        }
+                    }
+                }
+                
+                // 设置行高（表头）
+                if (!ws['!rows']) ws['!rows'] = [];
+                ws['!rows'][0] = { hpt: 25 };
+                
+                // 添加工作表到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, '订单数据');
+                
+                // 生成文件名
+                const fileName = '订单导出_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.xlsx';
+                
+                // 导出文件
+                XLSX.writeFile(wb, fileName);
+                
+                layer.msg('导出成功！', { icon: 1, time: 1500 });
+            }
+
             // 初始化表格
             const tableIn = table.render({
                 elem: '#table-list',
                 url: '{:url("index")}',
                 method: 'post',
                 toolbar: '#topBtn',
-                defaultToolbar: ['filter', 'print', 'exports'],
+                defaultToolbar: ['filter', 'print'],
                 cols: [[
                     { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
                     { field: 'order_no', title: '订单编号', width: 180, totalRowText: '合计：' },
-                    { field: 'cname', title: '客户名称' , width: 180},
-                    { field: 'contact', title: '联系方式' , width: 180},
-                    { field: 'country', title: '发货详细地址' , width: 180},
-                    { field: 'money', title: '成交金额(￥)', totalRow: true , width: 180},
+                    { field: 'contact', title: '联系方式', width: 180 },
+                    { field: 'cname', title: '客户名称', width: 180 },
+                    { field: 'client_company', title: '客户公司', width: 180 },
+                    { field: 'country', title: '发货详细地址', width: 180 },
+                    { field: 'customer_type', title: '客户性质', width: 180 },
+                    { field: 'product_name', title: '产品名称', width: 180 },
+                    { field: 'money', title: '成交金额(￥)', totalRow: true, width: 180 },
                     { field: 'profit', title: '利润', totalRow: true, width: 180 },
                     { field: 'margin_rate', title: '利润率(%)', totalRowText: '', width: 180 },
+                    { field: 'ticheng', title: '提成金额', width: 180 },
                     { field: 'shipping_cost', title: '估算运费', width: 180 },
-                    { field: 'invoice_amount', title: '开票金额' , width: 180},
-                    { field: 'tax_amount', title: '税费金额' , width: 180},
-                    { field: 'debugging_cost', title: '调试费' , width: 180},
-                    { field: 'sales_commission', title: '佣金' , width: 180},
+                    { field: 'invoice_amount', title: '开票金额', width: 180 },
+                    { field: 'tax_amount', title: '税费金额', width: 180 },
+                    { field: 'debugging_cost', title: '调试费', width: 180 },
+                    { field: 'sales_commission', title: '佣金', width: 180 },
                     { field: 'split_remarks', title: '分成备注', width: 180 },
-                    { field: 'bank_account', title: '收款账户' , width: 180},
                     { field: 'amount_received', title: '已收款金额', width: 180 },
-                    { field: 'order_time', title: '成交时间' , width: 180},
-                    { field: 'create_time', title: '创建时间' , width: 180},
-                    { field: 'ut_time', title: '更新时间' , width: 180},
-                    { field: 'pr_user', title: '负责人', hide: false , width: 180},
-                    { field: 'team_name', title: '团队', hide: false , width: 180 },
+                    { field: 'bank_account', title: '收款账户', width: 180 },
+                    { field: 'source', title: '运营渠道', width: 180 },
+                    { field: 'source_port', title: '运营端口', width: 180 },
+                    { field: 'pr_user', title: '负责人', width: 180 },
+                    { field: 'team_name', title: '团队', width: 180 },
+                    { field: 'joint_person', title: '协同人', width: 180 },
+                    { field: 'order_time', title: '成交时间', width: 180 },
+                    { field: 'create_time', title: '创建时间', width: 180 },
+                    { field: 'at_user', title: '创建人', width: 180 },
+                    { field: 'ut_time', title: '更新时间', width: 180 },
+                    { field: 'status', title: '业绩状态', width: 180 },
+                    { field: 'remark', title: '备注', width: 180 },
                     { width: 200, title: '操作', toolbar: '#action' }
                 ]],
                 limit: 100,
@@ -361,16 +576,17 @@
                         layer.close(index);
                     });
                 } else if (event === 'edit') {
-                   var indexOpen = layer.open({
-                        type: 2,
-                        title: '编辑订单',
-                        closeBtn: 1,
-                        area: ['100%', '86%'],
-                        anim: 2,
-                        shadeClose: false,
-                        maxmin: false,
-                        content: ["{:url('Order/edit')}?id=" + data.id]
-                    });
+                    // 编辑功能已屏蔽
+                    // var indexOpen = layer.open({
+                    //     type: 2,
+                    //     title: '编辑订单',
+                    //     closeBtn: 1,
+                    //     area: ['100%', '86%'],
+                    //     anim: 2,
+                    //     shadeClose: false,
+                    //     maxmin: false,
+                    //     content: ["{:url('Order/edit')}?id=" + data.id]
+                    // });
                 }
             });
 
@@ -387,6 +603,11 @@
                     maxmin: false,
                     content: ["{:url('Order/add')}"]
                 });
+            });
+
+            // 导出按钮事件监听
+            $('body').on('click', '#exportBtn', function () {
+                exportBeautifiedExcel();
             });
 
             // 表格工具栏事件监听

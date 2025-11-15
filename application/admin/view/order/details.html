@@ -155,16 +155,20 @@
                            value="{$orderInfo.pr_user|default=''}" class="layui-input">
                 </div>
             </div>
-            <!-- 询盘来源 -->
+            <!-- 运营渠道（询盘来源） -->
             <div class="layui-form-item">
-                <label class="layui-form-label">询盘来源</label>
+                <label class="layui-form-label">运营渠道</label>
                 <div class="layui-input-4">
-                    <select name="source" id="source" lay-verify="required" lay-filter="kh_status" lay-search>
-                        <option value="">请选择询盘来源</option>
-                        {volist name="sourceList" id="vo"}
-                        <option value="{$vo|htmlentities}" {if $vo == $orderInfo.source} selected {/if}>{$vo|htmlentities}</option>
-                        {/volist}
-                    </select>
+                    <input type="text" name="source" id="source" value="{$orderInfo.source|default=''|htmlentities}" 
+                           placeholder="运营渠道" class="layui-input" readonly>
+                </div>
+            </div>
+            <!-- 运营端口 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">运营端口</label>
+                <div class="layui-input-4">
+                    <input type="text" name="source_port" id="source_port" value="{$orderInfo.source_port|default=''|htmlentities}" 
+                           placeholder="运营端口" class="layui-input" readonly>
                 </div>
             </div>
             <!-- 收款账户 (Receiving Account) -->
@@ -175,18 +179,6 @@
                         <option value="">请选择收款账户</option>
                         {volist name="accountList" id="acc"}
                         <option value="{$acc.id}" {if $acc.id == $orderInfo.bank_account}selected{/if}>{$acc.account}</option>
-                        {/volist}
-                    </select>
-                </div>
-            </div>
-            <!-- 运营人员 -->
-            <div class="layui-form-item">
-                <label class="layui-form-label">运营人员<span style="color:red;">*</span></label>
-                <div class="layui-input-4">
-                    <select name="oper_user" lay-search lay-verify="required">
-                        <option value="">请选择运营人员</option>
-                        {volist name="operUserList" id="user"}
-                        <option value="{$user.id}" {if $user.id == $orderInfo.oper_user} selected {/if}>{$user.name}</option>
                         {/volist}
                     </select>
                 </div>
