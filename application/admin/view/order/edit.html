@@ -217,10 +217,12 @@
                             {volist name="orderItems" id="item"}
                             <tr>
                                 <td>
-                                    <select name="product_name[]" lay-search lay-verify="required">
+                                    <select name="product_name[]" lay-search lay-verify="required" class="product-select" data-item-product-id="{$item.product_id}" data-item-product-name="{$item.product_name|htmlentities}">
                                         <option value="">请选择产品名称</option>
                                         {volist name="productList" id="vo"}
-                                        <option value="{$vo.id}" {if $vo.id == $item.product_id} selected {/if}>{$vo.product_name} ({$vo.category_name|default='无'})</option>
+                                        <option value="{$vo.id}" {if isset($vo.is_deleted) && $vo.is_deleted} disabled {/if} {if $vo.id == $item.product_id || (string)$vo.id == (string)$item.product_id} selected {/if}>
+                                            {$vo.product_name} ({$vo.category_name|default='无'}){if isset($vo.is_deleted) && $vo.is_deleted} [已废弃]{/if}
+                                        </option>
                                         {/volist}
                                     </select>
                                 </td>
@@ -591,6 +593,110 @@
             }
             // 将对齐修正函数暴露到全局，便于在其他异步回调中调用
             window.fixSelectAlign = fixSelectAlign;
+            
+            // 处理产品下拉框：初始时包含所有产品，点击下拉框后过滤掉已删除的产品
+            // 为每个下拉框标记已删除的产品选项
+            $('select.product-select').each(function() {
+                var $select = $(this);
+                var productId = $select.data('item-product-id');
+                
+                // 标记所有已删除的产品选项（disabled的选项）
+                $select.find('option').each(function() {
+                    var $option = $(this);
+                    if ($option.prop('disabled') || $option.text().indexOf('[已废弃]') !== -1) {
+                        $option.attr('data-is-deleted', 'true');
+                    }
+                });
+            });
+            
+            // layui渲染后，确保已删除产品的选中状态和显示文本正确
+            setTimeout(function() {
+                $('select.product-select').each(function() {
+                    var $select = $(this);
+                    var productId = $select.data('item-product-id');
+                    var productName = $select.data('item-product-name');
+                    
+                    if (productId) {
+                        // 确保值被选中
+                        $select.val(productId);
+                        layui.form.render('select');
+                        
+                        // 更新显示文本
+                        var $selectedOption = $select.find('option[value="' + productId + '"]');
+                        if ($selectedOption.length > 0) {
+                            var displayText = $selectedOption.text();
+                            var $layuiInput = $select.next('.layui-form-select').find('.layui-input');
+                            if ($layuiInput.length > 0) {
+                                $layuiInput.val(displayText);
+                            }
+                        } else if (productName) {
+                            // 如果选项不存在，直接设置显示文本
+                            var $layuiInput = $select.next('.layui-form-select').find('.layui-input');
+                            if ($layuiInput.length > 0) {
+                                $layuiInput.val(productName + ' [已废弃]');
+                            }
+                        }
+                    }
+                });
+            }, 300);
+            
+            // 监听layui select的点击/打开事件，过滤掉已删除的产品选项
+            $(document).on('click', '.layui-form-select', function(e) {
+                var $layuiSelect = $(this);
+                var $originalSelect = $layuiSelect.prev('select.product-select');
+                
+                if ($originalSelect.length > 0 && $originalSelect.hasClass('product-select')) {
+                    var currentValue = $originalSelect.val();
+                    
+                    // 延迟执行，确保在layui渲染下拉选项后
+                    setTimeout(function() {
+                        // 隐藏已删除的产品选项（但保留当前选中的）
+                        $originalSelect.find('option[data-is-deleted="true"]').each(function() {
+                            var $option = $(this);
+                            var optionValue = $option.val();
+                            
+                            // 如果当前选中的是已删除的产品，保留显示；否则隐藏
+                            if (optionValue != currentValue && String(optionValue) != String(currentValue)) {
+                                // 在layui的下拉列表中隐藏该选项
+                                var $layuiOption = $layuiSelect.find('dl dd[lay-value="' + optionValue + '"]');
+                                if ($layuiOption.length > 0) {
+                                    $layuiOption.hide();
+                                }
+                            }
+                        });
+                    }, 150);
+                }
+            });
+            
+            // 使用layui的form模块监听下拉框打开事件
+            layui.form.on('select(product-select)', function(data) {
+                // 这个事件在值改变时触发，但我们可以在打开下拉框时过滤
+            });
+            
+            // 监听下拉框关闭事件（点击外部区域）
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.layui-form-select').length && 
+                    !$(e.target).closest('.layui-form-selected').length) {
+                    // 点击外部区域，恢复所有选项（实际上不需要恢复，因为每次打开都会重新过滤）
+                }
+            });
+            
+            // 监听下拉框变化事件
+            $(document).on('change', 'select.product-select', function() {
+                var $select = $(this);
+                var selectedValue = $select.val();
+                
+                // 如果选择了已删除的产品，恢复显示
+                var $selectedOption = $select.find('option[value="' + selectedValue + '"]');
+                if ($selectedOption.length > 0 && $selectedOption.attr('data-is-deleted') === 'true') {
+                    // 已删除的产品被选中，确保显示文本正确
+                    var displayText = $selectedOption.text();
+                    var $layuiInput = $select.next('.layui-form-select').find('.layui-input');
+                    if ($layuiInput.length > 0) {
+                        $layuiInput.val(displayText);
+                    }
+                }
+            });
         });
     </script>
 </body>

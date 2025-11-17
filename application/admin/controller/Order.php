@@ -155,6 +155,54 @@ class Order extends Common
     public function add()
     {
         if (request()->isPost()) {
+            // ====== 验证客户是否属于当前用户或协同人 ======
+            $contact = Request::param('contact');
+            if (!empty($contact)) {
+                $currentUsername = Session::get('username');
+                $currentAdminId = Session::get('aid');
+                
+                // 查找客户信息
+                $coninfo = Db::name('crm_contacts')->where('is_delete', 0)->where(function ($query) use ($contact) {
+                    $_contact = trim(preg_replace('/[+\-\s]/', '', $contact));
+                    $query->whereRaw("CONCAT(contact_extra, contact_value) = '{$contact}'")
+                        ->whereOr('contact_value', $contact);
+                    if ($contact != $_contact) {
+                        $query->whereOr('contact_value', $_contact)
+                            ->whereOrRaw("CONCAT(contact_extra, contact_value) = '{$_contact}'");
+                    }
+                })->find();
+                
+                if ($coninfo) {
+                    $custinfo = Db::name('crm_leads')->where('id', $coninfo['leads_id'])->find();
+                    if ($custinfo) {
+                        $isMyCustomer = ($custinfo['pr_user'] == $currentUsername);
+                        
+                        // 检查是否是协同人客户
+                        $isCollaboratorCustomer = false;
+                        if (!empty($custinfo['joint_person'])) {
+                            $jp = $custinfo['joint_person'];
+                            $jointPersonIds = [];
+                            if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                                $tmp = json_decode($jp, true);
+                                if (is_array($tmp)) {
+                                    $jointPersonIds = $tmp;
+                                }
+                            } else {
+                                $jointPersonIds = array_values(array_filter(explode(',', $jp)));
+                            }
+                            if (in_array($currentAdminId, $jointPersonIds)) {
+                                $isCollaboratorCustomer = true;
+                            }
+                        }
+                        
+                        // 如果客户既不是我的客户，也不是协同人客户，则不允许添加订单
+                        if (!$isMyCustomer && !$isCollaboratorCustomer) {
+                            return fail('该客户不属于您的客户或协同人客户，无法添加订单');
+                        }
+                    }
+                }
+            }
+            
             // ====== 读取主表字段 ======
             $data = [];
             $data['contact']          = Request::param('contact');        // 客户联系方式
@@ -162,19 +210,23 @@ class Order extends Common
             $data['client_company']            = Request::param('client_company'); // 客户公司
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
-            $data['source']           = Request::param('source');         // 询盘来源
+            $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username');
             $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['bank_account']     = Request::param('bank_account');   // 收款账户
             
-            // 检查 source_port 字段是否存在，如果存在则添加
-            try {
-                $columns = Db::query("SHOW COLUMNS FROM `crm_client_order` LIKE 'source_port'");
-                if (!empty($columns)) {
-                    $data['source_port'] = Request::param('source_port', '');  // 运营端口
+            // 处理运营端口：将端口ID转换为端口名称（文字）保存
+            $sourcePortId = Request::param('source_port', '');
+            $data['source_port'] = '';  // 默认为空
+            if (!empty($sourcePortId)) {
+                // 从 crm_inquiry_port 表获取端口名称
+                $portInfo = Db::name('crm_inquiry_port')
+                    ->where('id', $sourcePortId)
+                    ->field('port_name')
+                    ->find();
+                if ($portInfo && !empty($portInfo['port_name'])) {
+                    $data['source_port'] = $portInfo['port_name'];  // 保存端口名称（文字）
                 }
-            } catch (\Exception $e) {
-                // 如果查询失败，忽略该字段
             }
             $data['team_name']        = Request::param('team_name');      // 团队名称
             $data['at_user']          = Session::get('username');         // 创建人
@@ -247,6 +299,7 @@ class Order extends Common
             }
 
             // 1次查询构建 id => 产品名称 的映射
+            // 注意：这里不过滤 status，因为历史订单可能引用已删除的产品，需要保留产品名称
             $idNameMap = [];
             if (!empty($idArr)) {
                 $rows = Db::name('crm_products')->alias('p')
@@ -358,23 +411,26 @@ class Order extends Common
         $teamList = $this->getTeamList();
         $this->assign('teamList', $teamList);
 
-        // 检查shop_names字段是否存在
-        try {
-            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
-            $has_shop_names = !empty($columns);
-        } catch (\Exception $e) {
-            $has_shop_names = false;
+        // 从 crm_inquiry 表获取询盘来源列表（客户渠道）
+        $currentAdmin = \app\admin\model\Admin::getMyInfo();
+        $inquiryWhere = [];
+        if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
+            $inquiryWhere[] = $this->getOrgWhere($currentAdmin['org']);
         }
+        // 只获取启用状态的询盘来源（status = 0）
+        $inquiryQuery = Db::name('crm_inquiry');
+        if (!empty($inquiryWhere)) {
+            $inquiryQuery->where($inquiryWhere);
+        }
+        $inquiryList = $inquiryQuery
+            ->where('status', '=', 0)
+            ->field('id, inquiry_name')
+            ->order('inquiry_name', 'asc')
+            ->select();
         
-        $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
+        // 获取询盘来源名称列表（用于下拉框）
+        $sourceList = array_column($inquiryList, 'inquiry_name');
         $this->assign('sourceList', $sourceList);
-
-        // 获取询盘来源列表（包含shop_names字段）
-        if ($has_shop_names) {
-            $khStatusList = Db::name('crm_client_status')->field('id,status_name,shop_names')->select();
-        } else {
-            $khStatusList = Db::name('crm_client_status')->select();
-        }
 
         $this->assign('customer_type', self::CUSTOMER_TYPE);
 
@@ -391,38 +447,30 @@ class Order extends Common
         $this->assign('operUserList', $operUserList);
         $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
 
-        // 获取店铺列表，按来源名称分组（与 Client 控制器一致）
+        // 从 crm_inquiry_port 表获取端口列表，按询盘来源（inquiry_id）分组
         $shopList = [];
-        foreach ($khStatusList as $status) {
-            $statusName = $status['status_name'];
+        foreach ($inquiryList as $inquiry) {
+            $inquiryName = $inquiry['inquiry_name'];
+            $inquiryId = $inquiry['id'];
+            
+            // 查询该询盘来源对应的所有端口
+            $ports = Db::name('crm_inquiry_port')
+                ->where('inquiry_id', $inquiryId)
+                ->where('status', '=', 0) // 只获取启用状态的端口
+                ->field('id, port_name')
+                ->order('port_name', 'asc')
+                ->select();
+            
             $shops = [];
-            
-            // 检查是否有shop_names字段
-            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
-                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
-                foreach ($shop_names as $index => $shop_name) {
-                    if (!empty($shop_name)) {
-                        $shops[] = [
-                            'id' => md5($status['id'] . '_' . $shop_name),
-                            'name' => $shop_name
-                        ];
-                    }
-                }
-            }
-            
-            // 如果shop_names为空，尝试从crm_operation_shops表获取
-            if (empty($shops)) {
-                $commonShops = $this->getShopsByChannel('', $statusName);
-                foreach ($commonShops as $shop) {
-                    $shops[] = [
-                        'id' => $shop['id'],
-                        'name' => $shop['name']
-                    ];
-                }
+            foreach ($ports as $port) {
+                $shops[] = [
+                    'id' => $port['id'],
+                    'name' => $port['port_name']
+                ];
             }
             
             if (!empty($shops)) {
-                $shopList[$statusName] = $shops;
+                $shopList[$inquiryName] = $shops;
             }
         }
         $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
@@ -433,9 +481,11 @@ class Order extends Common
         if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
             $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
         }
+        // 只获取启用状态的产品（status = 0）
         $productRows = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id')
             ->where($where)
+            ->where('p.status', '=', 0)
             ->group('p.product_name, c.category_name')
             ->field('MIN(p.id) as id, p.product_name, c.category_name')
             ->order('p.product_name', 'asc')
@@ -499,71 +549,125 @@ class Order extends Common
                 //     $res['msg'] = "该客户在" . $custinfo['pr_user'] . "业务员下";
                 //     return $this->success($res);
                 // }
-                if ($custinfo['issuccess'] == 1) {
+                // 检查客户是否属于当前用户或协同人
+                $currentUsername = Session::get('username');
+                $currentAdminId = Session::get('aid');
+                $isMyCustomer = ($custinfo['pr_user'] == $currentUsername);
+                
+                // 检查是否是协同人客户
+                $isCollaboratorCustomer = false;
+                if (!empty($custinfo['joint_person'])) {
+                    $jp = $custinfo['joint_person'];
+                    $jointPersonIds = [];
+                    if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                        // JSON 数组格式
+                        $tmp = json_decode($jp, true);
+                        if (is_array($tmp)) {
+                            $jointPersonIds = $tmp;
+                        }
+                    } else {
+                        // 逗号分隔格式
+                        $jointPersonIds = array_values(array_filter(explode(',', $jp)));
+                    }
+                    // 检查当前用户的 admin_id 是否在协同人列表中
+                    if (in_array($currentAdminId, $jointPersonIds)) {
+                        $isCollaboratorCustomer = true;
+                    }
+                }
+                
+                // 如果客户既不是我的客户，也不是协同人客户，则不允许添加订单
+                if (!$isMyCustomer && !$isCollaboratorCustomer) {
                     $res['code'] = 0;
-                    $res['msg'] = "该客户已经成交了，请检查客户手机信息";
-                } else {
-                    // 获取询盘来源名称（kh_status 可能是 ID 或名称）
-                    $khStatusValue = $custinfo['kh_status'];
-                    $sourceName = $khStatusValue;
-                    
-                    // 尝试通过 ID 查找来源名称
-                    if (is_numeric($khStatusValue)) {
+                    $res['msg'] = "该客户不属于您的客户或协同人客户，无法添加订单";
+                    $this->success($res);
+                    return;
+                }
+                
+                // 获取询盘来源名称（kh_status 可能是 ID 或名称）
+                $khStatusValue = $custinfo['kh_status'];
+                $sourceName = $khStatusValue;
+                
+                // 尝试从 crm_inquiry 表查找来源名称
+                // 先尝试作为 ID 查找
+                if (is_numeric($khStatusValue)) {
+                    $inquiryInfo = Db::name('crm_inquiry')->where('id', $khStatusValue)->find();
+                    if ($inquiryInfo) {
+                        $sourceName = $inquiryInfo['inquiry_name'];
+                    } else {
+                        // 如果 crm_inquiry 表中找不到，尝试从 crm_client_status 表查找（兼容旧数据）
                         $statusInfo = Db::name('crm_client_status')->where('id', $khStatusValue)->find();
                         if ($statusInfo) {
                             $sourceName = $statusInfo['status_name'];
                         }
+                    }
+                } else {
+                    // 如果已经是名称，先尝试从 crm_inquiry 表验证
+                    $inquiryInfo = Db::name('crm_inquiry')->where('inquiry_name', $khStatusValue)->find();
+                    if ($inquiryInfo) {
+                        $sourceName = $inquiryInfo['inquiry_name'];
                     } else {
-                        // 如果已经是名称，直接使用
+                        // 如果 crm_inquiry 表中找不到，直接使用原值（可能是 crm_client_status 的名称，兼容旧数据）
                         $sourceName = $khStatusValue;
                     }
-                    
-                    $res['code'] = 1;
-                    $res['custname'] = $custinfo['kh_name'];
-                    $res['kh_username'] = $custinfo['kh_username'];
-                    $res['source'] = $sourceName;  // 返回来源名称
-                    $res['pr_user'] = $custinfo['pr_user'];
-                    $res['country'] = $custinfo['xs_area'];
-                    $res['oper_user'] = $custinfo['oper_user'];
-                    
-                    // 获取来源端口（如果字段存在）
-                    $res['source_port'] = '';
-                    try {
-                        $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
-                        if (!empty($columns) && isset($custinfo['source_port'])) {
-                            $res['source_port'] = $custinfo['source_port'];
-                        }
-                    } catch (\Exception $e) {
-                        // 忽略错误
+                }
+                
+                $res['code'] = 1;
+                $res['custname'] = $custinfo['kh_name'];
+                $res['kh_username'] = $custinfo['kh_username'];
+                $res['source'] = $sourceName;  // 返回来源名称
+                $res['pr_user'] = $custinfo['pr_user'];
+                $res['country'] = $custinfo['xs_area'];
+                $res['oper_user'] = $custinfo['oper_user'];
+                
+                // 获取来源端口（如果字段存在）
+                $res['source_port'] = '';
+                try {
+                    $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
+                    if (!empty($columns) && isset($custinfo['source_port'])) {
+                        $res['source_port'] = $custinfo['source_port'];
                     }
-                    
-                    // 获取协同人（joint_person）字段，解析为数组格式
-                    $jointPersonIds = [];
-                    if (!empty($custinfo['joint_person'])) {
-                        $jp = $custinfo['joint_person'];
-                        if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
-                            // JSON 数组格式
-                            $tmp = json_decode($jp, true);
-                            if (is_array($tmp)) {
-                                $jointPersonIds = $tmp;
-                            }
-                        } else {
-                            // 逗号分隔格式
-                            $jointPersonIds = array_values(array_filter(explode(',', $jp)));
+                } catch (\Exception $e) {
+                    // 忽略错误
+                }
+                
+                // 获取协同人（joint_person）字段，解析为数组格式
+                $jointPersonIds = [];
+                if (!empty($custinfo['joint_person'])) {
+                    $jp = $custinfo['joint_person'];
+                    if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                        // JSON 数组格式
+                        $tmp = json_decode($jp, true);
+                        if (is_array($tmp)) {
+                            $jointPersonIds = $tmp;
                         }
+                    } else {
+                        // 逗号分隔格式
+                        $jointPersonIds = array_values(array_filter(explode(',', $jp)));
                     }
-                    $res['joint_person'] = $jointPersonIds;
-                    
-                    // 获取团队名称（通过负责人 pr_user 查找）
-                    $teamName = '';
-                    if (!empty($custinfo['pr_user'])) {
-                        $adminInfo = Db::name('admin')->where('username', $custinfo['pr_user'])->field('team_name')->find();
-                        if ($adminInfo && !empty($adminInfo['team_name'])) {
-                            $teamName = $adminInfo['team_name'];
-                        }
+                }
+                $res['joint_person'] = $jointPersonIds;
+                
+                // 获取团队名称（通过负责人 pr_user 查找）
+                $teamName = '';
+                if (!empty($custinfo['pr_user'])) {
+                    $adminInfo = Db::name('admin')->where('username', $custinfo['pr_user'])->field('team_name')->find();
+                    if ($adminInfo && !empty($adminInfo['team_name'])) {
+                        $teamName = $adminInfo['team_name'];
                     }
-                    $res['team_name'] = $teamName;
-                    
+                }
+                $res['team_name'] = $teamName;
+                
+                // 无论客户是否成交，都不返回历史订单产品信息，让用户手动选择产品（创建新订单）
+                $isSuccess = ($custinfo['issuccess'] == 1);
+                $res['is_success'] = $isSuccess; // 标记客户是否已成交
+                
+                // 始终返回空的历史产品数组，不自动填充历史产品信息
+                $res['history_products'] = [];
+                
+                // 构建提示信息
+                if ($isSuccess) {
+                    $res['msg'] = "【该客户已成交，将创建新订单】客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $sourceName . ",所属业务员:" . $custinfo['pr_user'] . ",所属运营:" . $custinfo['oper_user'];
+                } else {
                     $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $sourceName . ",所属业务员:" . $custinfo['pr_user'] . ",所属运营:" . $custinfo['oper_user'];
                 }
             } else {
@@ -593,20 +697,24 @@ class Order extends Common
             $data['client_company']   = Request::param('client_company'); // 客户公司
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
-            $data['source']           = Request::param('source');         // 询盘来源
+            $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）
             $data['bank_account']     = Request::param('bank_account');  // 收款账户 ID (as string)
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username'); // 客户负责人（默认当前用户）
             $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['team_name']        = Request::param('team_name');      // 团队名称
             
-            // 检查 source_port 字段是否存在，如果存在则添加
-            try {
-                $columns = Db::query("SHOW COLUMNS FROM `crm_client_order` LIKE 'source_port'");
-                if (!empty($columns)) {
-                    $data['source_port'] = Request::param('source_port', '');  // 来源端口
+            // 处理运营端口：将端口ID转换为端口名称（文字）保存
+            $sourcePortId = Request::param('source_port', '');
+            $data['source_port'] = '';  // 默认为空
+            if (!empty($sourcePortId)) {
+                // 从 crm_inquiry_port 表获取端口名称
+                $portInfo = Db::name('crm_inquiry_port')
+                    ->where('id', $sourcePortId)
+                    ->field('port_name')
+                    ->find();
+                if ($portInfo && !empty($portInfo['port_name'])) {
+                    $data['source_port'] = $portInfo['port_name'];  // 保存端口名称（文字）
                 }
-            } catch (\Exception $e) {
-                // 如果查询失败，忽略该字段
             }
             
             $data['order_time']       = Request::param('order_time');     // 成交时间
@@ -675,6 +783,7 @@ class Order extends Common
             $idNameMap = [];
             if (!empty($idArr)) {
                 // 从产品表获取名称和分类，用于展示和计算
+                // 注意：这里不过滤 status，因为历史订单可能引用已删除的产品，需要保留产品名称
                 $rows = Db::name('crm_products')->alias('p')
                     ->leftJoin('crm_product_category c', 'p.category_id = c.id')
                     ->where('p.id', 'in', $idArr)
@@ -683,6 +792,22 @@ class Order extends Common
                 foreach ($rows as $r) {
                     // 拼接名称和分类（如需）：$r['product_name'].' ('.$r['category_name'].')'
                     $idNameMap[$r['id']] = $r['product_name'];
+                }
+                
+                // 如果某些产品ID查询不到（可能已被删除），尝试从订单明细表中获取产品名称
+                foreach ($idArr as $pid) {
+                    if (!isset($idNameMap[$pid])) {
+                        // 尝试从订单明细表中获取该产品ID对应的产品名称（如果有历史记录）
+                        $item = Db::name('crm_order_item')
+                            ->where('product_id', $pid)
+                            ->where('product_name', '<>', '')
+                            ->order('id desc')
+                            ->field('product_name')
+                            ->find();
+                        if ($item && !empty($item['product_name'])) {
+                            $idNameMap[$pid] = $item['product_name'];
+                        }
+                    }
                 }
             }
 
@@ -809,16 +934,65 @@ class Order extends Common
             // 有组织限制时构造过滤条件
             $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
         }
+        // 只获取启用状态的产品（status = 0）
         $productQuery = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id');
         if (!empty($where)) {
             $productQuery->where($where);
         }
         $productRows = $productQuery
+            ->where('p.status', '=', 0)
             ->group('p.product_name, c.category_name')
             ->field('MIN(p.id) as id, p.product_name, c.category_name')
             ->order('p.product_name', 'asc')
             ->select();
+        
+        // 获取订单中已有的产品ID，检查是否有已删除的产品（status=-1）
+        // 如果有，需要添加到产品列表中以便显示，但标记为已废弃
+        if (isset($items) && !empty($items)) {
+            $existingProductIds = [];
+            foreach ($items as $item) {
+                if (!empty($item['product_id'])) {
+                    $existingProductIds[] = (int)$item['product_id'];
+                }
+            }
+            $existingProductIds = array_unique($existingProductIds);
+            
+            // 检查这些产品是否已被删除（status=-1）
+            if (!empty($existingProductIds)) {
+                // 先查询所有可能的产品（包括已删除的），不受组织限制（因为历史订单需要显示）
+                $allProducts = Db::name('crm_products')->alias('p')
+                    ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+                    ->where('p.id', 'in', $existingProductIds)
+                    ->field('p.id, p.product_name, c.category_name, p.status')
+                    ->select();
+                
+                // 找出已删除的产品（status=-1）
+                foreach ($allProducts as $product) {
+                    if (isset($product['status']) && $product['status'] == -1) {
+                        $product['is_deleted'] = true; // 标记为已删除
+                        $productRows[] = $product;
+                    }
+                }
+                
+                // 对于在订单中存在但查询不到的产品（可能已被物理删除），从订单明细中获取产品名称
+                $foundProductIds = array_column($allProducts, 'id');
+                foreach ($items as $item) {
+                    if (!empty($item['product_id']) && !in_array($item['product_id'], $foundProductIds)) {
+                        // 产品不存在于产品表中，但从订单明细中获取信息
+                        if (!empty($item['product_name'])) {
+                            $productRows[] = [
+                                'id' => $item['product_id'],
+                                'product_name' => $item['product_name'],
+                                'category_name' => '无',
+                                'is_deleted' => true
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+        
         $this->assign('productList', $productRows);
 
         // 协同人列表（xm-select 数据格式）
@@ -947,8 +1121,22 @@ class Order extends Common
             }
         }
         
-        // 将 source_port 值添加到订单信息中
-        $order['source_port'] = $orderSourcePort;
+        // 如果 source_port 是端口名称（文字），需要找到对应的端口ID以便前端下拉框能正确选中
+        $orderSourcePortId = '';
+        if (!empty($orderSourcePort)) {
+            // 尝试通过端口名称查找端口ID
+            $portInfo = Db::name('crm_inquiry_port')
+                ->where('port_name', $orderSourcePort)
+                ->field('id')
+                ->find();
+            if ($portInfo && !empty($portInfo['id'])) {
+                $orderSourcePortId = $portInfo['id'];
+            }
+        }
+        
+        // 将 source_port 值（端口名称）和 source_port_id（端口ID，用于前端回显）添加到订单信息中
+        $order['source_port'] = $orderSourcePort;  // 端口名称（文字）
+        $order['source_port_id'] = $orderSourcePortId;  // 端口ID（用于前端下拉框选中）
 
         // 将订单主表和明细数据分配给模板
         $this->assign('orderInfo', $order);
@@ -1044,6 +1232,7 @@ class Order extends Common
             $idNameMap = [];
             if (!empty($idArr)) {
                 // 从产品表获取名称和分类，用于展示和计算
+                // 注意：这里不过滤 status，因为历史订单可能引用已删除的产品，需要保留产品名称
                 $rows = Db::name('crm_products')->alias('p')
                     ->leftJoin('crm_product_category c', 'p.category_id = c.id')
                     ->where('p.id', 'in', $idArr)
@@ -1052,6 +1241,22 @@ class Order extends Common
                 foreach ($rows as $r) {
                     // 拼接名称和分类（如需）：$r['product_name'].' ('.$r['category_name'].')'
                     $idNameMap[$r['id']] = $r['product_name'];
+                }
+                
+                // 如果某些产品ID查询不到（可能已被删除），尝试从订单明细表中获取产品名称
+                foreach ($idArr as $pid) {
+                    if (!isset($idNameMap[$pid])) {
+                        // 尝试从订单明细表中获取该产品ID对应的产品名称（如果有历史记录）
+                        $item = Db::name('crm_order_item')
+                            ->where('product_id', $pid)
+                            ->where('product_name', '<>', '')
+                            ->order('id desc')
+                            ->field('product_name')
+                            ->find();
+                        if ($item && !empty($item['product_name'])) {
+                            $idNameMap[$pid] = $item['product_name'];
+                        }
+                    }
                 }
             }
 
@@ -1173,11 +1378,13 @@ class Order extends Common
         $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
 
         // 产品列表（含分类名）。无组织限制时查询所有产品
+        // 不添加status过滤，所有产品数据都进行展示
         $where = [];
         if (!empty($currentAdmin['org']) && strpos($currentAdmin['org'], 'admin') === false) {
             // 有组织限制时构造过滤条件
             $where[] = $this->getOrgWhere($currentAdmin['org'], 'p');
         }
+        // 查询所有产品（不限制status状态）
         $productQuery = Db::name('crm_products')->alias('p')
             ->leftJoin('crm_product_category c', 'p.category_id = c.id');
         if (!empty($where)) {
@@ -1185,9 +1392,49 @@ class Order extends Common
         }
         $productRows = $productQuery
             ->group('p.product_name, c.category_name')
-            ->field('MIN(p.id) as id, p.product_name, c.category_name')
+            ->field('MIN(p.id) as id, p.product_name, c.category_name, p.status')
             ->order('p.product_name', 'asc')
             ->select();
+        
+        // 标记已删除的产品（status=-1）
+        foreach ($productRows as &$product) {
+            if (isset($product['status']) && $product['status'] == -1) {
+                $product['is_deleted'] = true; // 标记为已删除
+            }
+        }
+        unset($product); // 释放引用
+        
+        // 获取订单中已有的产品ID，检查是否有已被物理删除的产品
+        // 如果产品不存在于产品表中，从订单明细中获取产品名称
+        if (isset($items) && !empty($items)) {
+            $existingProductIds = [];
+            foreach ($items as $item) {
+                if (!empty($item['product_id'])) {
+                    $existingProductIds[] = (int)$item['product_id'];
+                }
+            }
+            $existingProductIds = array_unique($existingProductIds);
+            
+            // 检查订单中的产品是否都在产品列表中
+            if (!empty($existingProductIds)) {
+                $foundProductIds = array_column($productRows, 'id');
+                foreach ($items as $item) {
+                    if (!empty($item['product_id']) && !in_array($item['product_id'], $foundProductIds)) {
+                        // 产品不存在于产品表中（可能已被物理删除），从订单明细中获取信息
+                        if (!empty($item['product_name'])) {
+                            $productRows[] = [
+                                'id' => $item['product_id'],
+                                'product_name' => $item['product_name'],
+                                'category_name' => '无',
+                                'status' => -1,
+                                'is_deleted' => true
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+        
         $this->assign('productList', $productRows);
 
         // 协同人列表（xm-select 数据格式）
@@ -1550,6 +1797,23 @@ class Order extends Common
                 'page' => $page
             ])
             ->toArray();
+        
+        // 如果订单主表的 product_name 为空，尝试从订单明细表中获取产品名称
+        // 这样可以确保即使产品被删除，订单的产品名称仍然可以显示
+        foreach ($list['data'] as &$order) {
+            if (empty($order['product_name'])) {
+                $firstItem = Db::name('crm_order_item')
+                    ->where('order_id', $order['id'])
+                    ->where('product_name', '<>', '')
+                    ->order('line_no asc')
+                    ->field('product_name')
+                    ->find();
+                if ($firstItem && !empty($firstItem['product_name'])) {
+                    $order['product_name'] = $firstItem['product_name'];
+                }
+            }
+        }
+        unset($order);
 
 
         //成单率

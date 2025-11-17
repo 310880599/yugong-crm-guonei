@@ -254,12 +254,12 @@
 
         <table class="layui-table" id="table-list" lay-filter="table-list"></table>
     </div>
-
+    <!-- <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a> -->
     <script type="text/html" id="action">
         <!-- 是否审核通过 -->
     <!-- {//if $Think.session.aid == 1} -->
     <!-- <a class="layui-btn  layui-btn-xs" lay-event="shenhe"><i class="layui-icon">&#xe642;</i>审核通过</a> -->
-    <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
+    
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
     <!-- {/if} -->
     </script>
@@ -290,7 +290,8 @@
                     { field: 'profit', title: '利润', totalRow: true },
                     { field: 'margin_rate', title: '利润率(%)', totalRowText: '' },
                     { field: 'order_time', title: '成交时间' },
-                    { field: 'source', title: '询盘来源' },
+                    { field: 'source', title: '运营渠道' },
+                    { field: 'source_port', title: '运营端口' },
                     { field: 'pr_user', title: '负责人', hide: false },
                     { field: 'team_name', title: '团队', hide: false },
                     { width: 200, title: '操作', toolbar: '#action' }
