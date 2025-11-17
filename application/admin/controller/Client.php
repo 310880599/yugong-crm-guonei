@@ -199,7 +199,7 @@ class Client extends Common
 
         // ----- 以下为原样保留的页面下拉数据 -----
         $khRankList   = Db::table('crm_client_rank')->select();
-        $khStatusList = Db::table('crm_client_status')->select();
+        $inquiryList = Db::table('crm_inquiry')->select();
         $xsSourceList = Db::table('crm_clues_source')->select();
 
         $team_name   = session('team_name') ?? '';
@@ -211,53 +211,8 @@ class Client extends Common
 
         $this->assign('adminResult', $adminResult);
         $this->assign('khRankList', $khRankList);
-        $this->assign('khStatusList', $khStatusList);
+        $this->assign('inquiryList', $inquiryList);
         $this->assign('xsSourceList', $xsSourceList);
-
-        // 获取来源端口列表（按来源名称分组）
-        $shopList = [];
-        try {
-            $has_shop_names = false;
-            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
-            if (!empty($columns)) {
-                $has_shop_names = true;
-            }
-        } catch (\Exception $e) {
-            $has_shop_names = false;
-        }
-
-        foreach ($khStatusList as $status) {
-            $statusName = $status['status_name'];
-            $shops = [];
-
-            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
-                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
-                foreach ($shop_names as $shop_name) {
-                    if (!empty($shop_name)) {
-                        $shops[] = [
-                            'id' => md5($status['id'] . '_' . $shop_name),
-                            'name' => $shop_name
-                        ];
-                    }
-                }
-            }
-
-            if (empty($shops)) {
-                $commonShops = $this->getShopsByChannel('', $statusName);
-                foreach ($commonShops as $shop) {
-                    $shops[] = [
-                        'id' => $shop['id'],
-                        'name' => $shop['name']
-                    ];
-                }
-            }
-
-            if (!empty($shops)) {
-                $shopList[$statusName] = $shops;
-            }
-        }
-        $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
-
         return $this->fetch();
     }
 
@@ -292,58 +247,15 @@ class Client extends Common
             ];
         }
 
-        // 处理来源端口（source_port）字段，将MD5加密值转换为店铺名称
+        // 映射所属渠道名称和运营端口名称
         $rows = &$list['data'];
+        $inquiryMap = Db::table('crm_inquiry')->column('inquiry_name', 'id');
+        $portMap = Db::table('crm_inquiry_port')->column('port_name', 'id');
         foreach ($rows as &$row) {
-            $row['source_port_name'] = '';
-            try {
-                $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
-                if (!empty($columns) && !empty($row['source_port'])) {
-                    $sourcePortId = $row['source_port'];
-                    
-                    // 尝试从 crm_operation_shops 表查找店铺名称
-                    $shopInfo = Db::table('crm_operation_shops')
-                        ->where('id', $sourcePortId)
-                        ->where('is_active', 1)
-                        ->field('shop_name')
-                        ->find();
-                    
-                    if ($shopInfo) {
-                        $row['source_port_name'] = $shopInfo['shop_name'];
-                    } else {
-                        // 如果表中找不到，尝试从 crm_client_status 的 shop_names 字段查找
-                        // source_port 可能是 md5(status_id + '_' + shop_name) 格式，需要反向查找
-                        $statusId = $row['kh_status'];
-                        if (!empty($statusId)) {
-                            $statusInfo = Db::table('crm_client_status')
-                                ->where('id', $statusId)
-                                ->field('id, shop_names')
-                                ->find();
-                            
-                            if ($statusInfo && !empty($statusInfo['shop_names'])) {
-                                $shop_names = array_filter(array_map('trim', explode(',', $statusInfo['shop_names'])));
-                                foreach ($shop_names as $shop_name) {
-                                    $expectedId = md5($statusInfo['id'] . '_' . $shop_name);
-                                    if ($expectedId === $sourcePortId) {
-                                        $row['source_port_name'] = $shop_name;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // 如果还是找不到，显示ID
-                        if (empty($row['source_port_name'])) {
-                            $row['source_port_name'] = $sourcePortId;
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                // 忽略错误
-            }
+            $row['inquiry_name'] = isset($inquiryMap[$row['inquiry_id']]) ? $inquiryMap[$row['inquiry_id']] : (string)$row['inquiry_id'];
+            $row['port_name'] = isset($portMap[$row['port_id']])  ? $portMap[$row['port_id']] : (string)$row['port_id'];
         }
-        unset($row);
-
+        unset($row);    
         return [
             'code'  => 0,
             'msg'   => '获取成功!',

@@ -91,21 +91,23 @@
                             </div>
                         </div>
                         <div class="layui-inline">
-                            <label class="layui-form-label">客户来源：</label>
+                            <label class="layui-form-label">所属渠道：</label>
                             <div class="layui-input-inline">
-                                <select name="kh_status" id="kh_status" lay-filter="kh_status">
-                                    <option value="">请选择客户来源</option>
-                                    {volist name="khStatusList" id="vo"}
-                                    <option value="{$vo.status_name}">{$vo.status_name}</option>
+                                <select name="inquiry_id" id="inquiry_id" lay-filter="inquiry_id">
+                                    <option value="">请选择所属渠道</option>
+                                    {volist name="inquiryList" id="vo"}
+                                     <option value="{$vo.id}">{$vo.inquiry_name}</option>
                                     {/volist}
                                 </select>
                             </div>
                         </div>
                         <div class="layui-inline">
-                            <label class="layui-form-label">来源端口：</label>
+                            <label class="layui-form-label">运营端口：</label>
                             <div class="layui-input-inline">
-                                <select name="source_port" id="source_port" lay-search>
-                                    <option value="">请先选择客户来源</option>
+                                <select name="port_id" id="port_id" lay-search>
+                                    {volist name="portList" id="vo"}
+                                     <option value="{$vo.id}">{$vo.port_name}</option>
+                                    {/volist}
                                 </select>
                             </div>
                         </div>
@@ -166,8 +168,7 @@
         <table class="layui-table" id="table-list" lay-filter="table-list"></table>
     </div>
 
-    <script type="text/html" id="action">
-   <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="follow"><i class="layui-icon">&#xe654;</i>写跟进</a>
+<script type="text/html" id="action">
     <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
     <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
     <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
@@ -280,10 +281,10 @@
                             return res.issuccess == 1 ? '已成交' : '未成交';
                         }
                     },
-                    { field: 'source_port_name', title: '来源端口', width: 150 },
+                    { field: 'inquiry_name', title: '所属渠道', width: 150 },
+                    { field: 'port_name', title: '运营端口', width: 150 },
                     { field: 'main_phone', title: '主电话', width: 180 },
                     { field: 'aux_phone', title: '辅助电话', width: 180 },
-                    { field: 'last_up_records', title: '最新跟进记录' },
                     { field: 'pr_user', title: '负责人' },
                     { field: 'at_time', title: '创建时间' },
                     { field: 'ut_time', title: '更新时间' },
@@ -292,7 +293,7 @@
                 limit: 100,
                 page: { limits: [10, 20, 50, 100, 9999999] }
             });
- // 打开跟进弹窗
+            // 打开跟进弹窗
             function openFollowDialog(clientId) {
                 // 显示加载提示
                 var loading = layer.load(1, {shade: [0.1, '#fff']});
@@ -568,29 +569,51 @@
                 return false;
             });
 
-            // 来源端口联动逻辑
-            var shopList = {$shopList|raw}; // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
-            
-            function fillSourcePortBySourceName(sourceName) {
-                var shops = shopList[sourceName] || [];
-                var $sourcePort = $('#source_port');
-                $sourcePort.empty();
-                if (shops.length > 0) {
-                    $sourcePort.append('<option value="">请选择来源端口</option>');
-                    $.each(shops, function (index, shop) {
-                        $sourcePort.append('<option value="' + shop.id + '">' + shop.name + '</option>');
+            // 监听所属渠道变化，动态加载对应的运营端口选项
+
+            form.on('select(inquiry_id)', function(data) {
+                var inquiryId = data.value;
+                var $portSelect = $('#port_id');
+                $portSelect.empty();
+                if (inquiryId) {
+                    $.get("{:url('Client/getPortsByInquiry')}", {
+                        inquiry_id: inquiryId
+                    }, function(res) {
+                        if (res.code === 0) {
+                            $portSelect.append('<option value="">请选择运营端口</option>');
+                            $.each(res.data, function(index, item) {
+                                $portSelect.append('<option value="' + item.id + '">' + item.port_name +
+                                    '</option>');
+                            });
+                        } else {
+                            $portSelect.append('<option value="">无可用端口</option>');
+                        }
+                        form.render('select');
                     });
                 } else {
-                    $sourcePort.append('<option value="">该来源暂无店铺数据</option>');
+                    $portSelect.append('<option value="">请先选择所属渠道</option>');
                 }
-                form.render('select');
-            }
 
-            // 监听客户来源变化，动态更新来源端口选项
-            form.on('select(kh_status)', function (data) {
-                var sourceName = $(data.elem).find("option:selected").text();
-                fillSourcePortBySourceName(sourceName);
+                form.render('select');
             });
+
+
+
+
+
+
+    
+
+    
+    
+
+
+
+
+
+
+
+
 
 
             // 日期范围选择器初始化

@@ -398,9 +398,14 @@ class Client extends Model
         if ($keyword['xs_source'] !== '' && $keyword['xs_source'] !== null) $mapXsSource = ['xs_source' => $keyword['xs_source']];
         if (!empty($keyword['pr_user'])) $mapPrUser = [['pr_user', 'like', '%' . $keyword['pr_user'] . '%']];
 
-        $mapSourcePort = []; // 来源端口
-        if (!empty($keyword['source_port'])) {
-            $mapSourcePort = ['l.source_port' => $keyword['source_port']];
+        // 新增筛选：所属渠道 inquiry_id 和 运营端口 port_id
+        $mapInquiry = [];
+        if ($keyword['inquiry_id'] !== '' && $keyword['inquiry_id'] !== null) {
+            $mapInquiry = ['l.inquiry_id' => $keyword['inquiry_id']];
+        }
+        $mapPort = [];
+        if ($keyword['port_id'] !== '' && $keyword['port_id'] !== null) {
+            $mapPort = ['l.port_id' => $keyword['port_id']];
         }
 
         $current_admin = Admin::getMyInfo();
@@ -427,7 +432,8 @@ class Client extends Model
             ->where($mapKhStatus)
             ->where($mapKhRank)
             ->where($mapXsSource)
-            ->where($mapSourcePort)
+            ->where($mapInquiry)
+            ->where($mapPort)
             ->where($mapAtTime)
             ->where($mapPrUser)
             ->leftJoin('crm_contacts c', "c.leads_id = l.id AND c.is_delete = 0 AND c.contact_type IN (1,3)")
