@@ -307,14 +307,31 @@ class ExcelImport
                         $oper_user = $admin['username'];
                     }
 
-                    // 构建单条客户主表数据
+                    // **新增代码**：产品名称匹配产品ID
+                    $productId = 0;
+                    if (!empty($rowAssoc['产品名称'])) {
+                        $product = Db::name('crm_products')->where('product_name', $rowAssoc['产品名称'])->find();
+                        if (!$product) {
+                            $fail_count++;
+                            $logData = [
+                                'message'       => "第{$index}条数据导入失败",
+                                'error_message' => '产品名称“' . $rowAssoc['产品名称'] . '”未找到对应产品',
+                                'task_data'     => $row
+                            ];
+                            Client::addOperLog(null, '数据导入', $logData);
+                            continue;  // 跳过该条数据导入
+                        }
+                        $productId = $product['id'];
+                    }
+
+                    // 构建客户主表数据数组（注意：product_name存储为产品ID）
                     $leadsData = [
                         'kh_name'      => $rowAssoc['客户名称'] ?? '',
                         'kh_contact'   => $rowAssoc['联系人'] ?? '',
                         'kh_status'    => $rowAssoc['客户来源'] ?? '',
                         'kh_rank'      => $rowAssoc['客户等级'] ?? '',
                         'xs_area'      => $rowAssoc['地区'] ?? ($rowAssoc['国家'] ?? ''),
-                        'product_name' => $rowAssoc['产品名称'] ?? '',
+                        'product_name' => $productId,  // 使用匹配到的产品ID
                         'oper_user'    => $oper_user,
                         'inquiry_id'   => $inquiry_id,
                         'port_id'      => $port_id_str,
@@ -328,13 +345,17 @@ class ExcelImport
                         'status'       => 1,
                         'ispublic'     => 3
                     ];
-                    // 原始创建/修改时间（若Excel提供）
+                    // **新增代码**：处理原始创建时间和修改时间字段
                     if (!empty($rowAssoc['原来创建时间'])) {
-                        $origCreate = strtotime($rowAssoc['原来创建时间']) ? date('Y-m-d H:i:s', strtotime($rowAssoc['原来创建时间'])) : $rowAssoc['原来创建时间'];
+                        $origCreate = strtotime($rowAssoc['原来创建时间']) 
+                                      ? date('Y-m-d H:i:s', strtotime($rowAssoc['原来创建时间'])) 
+                                      : $rowAssoc['原来创建时间'];
                         $leadsData['origin_created_at'] = $origCreate;
                     }
                     if (!empty($rowAssoc['原来修改时间'])) {
-                        $origUpdate = strtotime($rowAssoc['原来修改时间']) ? date('Y-m-d H:i:s', strtotime($rowAssoc['原来修改时间'])) : $rowAssoc['原来修改时间'];
+                        $origUpdate = strtotime($rowAssoc['原来修改时间']) 
+                                      ? date('Y-m-d H:i:s', strtotime($rowAssoc['原来修改时间'])) 
+                                      : $rowAssoc['原来修改时间'];
                         $leadsData['origin_updated_at'] = $origUpdate;
                     }
 
