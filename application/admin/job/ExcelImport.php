@@ -293,7 +293,7 @@ class ExcelImport
                     $oper_user = $pr_user;
                     if (!empty($rowAssoc['负责人'])) {
                         $resp = $rowAssoc['负责人'];
-                        $admin = Db::name('admin')->where('username|real_name', $resp)->find();
+                        $admin = Db::name('admin')->where('username', $resp)->find();
                         if (!$admin) {
                             $fail_count++;
                             $logData = [
