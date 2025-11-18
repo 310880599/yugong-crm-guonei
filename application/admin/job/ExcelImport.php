@@ -345,18 +345,18 @@ class ExcelImport
                         'status'       => 1,
                         'ispublic'     => 3
                     ];
+                    // 设置 original_creation_time 和 original_modification_time 默认值为当前时间戳（秒）
+                    $timestampNow = time();  // 新增代码
+                    $leadsData['original_creation_time'] = $timestampNow;       // 新增代码
+                    $leadsData['original_modification_time'] = $timestampNow;   // 新增代码
                     // **新增代码**：处理原始创建时间和修改时间字段
                     if (!empty($rowAssoc['原来创建时间'])) {
-                        $origCreate = strtotime($rowAssoc['原来创建时间']) 
-                                      ? date('Y-m-d H:i:s', strtotime($rowAssoc['原来创建时间'])) 
-                                      : $rowAssoc['原来创建时间'];
-                        $leadsData['origin_created_at'] = $origCreate;
+                        // 若 Excel 提供了原始创建时间，则解析为时间戳，否则保持默认当前时间
+                        $leadsData['original_creation_time'] = strtotime($rowAssoc['原来创建时间']) ?: $timestampNow;  // 替换代码
                     }
                     if (!empty($rowAssoc['原来修改时间'])) {
-                        $origUpdate = strtotime($rowAssoc['原来修改时间']) 
-                                      ? date('Y-m-d H:i:s', strtotime($rowAssoc['原来修改时间'])) 
-                                      : $rowAssoc['原来修改时间'];
-                        $leadsData['origin_updated_at'] = $origUpdate;
+                        // 若 Excel 提供了原始修改时间，则解析为时间戳，否则保持默认当前时间
+                        $leadsData['original_modification_time'] = strtotime($rowAssoc['原来修改时间']) ?: $timestampNow;  // 替换代码
                     }
 
                     // 使用事务插入客户及联系人数据
