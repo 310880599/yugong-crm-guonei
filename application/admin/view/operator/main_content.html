@@ -74,7 +74,7 @@
                     <select id="yy_team_filter" lay-filter="yy_team_filter" class="layui-select" style="width: 150px; margin-right: 15px;">
                         <option value="">全部团队</option>
                         {volist name="$data['yy_data']['total']" id='vo'}
-                        <option value="{$vo['channel']}">{$vo['channel']}</option>
+                        <option value="{$vo['team_name']}">{$vo['team_name']}</option>
                         {/volist}
                     </select>
                     <div class="total">合计：<span>{$data['yy_data']['list']|array_column='yy_num'|array_sum}</span></div>
@@ -117,7 +117,7 @@
                         <tbody>
                             {volist name="$data['yy_data']['total']" id='vo'}
                             <tr>
-                                <td><b>{$vo['channel']}</b></td>
+                                <td><b>{$vo['team_name']}</b></td>
                                 <td>{$vo['yy_num']}</td>
                             </tr>
                             {/volist}
@@ -179,6 +179,39 @@
                             {/volist}
                             {if !$data['product_data']['oper_prod']}<tr>
                                 <td colspan="2">暂无数据</td>
+                            </tr>{/if}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card export">
+                <div class="layui-card-header">总询盘统计</div>
+                <div class="filter-bar">
+                    <div class="total">合计：<span>{$data['total_inquiry_stats']|array_column='count'|array_sum}</span></div>
+                </div>
+                <div class="layui-card-body">
+                    <table id="total_inquiry_table" class="layui-table layui-table-sm">
+                        <thead>
+                            <tr>
+                                <th>渠道</th>
+                                <th>端口</th>
+                                <th>询盘数量</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="$data['total_inquiry_stats']" id='vo'}
+                            <tr>
+                                <td>{$vo['channel_name']}</td>
+                                <td>{$vo['port_name'] ? $vo['port_name'] : '-'}</td>
+                                <td>{$vo['count']}</td>
+                            </tr>
+                            {/volist}
+                            {if !$data['total_inquiry_stats']}<tr>
+                                <td colspan="3">暂无数据</td>
                             </tr>{/if}
                         </tbody>
                     </table>

@@ -69,7 +69,7 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">销售产品分类排行</div>
+                <div class="layui-card-header">销售产品厂家排行</div>
                 <div class="filter-bar">
                     <div class="total">合计：<span>{$data['product_data']['order_prod_category'] ? $data['product_data']['order_prod_category']|array_column='count'|array_sum : 0}</span></div>
                 </div>
@@ -78,7 +78,7 @@
 
                         <thead>
                             <tr>
-                                <th>产品分类</th>
+                                <th>厂家名称</th>
                                 <th>销售数量</th>
                             </tr>
                         </thead>
@@ -100,7 +100,7 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">询盘产品分类排行</div>
+                <div class="layui-card-header">询盘产品厂家排行</div>
                 <div class="filter-bar">
                     <div class="total">合计：<span>{$data['product_data']['oper_prod_category'] ? $data['product_data']['oper_prod_category']|array_column='count'|array_sum : 0}</span></div>
                 </div>
@@ -108,7 +108,7 @@
                     <table id="pdfl_list_table" class="layui-table layui-table-sm">
                         <thead>
                             <tr>
-                                <th>产品分类</th>
+                                <th>厂家名称</th>
                                 <th>询盘数量</th>
                             </tr>
                         </thead>
@@ -192,7 +192,7 @@
                 </div>
             </div>
         </div>
-        <div class="layui-col-md6">
+        <!-- <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
                 <div class="layui-card-header">询盘产品地区排行</div>
@@ -251,12 +251,12 @@
                     </table>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 </div>
 <div class="layui-row layui-col-space15">
     <div class="layui-row layui-col-space15">
-        <div class="layui-col-md6">
+        <!-- <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
                 <div class="layui-card-header">销售产品分类地区排行</div>
@@ -315,8 +315,8 @@
                     </table>
                 </div>
             </div>
-        </div>
-        <div class="layui-col-md6">
+        </div> -->
+        <!-- <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
                 <div class="layui-card-header">询盘产品分类地区排行</div>
@@ -375,7 +375,7 @@
                     </table>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 </div>
 
