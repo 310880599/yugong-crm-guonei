@@ -1077,73 +1077,145 @@ class Client extends Common
 
 
 
+    // public function xlsUpload()
+    // {
+
+    //     $xlsFile = request()->file('xlsFile');
+
+    //     if (!$xlsFile) {
+    //         return json(['code' => -1, 'msg' => '请上传Excel文件']);
+    //     }
+
+    //     // 配置文件上传规则
+    //     $uploadConfig = [
+    //         'size' => 1024 * 1024 * 20, // 20MB 文件大小限制
+    //         'ext' => 'xlsx,xls', // 只允许上传 Excel 文件
+    //     ];
+
+    //     $uploadPath = Env::get('root_path') . 'public/uploads/';
+    //     if (!is_dir($uploadPath)) {
+    //         if (!mkdir($uploadPath, 0755, true)) {
+    //             return json(['code' => -1, 'msg' => '上传目录创建失败，请检查权限']);
+    //         }
+    //     }
+    //     $info = $xlsFile->validate($uploadConfig)->move($uploadPath, $this->generateUniqueFileName($xlsFile));
+    //     if (!$info) {
+    //         return json(['code' => -1, 'msg' => '文件上传失败：' . $xlsFile->getError()]);
+    //     }
+
+    //     $filePath = $uploadPath . $info->getSaveName();
+
+    //     $fileHash = hash_file('sha256', $filePath);
+
+    //     if (Cache::has('excel_import_hash:' . $fileHash)) {
+    //         return json(['code' => -1, 'msg' => '该文件已上传过，请不要重复上传']);
+    //     }
+
+    //     Cache::set('excel_import_hash:' . $fileHash, true, 172800);
+
+    //     try {
+    //         $reader = IOFactory::createReaderForFile($filePath);
+    //         $spreadsheet = $reader->load($filePath);
+    //         $sheet = $spreadsheet->getActiveSheet();
+    //         $data = $sheet->toArray(null, true, true, true);
+    //     } catch (\Exception $e) {
+    //         return json(['code' => -1, 'msg' => '读取Excel出错：' . $e->getMessage()]);
+    //     }
+
+    //     $headers = array_shift($data); // 表头
+    //     $pr_user = Session::get('username');
+
+    //     // 将数据拆分成小块，每块 100 条记录
+    //     $chunkSize = 100;
+    //     $chunks = array_chunk($data, $chunkSize);
+
+    //     foreach ($chunks as $chunk) {
+    //         $jobData = [
+    //             'user_id' => Session::get('aid'),
+    //             'filePath' => $filePath,
+    //             'pr_user' => $pr_user,
+    //             'headers' => $headers,
+    //             'chunkData' => $chunk
+    //         ];
+
+    //         // 将任务推送到队列
+    //         queue(\app\admin\job\ExcelImport::class, $jobData, 0, 'excel_import');
+    //     }
+
+    //     return json(['code' => 0, 'msg' => '导入任务已提交，请稍后查看结果']);
+    // }
+
+    // application/admin/controller/Client.php
+
+
     public function xlsUpload()
     {
-
+        // 获取上传的 Excel 文件
         $xlsFile = request()->file('xlsFile');
-
         if (!$xlsFile) {
             return json(['code' => -1, 'msg' => '请上传Excel文件']);
         }
 
-        // 配置文件上传规则
+        // 文件上传配置：大小限制20MB，扩展名xls/xlsx
         $uploadConfig = [
-            'size' => 1024 * 1024 * 20, // 20MB 文件大小限制
-            'ext' => 'xlsx,xls', // 只允许上传 Excel 文件
+            'size' => 1024 * 1024 * 20,
+            'ext'  => 'xlsx,xls'
         ];
-
         $uploadPath = Env::get('root_path') . 'public/uploads/';
+        // 若上传目录不存在则尝试创建
         if (!is_dir($uploadPath)) {
             if (!mkdir($uploadPath, 0755, true)) {
                 return json(['code' => -1, 'msg' => '上传目录创建失败，请检查权限']);
             }
         }
+        // 保存上传文件并生成唯一文件名:contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
         $info = $xlsFile->validate($uploadConfig)->move($uploadPath, $this->generateUniqueFileName($xlsFile));
         if (!$info) {
             return json(['code' => -1, 'msg' => '文件上传失败：' . $xlsFile->getError()]);
         }
-
         $filePath = $uploadPath . $info->getSaveName();
-
+        // 计算文件哈希用于判重
         $fileHash = hash_file('sha256', $filePath);
-
         if (Cache::has('excel_import_hash:' . $fileHash)) {
             return json(['code' => -1, 'msg' => '该文件已上传过，请不要重复上传']);
         }
+        Cache::set('excel_import_hash:' . $fileHash, true, 172800); // 标记48小时内重复
 
-        Cache::set('excel_import_hash:' . $fileHash, true, 172800);
-
+        // 读取Excel内容
         try {
-            $reader = IOFactory::createReaderForFile($filePath);
+            $reader      = IOFactory::createReaderForFile($filePath);
             $spreadsheet = $reader->load($filePath);
-            $sheet = $spreadsheet->getActiveSheet();
+            $sheet       = $spreadsheet->getActiveSheet();
+            // 转换表格为数组（保留表头行和空行）
             $data = $sheet->toArray(null, true, true, true);
         } catch (\Exception $e) {
             return json(['code' => -1, 'msg' => '读取Excel出错：' . $e->getMessage()]);
         }
-
-        $headers = array_shift($data); // 表头
-        $pr_user = Session::get('username');
-
-        // 将数据拆分成小块，每块 100 条记录
-        $chunkSize = 100;
-        $chunks = array_chunk($data, $chunkSize);
-
-        foreach ($chunks as $chunk) {
-            $jobData = [
-                'user_id' => Session::get('aid'),
-                'filePath' => $filePath,
-                'pr_user' => $pr_user,
-                'headers' => $headers,
-                'chunkData' => $chunk
-            ];
-
-            // 将任务推送到队列
-            queue(\app\admin\job\ExcelImport::class, $jobData, 0, 'excel_import');
+        if (empty($data)) {
+            return json(['code' => -1, 'msg' => 'Excel文件内容为空']);
         }
 
+        // 提取表头并去除首行
+        $headers = array_shift($data);
+        $pr_user = Session::get('username');   // 当前导入操作用户
+        $userId  = Session::get('aid');
+
+        // 将数据按每100条分组，逐批加入队列处理:contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
+        $chunkSize = 100;
+        $chunks = array_chunk($data, $chunkSize);
+        foreach ($chunks as $chunk) {
+            $jobData = [
+                'user_id'   => $userId,
+                'pr_user'   => $pr_user,
+                'headers'   => $headers,
+                'chunkData' => $chunk
+            ];
+            // 推送异步任务到名为 excel_import 的队列
+            queue(\app\admin\job\ExcelImport::class, $jobData, 0, 'excel_import');
+        }
         return json(['code' => 0, 'msg' => '导入任务已提交，请稍后查看结果']);
     }
+
 
 
     // 生成唯一文件名
@@ -3324,4 +3396,113 @@ class Client extends Common
         $redis->del($statusKey);
         $redis->del($resultKey);
     }
+
+
+    // 下载导入模板（CSV格式）
+    public function tpl()
+    {
+        // 文件名包含当前日期时间
+        $filename = '客户导入模板_' . date('Ymd_His') . '.csv';
+        // 工具函数：输出CSV一行，确保字段中包含的引号正确转义
+        $csvLine = function(array $cols) {
+            $safe = array_map(function($v) {
+                $v = str_replace('"', '""', (string)$v);
+                return '"' . $v . '"';
+            }, $cols);
+            return implode(',', $safe) . "\r\n";
+        };
+
+        // 表头字段（客户名称、电话、辅助电话...原来修改时间）
+        $header = ['客户名称', '电话', '辅助电话', '产品名称', '所属渠道', '运营端口', '协同人', '负责人', '其他信息', '原来创建时间', '原来修改时间'];
+        // 示例数据（可根据需要调整或留空）
+        $examples = [
+            ['示例客户A', '13800138000', '13900139000', '产品X', '渠道一', '端口A', '5,7', 'wangwu', '备注信息', '2020-01-01 10:00:00', '2020-06-01 08:00:00'],
+            ['示例客户B', '13700137000', '', '产品Y', '渠道二', '', '', '当前登录人', '', '2021-05-05 09:30:00', '']
+        ];
+
+        // 清除输出缓冲，设置CSV文件下载头
+        if (function_exists('ob_get_level')) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+        }
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        // 输出UTF-8 BOM，避免中文乱码
+        echo "\xEF\xBB\xBF";
+        // 输出表头
+        echo $csvLine($header);
+        // 输出示例行
+        foreach ($examples as $row) {
+            echo $csvLine($row);
+        }
+        exit;
+    }
+
+
+    // 检查最近导入是否有失败记录（供前端提示用）
+    public function checkImportFail()
+    {
+        $adminId   = Session::get('aid');
+        $username  = Session::get('username');
+        // 查询一小时内当前用户的导入失败日志记录
+        $hasFail = Db::table('crm_operation_log')
+                    ->where('user_id', $adminId)
+                    ->where('oper_type', '数据导入')
+                    ->where('description', 'like', '%导入失败%')
+                    ->whereTime('created_at', '>=', date('Y-m-d H:i:s', time()-3600))
+                    ->find();
+        return json(['code' => 0, 'fail' => $hasFail ? 1 : 0]);
+    }
+
+    // 获取导入失败日志列表（返回HTML片段）
+    public function importLog()
+    {
+        $adminId = Session::get('aid');
+        // 查询当前用户的所有“数据导入”失败日志记录（按时间倒序，最多最近100条）
+        $logQuery = Db::table('crm_operation_log')
+                    ->where('oper_type', '数据导入')
+                    ->where('description', 'like', '%导入失败%')
+                    ->order('id', 'desc')
+                    ->limit(100);
+        // 非超级管理员只查看自己的导入日志
+        if ($adminId != 1) {
+            $logQuery->where('user_id', $adminId);
+        }
+        $logList = $logQuery->select();
+
+        // 生成HTML表格
+        $html = '<table class="layui-table"><thead><tr><th>时间</th><th>失败详情</th></tr></thead><tbody>';
+        foreach ($logList as $log) {
+            $time = $log['created_at'];
+            $desc = $log['description'];
+            // 尝试解析JSON描述
+            $detailText = '';
+            $descData = json_decode($desc, true);
+            if (is_array($descData)) {
+                // 使用 message 和 error_message 字段
+                $detailText = $descData['message'] ?? '';
+                if (!empty($descData['error_message'])) {
+                    $detailText .= ' - ' . $descData['error_message'];
+                }
+                // 附加原始数据内容（如存在）
+                if (!empty($descData['task_data'])) {
+                    $orig = is_array($descData['task_data']) ? implode(' | ', $descData['task_data']) : $descData['task_data'];
+                    $detailText .= ' | 原始数据：' . htmlspecialchars($orig);
+                }
+            } else {
+                // 非JSON则直接输出文本
+                $detailText = htmlspecialchars($desc);
+            }
+            $html .= "<tr><td>{$time}</td><td>{$detailText}</td></tr>";
+        }
+        $html .= '</tbody></table>';
+        // 输出HTML片段
+        echo $html;
+        exit;
+    }
+
+
 }

@@ -236,6 +236,12 @@
 <script type="text/html" id="topBtn">
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加客户</button>
     <button type="button" class="layui-btn layui-btn-normal layui-btn-radius layui-btn-sm" id="toAll" style="margin-right:10px"><i class="layui-icon">&#xe681;</i>导入客户</button>
+    <button type="button" class="layui-btn layui-btn-normal layui-btn-radius layui-btn-sm" id="downloadTemplate">
+        <i class="layui-icon">&#xe601;</i>下载模板
+    </button>
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="viewImportLog">
+        <i class="layui-icon">&#xe621;</i>导入日志
+    </button>
     <button type="button" class="layui-btn layui-btn-danger layui-btn-radius layui-btn-sm" id="moveGh" lay-event="moveGh"><i class="layui-icon">&#xe770;</i>移入公海</button>
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="alterAll" lay-event="alterAll"><i class="layui-icon">&#xe60e;</i>转移客户</button>
     <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="chengjiaoAll" lay-event="chengjiaoAll"><i class="layui-icon">&#xe63c;</i>客户成交</button>
@@ -246,8 +252,8 @@
 
 {include file="common/foot"/}
 <script>
-layui.use(['table','form','upload','util','laydate'], function () {
-    var table = layui.table, form = layui.form, laydate = layui.laydate, $ = layui.jquery, upload = layui.upload;
+layui.use(['table','form','upload','util','laydate','layer'], function () {
+    var table = layui.table, form = layui.form, laydate = layui.laydate, $ = layui.jquery, upload = layui.upload, layer = layui.layer;
     var isMobile = $(window).width() < 768;
     var currentUsername = "{$Think.session.username}" || "default";
     var columnWidthKey = "crm_table_column_widths_" + currentUsername;
@@ -645,19 +651,60 @@ layui.use(['table','form','upload','util','laydate'], function () {
     });
 
 
-    // 导入
+    // 批量导入
+    var indexMsg;
     upload.render({
         elem: '#toAll',
         url: "{:url('Client/xlsUpload')}",
         accept: 'file',
         field: 'xlsFile',
         exts: 'xls|xlsx',
-        before: function () { layer.msg('正在导入数据，请稍等...', { icon: 16, shade: 0.04, time: false }); },
-        done: function (res) {
-            layer.msg(res.msg, { time: 1800, icon: res.code === 0 ? 1 : 2 });
-            if (res.code === 0) location.reload();
+        before: function(){
+            indexMsg = layer.msg('正在导入数据，请稍等...', { icon: 16, shade: 0.04, time: false });
+        },
+        done: function(res){
+            layer.close(indexMsg);
+            if(res.code === 0){
+                // 导入任务提交成功，提示并在回调中刷新页面
+                layer.msg(res.msg, { icon: 1, time: 2000 }, function(){
+                    // 标记导入完成，用于页面刷新后检查失败情况
+                    localStorage.setItem('importDone', '1');
+                    location.reload();
+                });
+            } else {
+                layer.msg(res.msg, { icon: 2, time: 3000 });
+            }
+        },
+        error: function(){
+            layer.close(indexMsg);
+            layer.msg('系统繁忙，请稍后重试', { time: 2000, icon: 5 });
         }
     });
+    // “下载模板”按钮点击事件：直接下载Excel模板
+    $('#downloadTemplate').on('click', function(){
+        window.location.href = "{:url('Client/tpl')}";
+    });
+    // “导入日志”按钮点击事件：弹出导入失败记录日志窗口
+    $('#viewImportLog').on('click', function(){
+        $.get("{:url('Client/importLog')}", function(html){
+            layer.open({
+                type: 1,
+                title: '导入失败记录',
+                area: ['800px','600px'],
+                shadeClose: true,
+                content: html
+            });
+        });
+    });
+    // 页面加载后检查最近导入结果是否有失败需要提醒
+    if(localStorage.getItem('importDone') === '1'){
+        localStorage.removeItem('importDone');
+        $.get("{:url('Client/checkImportFail')}", function(res){
+            if(res.code === 0 && res.fail === 1){
+                layer.alert('部分数据导入失败，请查看日志', { icon: 0, title: '提示' });
+            }
+        });
+    }
 });
 
 // 公共弹窗
