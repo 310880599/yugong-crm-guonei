@@ -15,6 +15,118 @@
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
     <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
     <script src="/static/admin/js/select.js"></script>
+    <style>
+        /* 协同客户列表页面样式优化 */
+        body {
+            background: #f5f7fa !important;
+        }
+        
+        .admin-main {
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        
+        /* 查询区域样式优化 */
+        .layui-elem-field {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: none !important;
+            margin-bottom: 20px;
+        }
+        
+        .layui-elem-field legend {
+            padding: 5px 15px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: #eda601;
+    border-radius: 0.5rem;
+        }
+        
+        .layui-card {
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+        
+        .layui-card-header {
+            background: transparent !important;
+            border-bottom: none !important;
+        }
+        
+        .layui-form-label {
+            width: 100px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .layui-input,
+        .layui-select {
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+        
+        .layui-input:focus,
+        .layui-select:focus {
+            border-color: #4285f4;
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+            outline: none;
+        }
+        
+        .layui-btn {
+            border-radius: 6px;
+            background: #4285f4;
+            border-color: #4285f4;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+        
+        .layui-btn:hover {
+            background: #3367d6;
+            border-color: #3367d6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+        }
+        
+        /* 表格样式优化 */
+        .layui-table-view {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .layui-table-view .layui-table td .layui-btn-primary {
+            background: #4285f4 !important;
+            border-color: #4285f4 !important;
+            color: #fff !important;
+        }
+        
+        .layui-table-view .layui-table td .layui-btn-primary:hover {
+            background: #3367d6 !important;
+            border-color: #3367d6 !important;
+        }
+        
+        .layui-table-view .layui-table td a {
+            color: #4285f4 !important;
+        }
+        
+        .layui-table-view .layui-table td a:hover {
+            color: #3367d6 !important;
+            text-decoration: underline;
+        }
+        
+        /* 固定列白色背景 */
+        .layui-table-fixed-l,
+        .layui-table-fixed-r {
+            background: #fff !important;
+        }
+        
+        .layui-table-fixed-l .layui-table,
+        .layui-table-fixed-r .layui-table {
+            background: #fff !important;
+        }
+    </style>
 </head>
 
 <body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
@@ -39,7 +151,7 @@
                                 </select>
                             </div>
                         </div>
-                        <!-- 【替换】原“客户来源”选择为“所属渠道”选择 -->
+                        <!-- 【替换】原"客户来源"选择为"所属渠道"选择 -->
                         <div class="layui-inline">
                             <label class="layui-form-label">所属渠道：</label>
                             <div class="layui-input-inline">
@@ -53,7 +165,7 @@
                             </div>
                         </div>
 
-                        <!-- 【新增】运营端口下拉（替换原已注释的“来源端口”部分） -->
+                        <!-- 【新增】运营端口下拉（替换原已注释的"来源端口"部分） -->
                         <div class="layui-inline">
                             <label class="layui-form-label">运营端口：</label>
                             <div class="layui-input-inline">

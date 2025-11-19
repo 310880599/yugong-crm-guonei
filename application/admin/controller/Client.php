@@ -294,6 +294,8 @@ class Client extends Common
             // 构建所属渠道和运营端口名称映射表
             $inquiryMap = Db::table('crm_inquiry')->column('inquiry_name', 'id');
             $portMap    = Db::table('crm_inquiry_port')->column('port_name', 'id');
+            // 构建产品名称映射表（product_name ID -> product_name 文字）
+            $productMap = Db::table('crm_products')->column('product_name', 'id');
 
             // 一次性取出所有客户的主/辅电话：1=主电话，3=辅助电话
             $phoneMap = []; // leads_id => ['main'=>'', 'aux'=>'']
@@ -336,6 +338,13 @@ class Client extends Common
                 $row['port_name'] = isset($portMap[$row['port_id']]) 
                                     ? $portMap[$row['port_id']] 
                                     : (string)$row['port_id'];
+                
+                // 产品名称（将ID转换为文字名称）
+                if (!empty($row['product_name'])) {
+                    $row['product_name'] = isset($productMap[$row['product_name']]) 
+                                          ? $productMap[$row['product_name']] 
+                                          : (string)$row['product_name'];
+                }
 
                 // 主/辅电话
                 $row['main_phone'] = $phoneMap[$row['id']]['main'] ?? '';
@@ -433,6 +442,8 @@ class Client extends Common
             // 【替换】不再使用 kh_status/source_port 映射，改为所属渠道/运营端口名称映射  
             $inquiryMap = Db::table('crm_inquiry')->column('inquiry_name', 'id');
             $portMap    = Db::table('crm_inquiry_port')->column('port_name', 'id');
+            // 构建产品名称映射表（product_name ID -> product_name 文字）
+            $productMap = Db::table('crm_products')->column('product_name', 'id');
 
             // 获取所有选中客户的主/辅电话（contact_type: 1=主电话, 3=辅助电话）
             $phoneMap = [];
@@ -478,6 +489,13 @@ class Client extends Common
                 $row['port_name'] = isset($portMap[$row['port_id']]) 
                                     ? $portMap[$row['port_id']] 
                                     : (string)$row['port_id'];
+                
+                // 产品名称（将ID转换为文字名称）
+                if (!empty($row['product_name'])) {
+                    $row['product_name'] = isset($productMap[$row['product_name']]) 
+                                          ? $productMap[$row['product_name']] 
+                                          : (string)$row['product_name'];
+                }
 
                 // 填充主/辅电话
                 $row['main_phone'] = $phoneMap[$row['id']]['main'] ?? '';
@@ -2510,8 +2528,15 @@ class Client extends Common
         } catch (\Exception $e) {
             $statusMap = [];
         }
+        
+        // 2) 产品名称映射表（product_name ID -> product_name 文字）
+        $productMap = Db::table('crm_products')->column('product_name', 'id');
+        
+        // 3) 所属渠道和运营端口名称映射表
+        $inquiryMap = Db::table('crm_inquiry')->column('inquiry_name', 'id');
+        $portMap = Db::table('crm_inquiry_port')->column('port_name', 'id');
 
-        // 2) 批量查询主/辅电话（crm_contacts：1=主，3=辅；按 leads_id 汇总）:contentReference[oaicite:2]{index=2}
+        // 4) 批量查询主/辅电话（crm_contacts：1=主，3=辅；按 leads_id 汇总）
         $phoneMap = [];
         if (!empty($leadIds)) {
             $contacts = Db::table('crm_contacts')
@@ -2535,11 +2560,27 @@ class Client extends Common
             }
         }
 
-        // 3) 协同人姓名：从 admin 表按 joint_person 映射（若表/ID不存在则回退为原ID）
+        // 5) 协同人姓名：从 admin 表按 joint_person 映射（若表/ID不存在则回退为原ID）
         $uidSet = [];
         foreach ($rows as &$row) {
             // 客户来源中文名（若映射不到则用原值）
             $row['kh_status_name'] = isset($statusMap[$row['kh_status']]) ? $statusMap[$row['kh_status']] : (string)$row['kh_status'];
+            
+            // 所属渠道名称（如无对应名称则用自身ID）
+            $row['inquiry_name'] = isset($inquiryMap[$row['inquiry_id']]) 
+                                    ? $inquiryMap[$row['inquiry_id']] 
+                                    : (string)$row['inquiry_id'];
+            // 运营端口名称（如无对应名称则用自身ID）
+            $row['port_name'] = isset($portMap[$row['port_id']]) 
+                                ? $portMap[$row['port_id']] 
+                                : (string)$row['port_id'];
+            
+            // 产品名称（将ID转换为文字名称）
+            if (!empty($row['product_name'])) {
+                $row['product_name'] = isset($productMap[$row['product_name']]) 
+                                      ? $productMap[$row['product_name']] 
+                                      : (string)$row['product_name'];
+            }
 
             // 主/辅电话
             $row['main_phone'] = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['main'] : '';
@@ -2674,8 +2715,15 @@ class Client extends Common
         } catch (\Exception $e) {
             $statusMap = [];
         }
+        
+        // 2) 产品名称映射表（product_name ID -> product_name 文字）
+        $productMap = Db::table('crm_products')->column('product_name', 'id');
+        
+        // 3) 所属渠道和运营端口名称映射表
+        $inquiryMap = Db::table('crm_inquiry')->column('inquiry_name', 'id');
+        $portMap = Db::table('crm_inquiry_port')->column('port_name', 'id');
 
-        // 2) 批量取主/辅电话（1=主、3=辅）
+        // 4) 批量取主/辅电话（1=主、3=辅）
         $phoneMap = [];
         if (!empty($leadIds)) {
             $contacts = Db::table('crm_contacts')
@@ -2698,11 +2746,28 @@ class Client extends Common
             }
         }
 
-        // 3) 协同人显示名
+        // 5) 协同人显示名
         $uidSet = [];
         foreach ($rows as &$row) {
             // 来源中文名（映射不到则回退为原值）
             $row['kh_status_name'] = isset($statusMap[$row['kh_status']]) ? $statusMap[$row['kh_status']] : (string)$row['kh_status'];
+            
+            // 所属渠道名称（如无对应名称则用自身ID）
+            $row['inquiry_name'] = isset($inquiryMap[$row['inquiry_id']]) 
+                                    ? $inquiryMap[$row['inquiry_id']] 
+                                    : (string)$row['inquiry_id'];
+            // 运营端口名称（如无对应名称则用自身ID）
+            $row['port_name'] = isset($portMap[$row['port_id']]) 
+                                ? $portMap[$row['port_id']] 
+                                : (string)$row['port_id'];
+            
+            // 产品名称（将ID转换为文字名称）
+            if (!empty($row['product_name'])) {
+                $row['product_name'] = isset($productMap[$row['product_name']]) 
+                                      ? $productMap[$row['product_name']] 
+                                      : (string)$row['product_name'];
+            }
+            
             // 主/辅电话
             $row['main_phone'] = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['main'] : '';
             $row['aux_phone']  = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['aux']  : '';

@@ -359,52 +359,188 @@
     
     /* 跟进弹窗样式 */
     .follow-container {
-        padding: 15px;
+        padding: 20px;
+        background: #fff;
     }
     
     .follow-header {
-        border-bottom: 1px solid #e6e6e6;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
+        border-bottom: 2px solid #4285f4;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .follow-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 18px;
+        font-weight: 600;
     }
     
     .follow-content {
         display: flex;
+        gap: 30px;
     }
     
     .follow-info {
         flex: 1;
-        padding-right: 15px;
+        padding-right: 20px;
+        border-right: 1px solid #e0e0e0;
     }
     
     .follow-history {
         flex: 1;
-        border-left: 1px solid #e6e6e6;
-        padding-left: 15px;
+        padding-left: 20px;
+    }
+    
+    .follow-history h4 {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 16px;
+        font-weight: 600;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
     }
     
     .info-item {
-        margin-bottom: 10px;
+        margin-bottom: 15px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
     }
     
     .info-label {
-        font-weight: bold;
+        font-weight: 600;
         display: inline-block;
-        width: 80px;
+        width: 100px;
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .info-item span:not(.info-label) {
+        color: #333;
+        font-size: 14px;
     }
     
     .timeline-item {
-        margin-bottom: 15px;
+        margin-bottom: 20px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border-left: 3px solid #4285f4;
     }
     
     .timeline-title {
-        color: rosybrown;
-        font-size: 14px;
-        margin-bottom: 5px;
+        color: #4285f4;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
     }
     
     .timeline-content {
-        margin-left: 10px;
+        margin-left: 0;
+        color: #333;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .timeline-content strong {
+        color: #4285f4;
+        margin-right: 5px;
+    }
+    
+    #follow-history-list {
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    
+    #follow-history-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #follow-history-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    #follow-history-list::-webkit-scrollbar-thumb {
+        background: #4285f4;
+        border-radius: 3px;
+    }
+    
+    #follow-history-list::-webkit-scrollbar-thumb:hover {
+        background: #3367d6;
+    }
+    
+    #follow-last-record {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 14px;
+        line-height: 1.6;
+        resize: none;
+    }
+    
+    #reply_msg {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 14px;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+    }
+    
+    #reply_msg:focus {
+        border-color: #4285f4;
+        box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+        outline: none;
+    }
+    
+    #submit-comment {
+        background: #4285f4;
+        border-color: #4285f4;
+        color: #fff;
+        border-radius: 6px;
+        padding: 8px 24px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+    
+    #submit-comment:hover {
+        background: #3367d6;
+        border-color: #3367d6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    }
+    
+    .layui-form-item {
+        margin-bottom: 15px;
+    }
+    
+    .layui-form-item:last-child {
+        margin-bottom: 0;
+        text-align: right;
+    }
+    
+    @media (max-width: 992px) {
+        .follow-content {
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .follow-info {
+            padding-right: 0;
+            border-right: none;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+        
+        .follow-history {
+            padding-left: 0;
+        }
     }
     .layui-table-view .layui-table td .yincang{
         display: none !important;
