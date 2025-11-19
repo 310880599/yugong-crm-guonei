@@ -144,29 +144,32 @@ $this->assign('adminResult', $adminResult);
         $current_admin = Admin::getMyInfo();
         $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
         
-        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+        // 如果配置了 inquiry_id，则按渠道过滤
+        if (!empty($current_admin_info['inquiry_id'])) {
             // 匹配渠道ID - 明确指定表别名 c（crm_leads）
             $query->where('c.inquiry_id', '=', $current_admin_info['inquiry_id']);
             
-            // port_id 是逗号分隔的多选值，需要检查交集 - 明确指定表别名 c
-            $admin_port_ids = !empty($current_admin_info['port_id']) ? array_filter(explode(',', $current_admin_info['port_id'])) : [];
-            $port_conditions = [];
-            foreach ($admin_port_ids as $port_id) {
-                $port_id = trim($port_id);
-                if ($port_id) {
-                    $port_conditions[] = "FIND_IN_SET('{$port_id}', c.port_id) > 0";
+            // 如果同时配置了 port_id，则进一步按端口过滤
+            if (!empty($current_admin_info['port_id'])) {
+                // port_id 是逗号分隔的多选值，需要检查交集 - 明确指定表别名 c
+                $admin_port_ids = array_filter(explode(',', $current_admin_info['port_id']));
+                $port_conditions = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_conditions[] = "FIND_IN_SET('{$port_id}', c.port_id) > 0";
+                    }
                 }
+                
+                if (!empty($port_conditions)) {
+                    $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                    $query->whereRaw($port_where);
+                }
+                // 如果 port_id 配置了但为空，不添加端口过滤条件，只按渠道过滤
             }
-            
-            if (!empty($port_conditions)) {
-                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
-                $query->whereRaw($port_where);
-            } else {
-                // 如果没有端口ID，返回空结果
-                $query->where('1=0');
-            }
+            // 如果只配置了 inquiry_id 没有配置 port_id，只按渠道过滤
         } else {
-            // 如果没有配置 inquiry_id 和 port_id，返回空结果
+            // 如果没有配置 inquiry_id，返回空结果（运营人员必须配置渠道）
             $query->where('1=0');
         }
         
@@ -465,26 +468,25 @@ private function exportToExcel($data)
             return $this->personOrderSearch();
         }
         
-        // 获取当前运营人员的渠道列表
-        $current_admin = Admin::getMyInfo();
-        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
-        $sourceList = [];
+        // 获取所有渠道列表（启用状态的）
+        $inquiryList = Db::name('crm_inquiry')
+            ->where('status', 0)
+            ->field('inquiry_name')
+            ->order('inquiry_name', 'asc')
+            ->select();
+        $channelList = array_column($inquiryList, 'inquiry_name');
         
-        if (!empty($current_admin_info['inquiry_id'])) {
-            // 获取当前运营人员的渠道名称
-            $inquiryInfo = Db::table('crm_inquiry')->where('id', $current_admin_info['inquiry_id'])->find();
-            if ($inquiryInfo && !empty($inquiryInfo['inquiry_name'])) {
-                $sourceList[] = $inquiryInfo['inquiry_name'];
-            }
-        }
-        
-        // 如果获取不到，使用默认列表（兼容旧数据）
-        if (empty($sourceList)) {
-            $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
-        }
+        // 获取所有端口列表（启用状态的）
+        $portList = Db::name('crm_inquiry_port')
+            ->where('status', 0)
+            ->field('port_name')
+            ->order('port_name', 'asc')
+            ->select();
+        $portList = array_column($portList, 'port_name');
         
         $this->assign('customer_type', Order::CUSTOMER_TYPE);
-        $this->assign('sourceList', $sourceList);
+        $this->assign('channelList', $channelList);
+        $this->assign('portList', $portList);
         return $this->fetch();
     }
 
@@ -492,102 +494,6 @@ private function exportToExcel($data)
     {
         $where = [];
         $client_where = [];
-        
-        // 获取当前运营人员信息
-        $current_admin = Admin::getMyInfo();
-        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
-        
-        // 根据运营人员的 inquiry_id 和 port_id 匹配订单
-        // 订单表的 source 字段存储渠道名称，source_port 字段存储端口名称
-        $order_conditions = [];
-        $client_conditions = [];
-        
-        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
-            // 获取渠道名称
-            $inquiryInfo = Db::table('crm_inquiry')->where('id', $current_admin_info['inquiry_id'])->find();
-            if ($inquiryInfo && !empty($inquiryInfo['inquiry_name'])) {
-                $inquiry_name = $inquiryInfo['inquiry_name'];
-                
-                // 获取端口名称列表
-                $admin_port_ids = !empty($current_admin_info['port_id']) ? array_filter(explode(',', $current_admin_info['port_id'])) : [];
-                $port_names = [];
-                foreach ($admin_port_ids as $port_id) {
-                    $port_id = trim($port_id);
-                    if ($port_id) {
-                        $port_info = Db::table('crm_inquiry_port')
-                            ->where('id', $port_id)
-                            ->where('inquiry_id', $current_admin_info['inquiry_id'])
-                            ->field('port_name')
-                            ->find();
-                        if ($port_info && !empty($port_info['port_name'])) {
-                            $port_names[] = addslashes($port_info['port_name']); // 转义防止SQL注入
-                        }
-                    }
-                }
-                
-                if (!empty($port_names)) {
-                    // 构建订单匹配条件：source = 渠道名称 AND source_port IN (端口名称列表)
-                    $port_conditions = [];
-                    foreach ($port_names as $port_name) {
-                        $port_conditions[] = "o.source_port = '{$port_name}'";
-                    }
-                    if (!empty($port_conditions)) {
-                        $port_where = '(' . implode(' OR ', $port_conditions) . ')';
-                        $order_conditions[] = "(o.source = '{$inquiry_name}' AND {$port_where})";
-                    }
-                } else {
-                    // 如果没有端口，只匹配渠道
-                    $order_conditions[] = "o.source = '{$inquiry_name}'";
-                }
-                
-                // 构建客户匹配条件：inquiry_id = 渠道ID AND port_id 包含端口ID
-                $port_id_conditions = [];
-                foreach ($admin_port_ids as $port_id) {
-                    $port_id = trim($port_id);
-                    if ($port_id) {
-                        $port_id_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
-                    }
-                }
-                if (!empty($port_id_conditions)) {
-                    $port_id_where = '(' . implode(' OR ', $port_id_conditions) . ')';
-                    $client_conditions[] = function($query) use ($current_admin_info, $port_id_where) {
-                        $query->where('l.inquiry_id', $current_admin_info['inquiry_id'])
-                            ->whereRaw($port_id_where);
-                    };
-                } else {
-                    $client_conditions[] = ['l.inquiry_id', '=', $current_admin_info['inquiry_id']];
-                }
-            }
-        }
-        
-        // 如果没有匹配条件，返回空结果
-        if (empty($order_conditions)) {
-            return [
-                'code' => 0,
-                'msg' => '获取成功!',
-                'data' => [],
-                'count' => 0,
-                'rel' => 1,
-                'totalInquiries' => 0,
-                'successRate' => '0.00',
-                'totalMoney' => '0.00',
-                'totalProfit' => '0.00',
-            ];
-        }
-        
-        // 构建订单查询条件
-        $order_where_raw = '(' . implode(' OR ', $order_conditions) . ')';
-        $where[] = function($query) use ($order_where_raw) {
-            $query->whereRaw($order_where_raw);
-        };
-        
-        // 构建客户查询条件
-        if (!empty($client_conditions)) {
-            foreach ($client_conditions as $condition) {
-                $client_where[] = $condition;
-            }
-        }
-        $client_where[] = ['l.status', '=', 1];
         
         //判断权限
         $page = input('page') ?? 1;
@@ -626,12 +532,20 @@ private function exportToExcel($data)
         if (isset($keyword['product_name'])) {
             $where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
         }
+        // 询盘渠道查询
         if (isset($keyword['source'])) {
             $where[] = ['source', '=', $keyword['source']];
             //兼容历史数据
             $kh_source = strtolower($keyword['source']);
             $client_where[] = ['kh_status', 'like', "%$kh_source%"];
         }
+        // 询盘端口查询
+        if (isset($keyword['source_port'])) {
+            $where[] = ['source_port', '=', $keyword['source_port']];
+        }
+        
+        // 客户查询条件：只查询启用状态的客户
+        $client_where[] = ['l.status', '=', 1];
         
         $list = Db::table('crm_client_order')
             ->alias('o')

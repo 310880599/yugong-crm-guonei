@@ -158,11 +158,22 @@
                                         </div>
 
                                         <div class="layui-inline">
-                                            <label class="layui-form-label">询盘来源：</label>
+                                            <label class="layui-form-label">询盘渠道：</label>
                                             <div class="layui-input-inline">
                                                 <select name="source" id="source" lay-search="">
-                                                    <option value="">请选择询盘来源</option>
-                                                    {volist name='sourceList' id='vo'}
+                                                    <option value="">请选择询盘渠道</option>
+                                                    {volist name='channelList' id='vo'}
+                                                    <option value="{$vo}">{$vo}</option>
+                                                    {/volist}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="layui-inline">
+                                            <label class="layui-form-label">询盘端口：</label>
+                                            <div class="layui-input-inline">
+                                                <select name="source_port" id="source_port" lay-search="">
+                                                    <option value="">请选择询盘端口</option>
+                                                    {volist name='portList' id='vo'}
                                                     <option value="{$vo}">{$vo}</option>
                                                     {/volist}
                                                 </select>
@@ -226,6 +237,7 @@
                     { field: 'margin_rate', title: '利润率(%)', totalRow: true },
                     { field: 'order_time', title: '成交时间' },
                     { field: 'source', title: '询盘来源' },
+                    { field: 'source_port', title: '来源端口' },
                     { 
                         field: 'wechat_receipt_image', 
                         title: '客户微信回执图', 

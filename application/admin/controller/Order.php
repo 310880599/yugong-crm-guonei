@@ -157,6 +157,7 @@ class Order extends Common
         if (request()->isPost()) {
             // ====== 验证客户是否属于当前用户或协同人 ======
             $contact = Request::param('contact');
+            $leadsId = null; // 保存客户ID，用于后续更新成交状态
             if (!empty($contact)) {
                 $currentUsername = Session::get('username');
                 $currentAdminId = Session::get('aid');
@@ -175,6 +176,7 @@ class Order extends Common
                 if ($coninfo) {
                     $custinfo = Db::name('crm_leads')->where('id', $coninfo['leads_id'])->find();
                     if ($custinfo) {
+                        $leadsId = $custinfo['id']; // 保存客户ID
                         $isMyCustomer = ($custinfo['pr_user'] == $currentUsername);
                         
                         // 检查是否是协同人客户
@@ -399,6 +401,13 @@ class Order extends Common
                         throw new \Exception('订单明细插入失败');
                     }
                 }
+                
+                // 订单添加成功后，更新客户的成交状态为已成交
+                if (!empty($leadsId)) {
+                    // 更新客户的成交状态为已成交
+                    Db::name('crm_leads')->where('id', $leadsId)->update(['issuccess' => 1]);
+                }
+                
                 Db::commit();
                 return json(['code' => 0, 'msg' => '添加成功！']);
             } catch (\Exception $e) {
@@ -585,52 +594,110 @@ class Order extends Common
                     return;
                 }
                 
-                // 获取询盘来源名称（kh_status 可能是 ID 或名称）
-                $khStatusValue = $custinfo['kh_status'];
-                $sourceName = $khStatusValue;
+                // 获取来源端口和询盘来源渠道（通过端口反查渠道）
+                $res['source_port'] = '';
+                $portName = ''; // 用于显示在消息中的端口名称
+                $sourceName = ''; // 询盘来源渠道名称
                 
-                // 尝试从 crm_inquiry 表查找来源名称
-                // 先尝试作为 ID 查找
-                if (is_numeric($khStatusValue)) {
-                    $inquiryInfo = Db::name('crm_inquiry')->where('id', $khStatusValue)->find();
-                    if ($inquiryInfo) {
-                        $sourceName = $inquiryInfo['inquiry_name'];
-                    } else {
-                        // 如果 crm_inquiry 表中找不到，尝试从 crm_client_status 表查找（兼容旧数据）
-                        $statusInfo = Db::name('crm_client_status')->where('id', $khStatusValue)->find();
-                        if ($statusInfo) {
-                            $sourceName = $statusInfo['status_name'];
+                // 优先从 source_port 字段获取端口名称
+                try {
+                    $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
+                    if (!empty($columns) && isset($custinfo['source_port']) && !empty($custinfo['source_port'])) {
+                        $res['source_port'] = $custinfo['source_port'];
+                        $portName = $custinfo['source_port'];
+                    }
+                } catch (\Exception $e) {
+                    // 忽略错误
+                }
+                
+                // 如果 source_port 字段为空，尝试从 port_id 获取端口名称和渠道信息
+                if (empty($portName) && !empty($custinfo['port_id'])) {
+                    $portIds = array_filter(explode(',', $custinfo['port_id']));
+                    if (!empty($portIds)) {
+                        $firstPortId = trim($portIds[0]);
+                        if ($firstPortId) {
+                            // 查询端口信息，同时获取端口名称和渠道ID
+                            $portInfo = Db::name('crm_inquiry_port')
+                                ->where('id', $firstPortId)
+                                ->field('port_name, inquiry_id')
+                                ->find();
+                            if ($portInfo) {
+                                if (!empty($portInfo['port_name'])) {
+                                    $portName = $portInfo['port_name'];
+                                    $res['source_port'] = $portName;
+                                }
+                                // 通过端口的 inquiry_id 获取渠道名称
+                                if (!empty($portInfo['inquiry_id'])) {
+                                    $inquiryInfo = Db::name('crm_inquiry')
+                                        ->where('id', $portInfo['inquiry_id'])
+                                        ->field('inquiry_name')
+                                        ->find();
+                                    if ($inquiryInfo && !empty($inquiryInfo['inquiry_name'])) {
+                                        $sourceName = $inquiryInfo['inquiry_name'];
+                                    }
+                                }
+                            }
                         }
                     }
-                } else {
-                    // 如果已经是名称，先尝试从 crm_inquiry 表验证
-                    $inquiryInfo = Db::name('crm_inquiry')->where('inquiry_name', $khStatusValue)->find();
-                    if ($inquiryInfo) {
+                }
+                
+                // 如果通过端口没有获取到渠道名称，尝试从 inquiry_id 字段获取
+                if (empty($sourceName) && !empty($custinfo['inquiry_id'])) {
+                    $inquiryInfo = Db::name('crm_inquiry')
+                        ->where('id', $custinfo['inquiry_id'])
+                        ->field('inquiry_name')
+                        ->find();
+                    if ($inquiryInfo && !empty($inquiryInfo['inquiry_name'])) {
                         $sourceName = $inquiryInfo['inquiry_name'];
-                    } else {
-                        // 如果 crm_inquiry 表中找不到，直接使用原值（可能是 crm_client_status 的名称，兼容旧数据）
-                        $sourceName = $khStatusValue;
                     }
+                }
+                
+                // 如果还是没有渠道名称，尝试从 kh_status 获取（兼容旧数据）
+                if (empty($sourceName)) {
+                    $khStatusValue = $custinfo['kh_status'] ?? '';
+                    if (!empty($khStatusValue)) {
+                        // 先尝试作为 ID 查找
+                        if (is_numeric($khStatusValue)) {
+                            $inquiryInfo = Db::name('crm_inquiry')->where('id', $khStatusValue)->find();
+                            if ($inquiryInfo) {
+                                $sourceName = $inquiryInfo['inquiry_name'];
+                            } else {
+                                // 如果 crm_inquiry 表中找不到，尝试从 crm_client_status 表查找（兼容旧数据）
+                                $statusInfo = Db::name('crm_client_status')->where('id', $khStatusValue)->find();
+                                if ($statusInfo) {
+                                    $sourceName = $statusInfo['status_name'];
+                                }
+                            }
+                        } else {
+                            // 如果已经是名称，先尝试从 crm_inquiry 表验证
+                            $inquiryInfo = Db::name('crm_inquiry')->where('inquiry_name', $khStatusValue)->find();
+                            if ($inquiryInfo) {
+                                $sourceName = $inquiryInfo['inquiry_name'];
+                            } else {
+                                // 如果 crm_inquiry 表中找不到，直接使用原值（可能是 crm_client_status 的名称，兼容旧数据）
+                                $sourceName = $khStatusValue;
+                            }
+                        }
+                    }
+                }
+                
+                // 如果还是没有渠道名称，使用默认值
+                if (empty($sourceName)) {
+                    $sourceName = '未设置';
+                }
+                
+                // 如果还是没有端口名称，使用默认值
+                if (empty($portName)) {
+                    $portName = '未设置';
                 }
                 
                 $res['code'] = 1;
                 $res['custname'] = $custinfo['kh_name'];
                 $res['kh_username'] = $custinfo['kh_username'];
-                $res['source'] = $sourceName;  // 返回来源名称
+                $res['source'] = $sourceName;  // 返回来源名称（通过端口反查的渠道）
                 $res['pr_user'] = $custinfo['pr_user'];
                 $res['country'] = $custinfo['xs_area'];
                 $res['oper_user'] = $custinfo['oper_user'];
-                
-                // 获取来源端口（如果字段存在）
-                $res['source_port'] = '';
-                try {
-                    $columns = Db::query("SHOW COLUMNS FROM `crm_leads` LIKE 'source_port'");
-                    if (!empty($columns) && isset($custinfo['source_port'])) {
-                        $res['source_port'] = $custinfo['source_port'];
-                    }
-                } catch (\Exception $e) {
-                    // 忽略错误
-                }
                 
                 // 获取协同人（joint_person）字段，解析为数组格式
                 $jointPersonIds = [];
@@ -666,11 +733,11 @@ class Order extends Common
                 // 始终返回空的历史产品数组，不自动填充历史产品信息
                 $res['history_products'] = [];
                 
-                // 构建提示信息
+                // 构建提示信息（将"所属运营"改为"所属端口"）
                 if ($isSuccess) {
-                    $res['msg'] = "【该客户已成交，将创建新订单】客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $sourceName . ",所属业务员:" . $custinfo['pr_user'] . ",所属运营:" . $custinfo['oper_user'];
+                    $res['msg'] = "【该客户已成交，将创建新订单】客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $sourceName . ",所属业务员:" . $custinfo['pr_user'] . ",所属端口:" . $portName;
                 } else {
-                    $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $sourceName . ",所属业务员:" . $custinfo['pr_user'] . ",所属运营:" . $custinfo['oper_user'];
+                    $res['msg'] = "客户名称:" . $custinfo['kh_name'] . "询盘来源：" . $sourceName . ",所属业务员:" . $custinfo['pr_user'] . ",所属端口:" . $portName;
                 }
             } else {
                 $res['code'] = 0;
@@ -1737,9 +1804,18 @@ class Order extends Common
         $where = [];
         $client_where = [];
         $pr_user = Session::get('username') ?? '';
-        //展示自己创建的订单
-        $where[] = ['at_user', '=', $pr_user];
-        // $where[] = ['pr_user', '=', $pr_user];
+        
+        // 确保只显示当前用户的订单：自己创建的或自己是负责人的
+        if (!empty($pr_user)) {
+            $where[] = function($query) use ($pr_user) {
+                $query->where('at_user', '=', $pr_user)
+                      ->whereOr('pr_user', '=', $pr_user);
+            };
+        } else {
+            // 如果没有用户名，返回空结果
+            $where[] = ['id', '=', 0];
+        }
+        
         $client_where[] = ['pr_user', '=', $pr_user];
         //判断权限
         // $team_name = session('team_name') ?? '';
