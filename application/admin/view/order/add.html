@@ -36,6 +36,35 @@
         .cat-bold {
             font-weight: bold;
         }
+        
+        /* 确保左侧填写说明完整显示 */
+        .admin-main {
+            overflow: visible !important;
+            min-height: auto !important;
+            max-height: none !important;
+        }
+        
+        body {
+            overflow: visible !important;
+        }
+        
+        /* 如果页面在iframe中，确保内容可以完整显示 */
+        html, body {
+            height: auto !important;
+            min-height: 100% !important;
+        }
+        .layui-form-pane .layui-form-label {
+    width: 146px;
+    padding: 8px 15px;
+    height: 38px;
+    line-height: 20px;
+    border-width: 0;
+    border-style: none;
+    border-radius: 2px 0 0 2px;
+    text-align: left;
+    background-color: #FBFBFB;
+    box-sizing: border-box;
+}
     </style>
 </head>
 
@@ -485,7 +514,7 @@
             </div>
             <!-- 客户微信回执图 -->
             <div class="layui-form-item">
-                <label class="layui-form-label">客户微信回执图</label>
+                <label class="layui-form-label"><span style="color:red;">*</span>客户微信回执图</label>
                 <div class="layui-input-4">
                     <div class="layui-upload">
                         <button type="button" class="layui-btn" id="upload_wechat_receipt">
@@ -494,14 +523,14 @@
                         <div class="layui-upload-list">
                             <img class="layui-upload-img" id="wechat_receipt_preview" style="max-width: 200px; max-height: 200px; display: none;">
                             <p id="wechat_receipt_text"></p>
-                            <input type="hidden" name="wechat_receipt_image" id="wechat_receipt_image" value="">
+                            <input type="hidden" name="wechat_receipt_image" id="wechat_receipt_image" value="" lay-verify="required">
                         </div>
                     </div>
                 </div>
             </div>
             <!-- 产品询盘分配图 -->
             <div class="layui-form-item">
-                <label class="layui-form-label">产品询盘分配图</label>
+                <label class="layui-form-label"><span style="color:red;">*</span>产品询盘分配图</label>
                 <div class="layui-input-4">
                     <div class="layui-upload">
                         <button type="button" class="layui-btn" id="upload_inquiry_assign">
@@ -510,7 +539,7 @@
                         <div class="layui-upload-list">
                             <img class="layui-upload-img" id="inquiry_assign_preview" style="max-width: 200px; max-height: 200px; display: none;">
                             <p id="inquiry_assign_text"></p>
-                            <input type="hidden" name="inquiry_assign_image" id="inquiry_assign_image" value="">
+                            <input type="hidden" name="inquiry_assign_image" id="inquiry_assign_image" value="" lay-verify="required">
                         </div>
                     </div>
                 </div>
@@ -984,6 +1013,20 @@
             
             // 如果验证失败，阻止提交
             if (!customerValidated) {
+                return false;
+            }
+
+            // 检查两个图片是否已上传
+            var wechatReceiptImage = $('#wechat_receipt_image').val();
+            var inquiryAssignImage = $('#inquiry_assign_image').val();
+            
+            if (!wechatReceiptImage || wechatReceiptImage.trim() === '') {
+                layer.msg('请上传客户微信回执图', { icon: 2, time: 2000 });
+                return false;
+            }
+            
+            if (!inquiryAssignImage || inquiryAssignImage.trim() === '') {
+                layer.msg('请上传产品询盘分配图', { icon: 2, time: 2000 });
                 return false;
             }
 
