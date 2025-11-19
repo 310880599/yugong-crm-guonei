@@ -1,14 +1,20 @@
 <!-- 左边统计 -->
-
-
-<div class=" layui-col-md8">
-    <div class="layui-row layui-col-space15">
-        <div class="layui-col-md6">
-            <div class="layui-card fold-card export">
-                <div class="layui-card-header">业务询盘排行</div>
+ <style>
+    .table-export-select{
+        border: none !important;
+    }
+ </style>
+<div class="col-md-8">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="wukong-table-card fold-card export">
+                <div class="wukong-table-card-header">
+                    <span>业务询盘排行</span>
+                    <button class="btn btn-sm btn-outline-secondary toggle-table" style="display: none;">展开</button>
+                </div>
                 <div class="filter-bar">
                     <label>团队筛选：</label>
-                    <select id="yw_team_filter" lay-filter="yw_team_filter" class="layui-select" style="width: 150px; margin-right: 15px;">
+                    <select id="yw_team_filter" lay-filter="yw_team_filter" class="form-select" style="width: 150px;">
                         <option value="">全部团队</option>
                         {volist name="$data['yw_data']['total']" id='vo'}
                         <option value="{$vo['team_name']}">{$vo['team_name']}</option>
@@ -16,8 +22,8 @@
                     </select>
                     <div class="total">合计：<span>{$data['yw_data']['list']|array_column='yw_num'|array_sum}</span></div>
                 </div>
-                <div class="layui-card-body table-scroll">
-                    <table id="yw_list_table" class="layui-table layui-table-sm fold-table">
+                <div class="wukong-table-card-body table-scroll" style="max-height: 400px; overflow-y: auto;">
+                    <table id="yw_list_table" class="wukong-table fold-table">
                         <thead>
                             <tr>
                                 <th>业务员</th>
@@ -27,7 +33,7 @@
                         <tbody>
                             {volist name="$data['yw_data']['list']" id='vo'}
                             <tr>
-                                <td><b>{$vo['username']}</b> ({$vo['team_name']})</td>
+                                <td><strong>{$vo['username']}</strong> ({$vo['team_name']})</td>
                                 <td>{$vo['yw_num']}</td>
                             </tr>
                             {/volist}
@@ -36,15 +42,15 @@
                 </div>
             </div>
         </div>
-        <div class="layui-col-md6">
-            <div class="layui-card export">
-                <div class="layui-card-header">业务询盘汇总</div>
+        <div class="col-md-6">
+            <div class="wukong-table-card export">
+                <div class="wukong-table-card-header">业务询盘汇总</div>
                 <div class="filter-bar">
-                       <div><a href="javascript:void(0);" class="detail-link" data-url="{:url('getDetail')}" data-type="yw-total">查看详情</a></div>
-                      <div class="total">合计：<span>{$data['yw_data']['total']|array_column='yw_num'|array_sum}</span></div>
+                    <div><a href="javascript:void(0);" class="detail-link text-primary text-decoration-none" data-url="{:url('getDetail')}" data-type="yw-total">查看详情</a></div>
+                    <div class="total">合计：<span>{$data['yw_data']['total']|array_column='yw_num'|array_sum}</span></div>
                 </div>
-                <div class="layui-card-body">
-                    <table id="yw_total_table" class="layui-table layui-table-sm">
+                <div class="wukong-table-card-body">
+                    <table id="yw_total_table" class="wukong-table">
                         <thead>
                             <tr>
                                 <th>团队</th>
@@ -54,7 +60,7 @@
                         <tbody>
                             {volist name="$data['yw_data']['total']" id='vo' key="k" }
                             <tr>
-                                <td><span style="font-weight: 600;">{$vo['team_name']}</span> </td>
+                                <td><strong>{$vo['team_name']}</strong></td>
                                 <td>{$vo['yw_num']}</td>
                             </tr>
                             {/volist}
@@ -64,14 +70,16 @@
             </div>
         </div>
     </div>
-    <div class="layui-row layui-col-space15">
-        <div class="layui-col-md6">
-
-            <div class="layui-card fold-card export">
-                <div class="layui-card-header">运营询盘排行</div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="wukong-table-card fold-card export">
+                <div class="wukong-table-card-header">
+                    <span>运营询盘排行</span>
+                    <button class="btn btn-sm btn-outline-secondary toggle-table" style="display: none;">展开</button>
+                </div>
                 <div class="filter-bar">
                     <label>团队筛选：</label>
-                    <select id="yy_team_filter" lay-filter="yy_team_filter" class="layui-select" style="width: 150px; margin-right: 15px;">
+                    <select id="yy_team_filter" lay-filter="yy_team_filter" class="form-select" style="width: 150px;">
                         <option value="">全部团队</option>
                         {volist name="$data['yy_data']['total']" id='vo'}
                         <option value="{$vo['team_name']}">{$vo['team_name']}</option>
@@ -79,8 +87,8 @@
                     </select>
                     <div class="total">合计：<span>{$data['yy_data']['list']|array_column='yy_num'|array_sum}</span></div>
                 </div>
-                <div class="layui-card-body table-scroll">
-                    <table id="yy_list_table" class="layui-table layui-table-sm fold-table">
+                <div class="wukong-table-card-body table-scroll" style="max-height: 400px; overflow-y: auto;">
+                    <table id="yy_list_table" class="wukong-table fold-table">
                         <thead>
                             <tr>
                                 <th>运营</th>
@@ -90,7 +98,7 @@
                         <tbody>
                             {volist name="$data['yy_data']['list']" id='vo'}
                             <tr>
-                                <td><b>{$vo['username']}</b> ({$vo['channel']})</td>
+                                <td><strong>{$vo['username']}</strong> ({$vo['channel']})</td>
                                 <td>{$vo['yy_num']}</td>
                             </tr>
                             {/volist}
@@ -99,15 +107,14 @@
                 </div>
             </div>
         </div>
-        <div class="layui-col-md6">
-            <div class="layui-card export">
-                <div class="layui-card-header">运营询盘汇总</div>
+        <div class="col-md-6">
+            <div class="wukong-table-card export">
+                <div class="wukong-table-card-header">运营询盘汇总</div>
                 <div class="filter-bar">
                     <div class="total">合计：<span>{$data['yy_data']['total']|array_column='yy_num'|array_sum}</span></div>
                 </div>
-                <div class="layui-card-body">
-                    <table id="yy_total_table" class="layui-table layui-table-sm">
-
+                <div class="wukong-table-card-body">
+                    <table id="yy_total_table" class="wukong-table">
                         <thead>
                             <tr>
                                 <th>团队</th>
@@ -117,7 +124,7 @@
                         <tbody>
                             {volist name="$data['yy_data']['total']" id='vo'}
                             <tr>
-                                <td><b>{$vo['team_name']}</b></td>
+                                <td><strong>{$vo['team_name']}</strong></td>
                                 <td>{$vo['yy_num']}</td>
                             </tr>
                             {/volist}
@@ -125,17 +132,14 @@
                     </table>
                 </div>
             </div>
-
         </div>
     </div>
-    <div class="layui-row layui-col-space15">
-        <div class="layui-col-md6">
-            <div class="layui-card export">
-
-                <div class="layui-card-header">销售产品排行</div>
-                <div class="layui-card-body">
-                    <table id="sp_list_table" class="layui-table layui-table-sm" data-url="getProdAll" data-params='{"data":{"type":"order"},"ele":["#at_time","#dateRange"]}'>
-
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="wukong-table-card export">
+                <div class="wukong-table-card-header">销售产品排行</div>
+                <div class="wukong-table-card-body">
+                    <table id="sp_list_table" class="wukong-table" data-url="getProdAll" data-params='{"data":{"type":"order"},"ele":["#at_time","#dateRange"]}'>
                         <thead>
                             <tr>
                                 <th>产品</th>
@@ -150,19 +154,18 @@
                             </tr>
                             {/volist}
                             {if !$data['product_data']['order_prod']}<tr>
-                                <td colspan="2">暂无数据</td>
+                                <td colspan="2" class="text-center text-muted">暂无数据</td>
                             </tr>{/if}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-        <div class="layui-col-md6">
-            <div class="layui-card export" >
-
-                <div class="layui-card-header">询盘产品排行</div>
-                <div class="layui-card-body">
-                    <table id="pd_list_table" class="layui-table layui-table-sm" data-url="getProdAll" data-params='{"data":{"type":"oper"},"ele":["#at_time","#dateRange"]}' >
+        <div class="col-md-6">
+            <div class="wukong-table-card export">
+                <div class="wukong-table-card-header">询盘产品排行</div>
+                <div class="wukong-table-card-body">
+                    <table id="pd_list_table" class="wukong-table" data-url="getProdAll" data-params='{"data":{"type":"oper"},"ele":["#at_time","#dateRange"]}'>
                         <thead>
                             <tr>
                                 <th>产品</th>
@@ -170,7 +173,6 @@
                             </tr>
                         </thead>
                         <tbody>
-
                             {volist name="$data['product_data']['oper_prod']" id='vo'}
                             <tr>
                                 <td>{$vo['product_name']}</td>
@@ -178,7 +180,7 @@
                             </tr>
                             {/volist}
                             {if !$data['product_data']['oper_prod']}<tr>
-                                <td colspan="2">暂无数据</td>
+                                <td colspan="2" class="text-center text-muted">暂无数据</td>
                             </tr>{/if}
                         </tbody>
                     </table>
@@ -186,15 +188,15 @@
             </div>
         </div>
     </div>
-    <div class="layui-row layui-col-space15">
-        <div class="layui-col-md12">
-            <div class="layui-card export">
-                <div class="layui-card-header">总询盘统计</div>
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="wukong-table-card export">
+                <div class="wukong-table-card-header">总询盘统计</div>
                 <div class="filter-bar">
                     <div class="total">合计：<span>{$data['total_inquiry_stats']|array_column='count'|array_sum}</span></div>
                 </div>
-                <div class="layui-card-body">
-                    <table id="total_inquiry_table" class="layui-table layui-table-sm">
+                <div class="wukong-table-card-body">
+                    <table id="total_inquiry_table" class="wukong-table">
                         <thead>
                             <tr>
                                 <th>渠道</th>
@@ -211,7 +213,7 @@
                             </tr>
                             {/volist}
                             {if !$data['total_inquiry_stats']}<tr>
-                                <td colspan="3">暂无数据</td>
+                                <td colspan="3" class="text-center text-muted">暂无数据</td>
                             </tr>{/if}
                         </tbody>
                     </table>
@@ -222,69 +224,71 @@
 </div>
 
 <!-- 右边待办 + 动态 -->
-<div class="layui-col-md4">
-    <div class="layui-card">
-        <div class="layui-card-header">{$wenhou}</div>
-        <div class="layui-card-body layui-text">
-            欢迎回来！祝你工作顺利 👍
+<div class="col-md-4">
+    <div class="wukong-todo-card">
+        <div class="wukong-todo-card-header">{$wenhou}</div>
+        <div class="wukong-todo-card-body">
+            <p class="mb-0">欢迎回来！祝你工作顺利 👍</p>
         </div>
     </div>
 
-    <div class="layui-card">
-        <div class="layui-card-header">待办事项</div>
-        <div class="layui-card-body">
-            <table class="layui-table layui-table-sm">
+    <div class="wukong-table-card">
+        <div class="wukong-table-card-header">待办事项</div>
+        <div class="wukong-table-card-body">
+            <table class="wukong-table">
                 <tbody>
                     <tr>
-                        <td>今日已跟进</td>
-                        <td>{$today_count}</td>
+                        <td><strong>今日已跟进</strong></td>
+                        <td class="text-primary"><strong>{$today_count}</strong></td>
                     </tr>
                     <tr>
-                        <td>未跟进个数</td>
-                        <td>{$all_count}</td>
+                        <td><strong>未跟进个数</strong></td>
+                        <td class="text-warning"><strong>{$all_count}</strong></td>
                     </tr>
                     <tr>
-                        <td>跟进率</td>
-                        <td>{$genjinlv}%</td>
+                        <td><strong>跟进率</strong></td>
+                        <td class="text-success"><strong>{$genjinlv}%</strong></td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <div class="layui-card">
-        <div class="layui-card-header">最近动态</div>
-        <div class="layui-card-body">
-            <dl class="layuiadmin-card-status">
+    <div class="wukong-table-card">
+        <div class="wukong-table-card-header">最近动态</div>
+        <div class="wukong-table-card-body">
+            <ul class="wukong-timeline">
                 {volist name='result' id='vo'}
-                <dd>
-                    <div class="layui-status-img">
-                        <a><img src="{$vo.avatar}" style="border-radius:50%"></a>
-                    </div>
-                    <div>
-                        <p>{$vo.username} <em style="color:red;">跟进</em>
-                            <a href="{:url('Client/dialogue')}?id={$vo.id}"> {$vo.kh_name}</a>
+                <li class="wukong-timeline-item">
+                    <img src="{$vo.avatar}" class="wukong-timeline-avatar" alt="{$vo.username}">
+                    <div class="wukong-timeline-content">
+                        <p>
+                            <span class="wukong-timeline-username">{$vo.username}</span>
+                            <span class="wukong-timeline-action">跟进</span>
+                            <a href="{:url('Client/dialogue')}?id={$vo.id}" class="wukong-timeline-link">{$vo.kh_name}</a>
                         </p>
-                        <p class="msg"><b style="color: burlywood;">记录:</b> {$vo.reply_msg}</p>
-                        <span>时间：{$vo.create_date|date='Y-m-d H:i:s'}</span>
+                        <p class="wukong-timeline-msg">
+                            <strong style="color: #d4a574;">记录:</strong> {$vo.reply_msg}
+                        </p>
+                        <span class="wukong-timeline-time">时间：{$vo.create_date|date='Y-m-d H:i:s'}</span>
                     </div>
-                </dd>
+                </li>
                 {/volist}
-            </dl>
+            </ul>
         </div>
     </div>
 </div>
 
 <!-- 详情弹窗 -->
 <div id="detailModal" style="display: none; padding: 20px;">
-    <div class="layui-row">
-        <div class="layui-col-md12">
-            <div class="layui-card">
-                <div class="layui-card-header">
+    <div class="row">
+        <div class="col-12">
+            <div class="wukong-table-card">
+                <div class="wukong-table-card-header">
                     <span id="modalTitle">交叉统计表</span>
-                    <button style="float: right;" class="layui-btn layui-btn-sm" onclick="exportCrossTable()">导出表格</button>
+                    <button class="btn btn-sm btn-primary wukong-btn wukong-btn-primary" onclick="exportCrossTable()">导出表格</button>
                 </div>
-                <div class="layui-card-body">
+                <div class="wukong-table-card-body">
                     <div id="crossTableContainer" style="overflow-x: auto;">
                         <!-- 表格将在这里动态生成 -->
                     </div>
@@ -299,22 +303,35 @@
     function initFoldCard() {
         $('.fold-card').each(function () {
             var $card = $(this);
-            var $header = $card.find('.layui-card-header');
+            var $header = $card.find('.wukong-table-card-header');
             var $scroll = $card.find('.table-scroll');
             if ($scroll.length && $scroll[0].scrollHeight > $scroll.height() + 20) {
-                if ($header.find('.toggle-table').length === 0) {
-                    $header.append('<button class="layui-btn layui-btn-xs toggle-table">展开</button>');
+                var $toggleBtn = $header.find('.toggle-table');
+                if ($toggleBtn.length === 0) {
+                    $header.append('<button class="btn btn-sm btn-outline-secondary toggle-table">展开</button>');
+                } else {
+                    $toggleBtn.show();
                 }
             } else {
-                $header.find('.toggle-table').remove();
+                $header.find('.toggle-table').hide();
             }
         });
     }
     // 页面初始化时运行一次
-    $(document).ready(init);
+    $(document).ready(function() {
+        // 延迟执行，确保 DOM 完全加载
+        setTimeout(function() {
+            initFoldCard();
+            if (typeof ExportSelectTables !== 'undefined') {
+                ExportSelectTables.addCheckboxes();
+            }
+        }, 100);
+    });
 
     function init(){
         initFoldCard();
-         ExportSelectTables.addCheckboxes();
+        if (typeof ExportSelectTables !== 'undefined') {
+            ExportSelectTables.addCheckboxes();
+        }
     }
 </script>

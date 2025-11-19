@@ -1,49 +1,426 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{:config('sys_name')}后台管理</title>
-    <meta name="renderer" content="webkit">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
-    <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
-    <link rel="stylesheet" href="/static/common/css/font.css" media="all">
-    <link rel="stylesheet" href="/static/admin/css/select.css" media="all">
-    <script src="/static/admin/js/select.js"></script>
-    <style>
-       .filtrate-warp { margin-bottom: 10px; }
-        .filtrate-warp .title { padding: 5px 12px 7px 12px; font-size: 14px; font-weight: normal; text-align: left; cursor: pointer; width: 90px; background-color: transparent !important; color: black !important; }
-        .filtrate-warp .title:hover { color: black; }
-        .filtrate-warp .flag { padding: 6px 12px 6px 12px; cursor: pointer; }
-        .filtrate-warp .flag:hover { color: black; }
-        .filtrate-warp .layui-badge:hover { color: white !important; }
-        
-        /* 跟进弹窗样式 */
-        .follow-container { padding: 15px; }
-        .follow-header { border-bottom: 1px solid #e6e6e6; padding-bottom: 10px; margin-bottom: 15px; }
-        .follow-content { display: flex; }
-        .follow-info { flex: 1; padding-right: 15px; }
-        .follow-history { flex: 1; border-left: 1px solid #e6e6e6; padding-left: 15px; }
-        .info-item { margin-bottom: 10px; }
-        .info-label { font-weight: bold; display: inline-block; width: 80px; }
-        .timeline-item { margin-bottom: 15px; }
-        .timeline-title { color: rosybrown; font-size: 14px; margin-bottom: 5px; }
-        .timeline-content { margin-left: 10px; }
-        .avatar { width: 30px; height: 30px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-    </style>
-</head>
+{include file="common/head"/}
+<link rel="stylesheet" href="/static/admin/css/select.css" media="all">
+<script src="/static/admin/js/select.js"></script>
+<style>
+    /* 个人客户列表页面样式优化 - 撑满页面 */
+    body {
+        background: #f5f7fa !important;
+    }
+    
+    .personclient-list-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 20px;
+        background: #f5f7fa;
+        overflow: auto;
+    }
+    
+    .filtrate-warp {
+        margin-bottom: 10px;
+    }
 
-<body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
-<div class="admin-main layui-anim layui-anim-upbit">
+    .filtrate-warp .title {
+        padding: 5px 12px 7px 12px;
+        font-size: 14px;
+        font-weight: normal;
+        text-align: left;
+        cursor: pointer;
+        width: 90px;
+        background-color: transparent !important;
+        color: #333 !important;
+    }
 
-    <fieldset class="layui-elem-field">
-        <legend>高级查询</legend>
-        <div class="layui-card" style="box-shadow:none;margin-top:10px">
-            <div class="layui-form layui-card-header layuiadmin-card-header-auto" style="border-bottom:transparent;height:auto">
+    .filtrate-warp .title:hover {
+        color: #4285f4;
+    }
+
+    .filtrate-warp .flag {
+        padding: 6px 12px 6px 12px;
+        cursor: pointer;
+    }
+
+    .filtrate-warp .flag:hover {
+        color: #4285f4;
+    }
+
+    .filtrate-warp .layui-badge:hover {
+        color: white !important;
+    }
+    
+    /* 查询区域样式优化 */
+    .wukong-search-card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        padding: 20px;
+        margin-bottom: 20px;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    .wukong-search-card .layui-form {
+        display: flex !important;
+    }
+    .layui-table-view .layui-table td .layui-btn-xs{
+        color: #fff !important;
+    }
+    .wukong-search-card .layui-form-item {
+        margin-bottom: 15px;
+        display: block !important;
+    }
+    .layui-table-view .layui-table td, .layui-table-view .layui-table th{
+        background-color: #fff !important;
+    }
+    .wukong-search-card .layui-form-label {
+        width: 100px;
+        color: #333;
+        font-weight: 500;
+        background-color: transparent !important;
+        display: inline-block !important;
+    }
+    
+    .wukong-search-card .layui-inline {
+        display: inline-block !important;
+        margin-right: 15px;
+        margin-bottom: 15px;
+        vertical-align: top;
+    }
+    
+    .wukong-search-card .layui-input-inline {
+        display: inline-block !important;
+    }
+    
+    .wukong-search-card .layui-input,
+    .wukong-search-card .layui-select {
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+    }
+    
+    .wukong-search-card .layui-input:focus,
+    .wukong-search-card .layui-select:focus {
+        border-color: #4285f4;
+        box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+    }
+    
+    .wukong-search-card .layui-btn {
+        border-radius: 6px;
+        background: #4285f4;
+        border-color: #4285f4;
+        transition: all 0.3s ease;
+    }
+    
+    .wukong-search-card .layui-btn:hover {
+        background: #3367d6;
+        border-color: #3367d6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    }
+    
+    /* 表格容器样式 */
+    .personclient-table-wrapper {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        overflow: visible;
+        padding: 0;
+        height: calc(100vh - 280px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+     /* LayUI 表格视图撑满 */
+     .layui-table-view {
+         flex: 1;
+         display: flex;
+         flex-direction: column;
+         height: 100%;
+         border: none !important;
+         overflow: visible !important;
+         position: relative;
+     }
+     
+     .layui-table-box {
+         overflow-x: auto !important;
+         overflow-y: auto !important;
+         width: 100%;
+         flex: 1;
+     }
+     
+     .layui-table-main {
+         overflow-x: auto !important;
+         overflow-y: auto !important;
+         width: 100%;
+     }
+     
+     .layui-table-body {
+         overflow-x: auto !important;
+         overflow-y: auto !important;
+         width: 100%;
+     }
+     
+     .layui-table {
+         width: auto !important;
+         min-width: 100%;
+         table-layout: auto;
+     }
+     
+     /* 确保表格单元格内容完整显示 */
+     .layui-table-cell {
+         overflow: visible !important;
+         text-overflow: clip !important;
+         white-space: normal !important;
+         word-wrap: break-word !important;
+         word-break: break-all !important;
+         padding: 8px 15px !important;
+     }
+     
+     /* 表头单元格 */
+     .layui-table th {
+         white-space: nowrap !important;
+     }
+    
+    /* 确保固定列在横向滚动时正常显示 */
+    .layui-table-fixed-l,
+    .layui-table-fixed-r {
+        z-index: 999 !important;
+    }
+    
+    /* LayUI 表格工具栏样式优化 */
+    .layui-table-tool {
+        background: #fff !important;
+        padding: 16px 20px !important;
+        border-bottom: 1px solid #e0e0e0 !important;
+        margin: 0 !important;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .layui-table-tool .layui-btn {
+        border-radius: 6px !important;
+        transition: all 0.3s ease !important;
+        vertical-align: middle !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px;
+    }
+    
+    .layui-table-tool .layui-btn-primary {
+        background: #4285f4 !important;
+        border-color: #4285f4 !important;
+        color: #fff !important;
+    }
+    
+    .layui-table-tool .layui-btn-primary:hover {
+        background: #3367d6 !important;
+        border-color: #3367d6 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    }
+    
+    .layui-table-tool .layui-btn-normal {
+        background: #34a853 !important;
+        border-color: #34a853 !important;
+        color: #fff !important;
+    }
+    
+    .layui-table-tool .layui-btn-normal:hover {
+        background: #2d8f47 !important;
+        border-color: #2d8f47 !important;
+    }
+    
+    .layui-table-tool .layui-btn-danger {
+        background: #ea4335 !important;
+        border-color: #ea4335 !important;
+        color: #fff !important;
+    }
+    
+    .layui-table-tool .layui-btn-danger:hover {
+        background: #d33b2c !important;
+        border-color: #d33b2c !important;
+    }
+    
+    /* 操作按钮样式优化 */
+    .layui-table-view .layui-table td {
+        vertical-align: middle !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-xs {
+        border-radius: 4px !important;
+        padding: 4px 12px !important;
+        font-size: 12px !important;
+        transition: all 0.3s ease !important;
+        margin: 0 4px !important;
+        vertical-align: middle !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px;
+        line-height: 1.5 !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-xs:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-primary {
+        background: #4285f4 !important;
+        border-color: #4285f4 !important;
+        color: #fff !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-primary:hover {
+        background: #3367d6 !important;
+        border-color: #3367d6 !important;
+    }
+    
+    /* 客户名称链接样式 */
+    .layui-table-view .layui-table td a {
+        color: #4285f4 !important;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .layui-table-view .layui-table td a:hover {
+        color: #3367d6 !important;
+        text-decoration: underline;
+    }
+    
+    /* 分页栏样式 */
+    .layui-table-page {
+        flex-shrink: 0;
+        background: #fff !important;
+        border-top: 1px solid #e0e0e0 !important;
+        padding: 12px 20px !important;
+    }
+    
+    /* 固定列白色背景 */
+    .layui-table-fixed-l {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-l .layui-table {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-l .layui-table thead {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-l .layui-table tbody {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-l .layui-table tbody tr {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-l .layui-table tbody tr:hover {
+        background: #f8f9fa !important;
+    }
+    
+    .layui-table-fixed-l .layui-table-cell {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-r {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-r .layui-table {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-r .layui-table thead {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-r .layui-table tbody {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-r .layui-table tbody tr {
+        background: #fff !important;
+    }
+    
+    .layui-table-fixed-r .layui-table tbody tr:hover {
+        background: #f8f9fa !important;
+    }
+    
+    .layui-table-fixed-r .layui-table-cell {
+        background: #fff !important;
+    }
+    
+    /* 跟进弹窗样式 */
+    .follow-container {
+        padding: 15px;
+    }
+    
+    .follow-header {
+        border-bottom: 1px solid #e6e6e6;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .follow-content {
+        display: flex;
+    }
+    
+    .follow-info {
+        flex: 1;
+        padding-right: 15px;
+    }
+    
+    .follow-history {
+        flex: 1;
+        border-left: 1px solid #e6e6e6;
+        padding-left: 15px;
+    }
+    
+    .info-item {
+        margin-bottom: 10px;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        display: inline-block;
+        width: 80px;
+    }
+    
+    .timeline-item {
+        margin-bottom: 15px;
+    }
+    
+    .timeline-title {
+        color: rosybrown;
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+    
+    .timeline-content {
+        margin-left: 10px;
+    }
+    .layui-table-view .layui-table td .yincang{
+        display: none !important;
+    }
+    .avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: middle;
+    }
+</style>
+<div class="personclient-list-container">
+    <!-- 查询区域 -->
+    <div class="wukong-search-card">
+        <div class="layui-form" lay-filter="LAY-app-contlist-search">
 
                 <div class="layui-form-item" style="text-align:left;padding-left:20px;">
 
@@ -135,10 +512,18 @@
 
             </div>
         </div>
-    </fieldset>
-
-    <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+        <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+    </div>
+    
+  
 </div>
+  <!-- 表格区域 -->
+  <!-- <div class="personclient-list-container">
+        
+    <div class="personclient-table-wrapper">
+      
+    </div>
+    </div> -->
 <!-- 跟进弹窗 -->
 <div id="follow-dialog" style="display: none;">
     <div class="follow-container">
@@ -229,7 +614,7 @@
      <a class="layui-btn layui-btn-primary layui-btn-xs follow-btn" href="javascript:void(0);" data-id="{{d.id}}"><i class="layui-icon">&#xe654;</i>写跟进</a>
     <a class="layui-btn layui-btn-xs" data-id="{{d.id}}" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
     <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
-    <a class="layui-btn layui-btn-primary layui-btn-xs" data-id="{{d.id}}" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs yincang" data-id="{{d.id}}" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
 </script>
 
 <!-- 顶部工具栏 -->
@@ -259,46 +644,46 @@ layui.use(['table','form','upload','util','laydate','layer'], function () {
     var columnWidthKey = "crm_table_column_widths_" + currentUsername;
     var tableId = "table-list";
 
-    // 列定义
-    var cols = [[
-        { type: 'checkbox', fixed: true },
-        { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
-        { field: 'kh_name', title: '客户名称', sort: true, templet: function(res){
-            return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + (res.kh_name || '') + "</a>";
-        }},
-        { field: 'product_name', title: '产品名称' }, 
-        { field: 'inquiry_name', title: '所属渠道' },     // 原“询盘来源”列
-        { field: 'port_name', title: '运营端口' },       // 原“来源端口”列
-        { field: 'main_phone', title: '主电话' },
-        { field: 'aux_phone', title: '辅助电话' },
-        { field: 'joint_person_names', title: '协同人' },
-        { field: 'issuccess', title: '成交状态', templet: function(res){ return res.issuccess == 1 ? '已成交' : '未成交'; } },
-        { field: 'last_up_records', title: '最新跟进记录' },
-        { field: 'pr_user', title: '负责人',width: 150 },
-        { field: 'at_time', title: '创建时间', sort: true ,width: 150},
-        { field: 'ut_time', title: '更新于', sort: true ,width: 150},
-        { field: 'original_creation_time', title: '原来创建时间', width: 150,  hide: false,
-            templet: function(d){
-            var v = d.original_creation_time;
-            if (!v) return '';
-            // 如果是纯数字（秒级时间戳）
-            if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
-            // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
-            return v;
-            }
-        },
-        { field: 'original_modification_time', title: '原来修改时间', width: 150,  hide: false,
-            templet: function(d){
-            var v = d.original_modification_time;
-            if (!v) return '';
-            // 如果是纯数字（秒级时间戳）
-            if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
-            // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
-            return v;
-            }
-        },
-        { fixed: 'right', width: isMobile ? 100 : 320, align: 'center', toolbar: '#action' }
-    ]];
+     // 列定义
+     var cols = [[
+         { type: 'checkbox', fixed: true, width: 50 },
+         { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
+         { field: 'kh_name', title: '客户名称', width: 150, sort: true, templet: function(res){
+             return "<a href='{:url('dialogue')}?id=" + res.id + "'>" + (res.kh_name || '') + "</a>";
+         }},
+         { field: 'product_name', title: '产品名称', width: 120 }, 
+         { field: 'inquiry_name', title: '所属渠道', width: 120 },     // 原"询盘来源"列
+         { field: 'port_name', title: '运营端口', width: 120 },       // 原"来源端口"列
+         { field: 'main_phone', title: '主电话', width: 130 },
+         { field: 'aux_phone', title: '辅助电话', width: 130 },
+         { field: 'joint_person_names', title: '协同人', width: 150 },
+         { field: 'issuccess', title: '成交状态', width: 100, templet: function(res){ return res.issuccess == 1 ? '已成交' : '未成交'; } },
+         { field: 'last_up_records', title: '最新跟进记录', width: 200 },
+         { field: 'pr_user', title: '负责人', width: 150 },
+         { field: 'at_time', title: '创建时间', width: 150, sort: true },
+         { field: 'ut_time', title: '更新于', width: 150, sort: true },
+         { field: 'original_creation_time', title: '原来创建时间', width: 150, hide: false,
+             templet: function(d){
+             var v = d.original_creation_time;
+             if (!v) return '';
+             // 如果是纯数字（秒级时间戳）
+             if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+             // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+             return v;
+             }
+         },
+         { field: 'original_modification_time', title: '原来修改时间', width: 150, hide: false,
+             templet: function(d){
+             var v = d.original_modification_time;
+             if (!v) return '';
+             // 如果是纯数字（秒级时间戳）
+             if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+             // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+             return v;
+             }
+         },
+         { fixed: 'right', title: '操作', width: isMobile ? 100 : 320, align: 'center', toolbar: '#action' }
+     ]];
 
     restoreColWidth(cols[0]);
 

@@ -5,7 +5,11 @@
     </fieldset>
     <table class="layui-table" id="list" lay-filter="list"></table>
 </div>
-
+<style>
+    table{
+        width: 100% !important;
+    }
+</style>
 {include file="common/foot"/}
 <script type="text/html" id="barDemo">
     <a href="{:url('adminEdit')}?admin_id={{d.admin_id}}" class="layui-btn layui-btn-xs">{:lang('edit')}</a>
@@ -36,18 +40,16 @@
 			toolbar: '#topBtn',
 			title:'{:lang("admin")}{:lang("list")}',
             cols: [[
-                {field:'admin_id', title: '编号', width:60,fixed: true}
-                ,{field:'username', title: '用户名', width:80}
-				,{field:'title', title: '{:lang("userGroup")}', width:200}
+                // {field:'admin_id', title: '编号', fixed: true}
+                {field:'username', title: '用户名',width:80 }
+				,{field:'title', title: '{:lang("userGroup")}',width:150}
                 // ,{field:'email', title: '邮箱', width:200}
-                ,{field: 'parent_id', title: '上级主管', width: 200}
-                ,{field: 'team_name', title: '团队名称', width: 200}
-                ,{field: 'mubiao', title: '业绩月目标', width: 200}
-                ,{field: 'ticheng', title: '提成点%', width: 200}
-                ,{field:'tel', title: '{:lang("tel")}', width:150}
-                ,{field:'ip', title: '{:lang("ip")}',width:150,hide:true}
-                ,{field:'is_open', title: '{:lang("status")}',width:150,toolbar: '#open'}
-                ,{width:160, align:'center', toolbar: '#barDemo'}
+                //,{field: 'parent_id', title: '上级主管', }
+                ,{field: 'team_name', title: '团队名称', width:200}
+                ,{field:'tel', title: '{:lang("tel")}',}
+                ,{field:'ip', title: '{:lang("ip")}',hide:true,width:80}
+                ,{field:'is_open', title: '{:lang("status")}',toolbar: '#open',width:100}
+                ,{ align:'center', toolbar: '#barDemo'}
             ]]
         });
         form.on('switch(open)', function(obj){

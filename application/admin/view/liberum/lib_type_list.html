@@ -1,74 +1,179 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>{:config('sys_name')}后台管理</title>
-    <meta name="renderer" content="webkit">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="format-detection" content="telephone=no">
-    <link rel="stylesheet" href="/static/plugins/layui/css/layui.css" media="all" />
-    <link rel="stylesheet" href="/static/admin/css/global.css" media="all">
-    <link rel="stylesheet" href="/static/common/css/font.css" media="all">
+{include file="common/head"/}
+<style>
+    /* 公海类型列表页面样式优化 - 撑满页面 */
+    body {
+        background: #f5f7fa !important;
+    }
+    
+    .lib-type-list-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 20px;
+        background: #f5f7fa;
+        overflow: auto;
+    }
+    
+    .filtrate-warp {
+        margin-bottom: 10px;
+    }
 
-    <style>
+    .filtrate-warp .title {
+        padding: 5px 12px 7px 12px;
+        font-size: 14px;
+        font-weight: normal;
+        text-align: left;
+        cursor: pointer;
+        width: 90px;
+        background-color: transparent !important;
+        color: #333 !important;
+    }
 
-        .filtrate-warp{
-            margin-bottom: 10px;
-        }
+    .filtrate-warp .title:hover {
+        color: #4285f4;
+    }
 
-        .filtrate-warp .title{
-            padding: 5px 12px 7px 12px;
-            font-size: 14px;
-            font-weight: normal;
-            text-align: left;
-            cursor: pointer;
-            width: 90px;
-            background-color: transparent!important;
-            color: black!important;
-        }
+    .filtrate-warp .flag {
+        padding: 6px 12px 6px 12px;
+        cursor: pointer;
+    }
 
-        .filtrate-warp .title:hover{
-            color: black;
-        }
+    .filtrate-warp .flag:hover {
+        color: #4285f4;
+    }
 
-        .filtrate-warp .flag{
-            padding: 6px 12px 6px 12px;
-            cursor: pointer;
-        }
-
-        .filtrate-warp .flag:hover{
-            color: black;
-        }
-
-        .filtrate-warp .layui-badge:hover{
-            color: white!important;
-        }
-
-    </style>
-
-</head>
-<body class="skin-<?php if(!empty($_COOKIE['skin'])){echo $_COOKIE['skin'];}else{echo '0';setcookie('skin','0');}?>">
-
-<div class="admin-main layui-anim layui-anim-upbit">
-
-    <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+    .filtrate-warp .layui-badge:hover {
+        color: white !important;
+    }
+    
+    /* 表格容器样式 - 撑满可用空间 */
+    .lib-type-table-wrapper {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        padding: 0;
+        height: calc(100vh - 100px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* LayUI 表格视图撑满 */
+    .layui-table-view {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border: none !important;
+    }
+    
+    .layui-table-body {
+        flex: 1;
+        overflow: auto;
+    }
+    
+    /* LayUI 表格工具栏样式优化 */
+    .layui-table-tool {
+        background: #fff !important;
+        padding: 16px 20px !important;
+        border-bottom: 1px solid #e0e0e0 !important;
+        margin: 0 !important;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .layui-table-tool .layui-btn {
+        border-radius: 6px !important;
+        transition: all 0.3s ease !important;
+        vertical-align: middle !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px;
+    }
+    
+    .layui-table-tool .layui-btn-primary {
+        background: #4285f4 !important;
+        border-color: #4285f4 !important;
+        color: #fff !important;
+    }
+    
+    .layui-table-tool .layui-btn-primary:hover {
+        background: #3367d6 !important;
+        border-color: #3367d6 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    }
+    
+    /* 操作按钮样式优化 - 修复对齐问题 */
+    .layui-table-view .layui-table td {
+        vertical-align: middle !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-xs {
+        border-radius: 4px !important;
+        padding: 4px 12px !important;
+        font-size: 12px !important;
+        transition: all 0.3s ease !important;
+        margin: 0 4px !important;
+        vertical-align: middle !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px;
+        line-height: 1.5 !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-xs:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-xs:not(.layui-btn-danger) {
+        background: #4285f4 !important;
+        border-color: #4285f4 !important;
+        color: #fff !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-xs:not(.layui-btn-danger):hover {
+        background: #3367d6 !important;
+        border-color: #3367d6 !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-danger {
+        background: #ea4335 !important;
+        border-color: #ea4335 !important;
+    }
+    
+    .layui-table-view .layui-table td .layui-btn-danger:hover {
+        background: #d33b2c !important;
+        border-color: #d33b2c !important;
+    }
+    
+    /* 分页栏样式 */
+    .layui-table-page {
+        flex-shrink: 0;
+        background: #fff !important;
+        border-top: 1px solid #e0e0e0 !important;
+        padding: 12px 20px !important;
+    }
+</style>
+<div class="lib-type-list-container">
+    <div class="lib-type-table-wrapper">
+        <table class="layui-table" id="table-list" lay-filter="table-list"></table>
+    </div>
 </div>
 
 
 
 <script type="text/html" id="action">
-
     <a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
 </script>
 
-
 <script type="text/html" id="topBtn">
-    <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加公海类型</button>
-
+    <button type="button" class="layui-btn layui-btn-primary layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加公海类型</button>
 </script>
 
 
