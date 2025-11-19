@@ -1,0 +1,624 @@
+/**
+ * 悟空CRM风格样式系统
+ * 基于 Bootstrap 5
+ */
+
+/* ========== 悟空CRM主题色 ========== */
+:root {
+    --wukong-primary: #4285f4;
+    --wukong-primary-dark: #3367d6;
+    --wukong-primary-light: #5a95f5;
+    --wukong-success: #34a853;
+    --wukong-warning: #fbbc04;
+    --wukong-danger: #ea4335;
+    --wukong-info: #4285f4;
+    
+    --wukong-bg: #f5f7fa;
+    --wukong-card-bg: #ffffff;
+    --wukong-border: #e0e0e0;
+    --wukong-text: #333333;
+    --wukong-text-light: #666666;
+    --wukong-text-lighter: #999999;
+    
+    --wukong-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --wukong-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --wukong-radius: 8px;
+}
+
+/* ========== 全局样式 ========== */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: var(--wukong-bg);
+    color: var(--wukong-text);
+    line-height: 1.6;
+}
+
+/* ========== 悟空CRM卡片样式 ========== */
+.wukong-card {
+    background: var(--wukong-card-bg);
+    border-radius: var(--wukong-radius);
+    box-shadow: var(--wukong-shadow);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    border: 1px solid var(--wukong-border);
+}
+
+.wukong-card:hover {
+    box-shadow: var(--wukong-shadow-hover);
+}
+
+.wukong-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--wukong-border);
+    margin: -20px -20px 20px -20px;
+    background: #fafafa;
+    border-radius: var(--wukong-radius) var(--wukong-radius) 0 0;
+}
+
+.wukong-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--wukong-text);
+    margin: 0;
+}
+
+.wukong-card-body {
+    padding: 0;
+}
+
+/* ========== 悟空CRM表单样式 ========== */
+.wukong-form-group {
+    margin-bottom: 20px;
+}
+
+.wukong-form-label {
+    font-weight: 500;
+    color: var(--wukong-text);
+    margin-bottom: 8px;
+    display: block;
+    font-size: 14px;
+}
+
+.wukong-form-label.required::before {
+    content: '*';
+    color: var(--wukong-danger);
+    margin-right: 4px;
+}
+
+.wukong-form-control {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--wukong-text);
+    background-color: #fff;
+    border: 1px solid var(--wukong-border);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.wukong-form-control:focus {
+    border-color: var(--wukong-primary);
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+.wukong-form-control:hover {
+    border-color: var(--wukong-primary-light);
+}
+
+/* ========== 悟空CRM按钮样式 ========== */
+.wukong-btn {
+    display: inline-block;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.wukong-btn-primary {
+    color: #fff;
+    background-color: var(--wukong-primary);
+    border-color: var(--wukong-primary);
+}
+
+.wukong-btn-primary:hover {
+    background-color: var(--wukong-primary-dark);
+    border-color: var(--wukong-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.wukong-btn-success {
+    color: #fff;
+    background-color: var(--wukong-success);
+    border-color: var(--wukong-success);
+}
+
+.wukong-btn-success:hover {
+    background-color: #2d8f47;
+    border-color: #2d8f47;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52, 168, 83, 0.3);
+}
+
+.wukong-btn-warning {
+    color: #fff;
+    background-color: var(--wukong-warning);
+    border-color: var(--wukong-warning);
+}
+
+.wukong-btn-warning:hover {
+    background-color: #e6a800;
+    border-color: #e6a800;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 188, 4, 0.3);
+}
+
+.wukong-btn-danger {
+    color: #fff;
+    background-color: var(--wukong-danger);
+    border-color: var(--wukong-danger);
+}
+
+.wukong-btn-danger:hover {
+    background-color: #d33b2c;
+    border-color: #d33b2c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(234, 67, 53, 0.3);
+}
+
+.wukong-btn-default {
+    color: var(--wukong-text);
+    background-color: #fff;
+    border-color: var(--wukong-border);
+}
+
+.wukong-btn-default:hover {
+    color: var(--wukong-primary);
+    border-color: var(--wukong-primary);
+    background-color: #fff;
+}
+
+.wukong-btn-sm {
+    padding: 6px 16px;
+    font-size: 12px;
+}
+
+.wukong-btn-lg {
+    padding: 14px 32px;
+    font-size: 16px;
+}
+
+/* ========== 悟空CRM表格样式 ========== */
+.wukong-table-wrapper {
+    background: var(--wukong-card-bg);
+    border-radius: var(--wukong-radius);
+    box-shadow: var(--wukong-shadow);
+    overflow: hidden;
+}
+
+.wukong-table {
+    width: 100%;
+    margin-bottom: 0;
+    border-collapse: collapse;
+}
+
+.wukong-table thead {
+    background: #fafafa;
+}
+
+.wukong-table thead th {
+    padding: 16px;
+    font-weight: 600;
+    color: var(--wukong-text);
+    border-bottom: 2px solid var(--wukong-border);
+    text-align: left;
+    font-size: 14px;
+}
+
+.wukong-table tbody td {
+    padding: 16px;
+    border-bottom: 1px solid var(--wukong-border);
+    color: var(--wukong-text-light);
+    font-size: 14px;
+}
+
+.wukong-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.wukong-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.wukong-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ========== 悟空CRM搜索栏样式 ========== */
+.wukong-search-bar {
+    background: var(--wukong-card-bg);
+    border-radius: var(--wukong-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--wukong-shadow);
+    border: 1px solid var(--wukong-border);
+}
+
+.wukong-search-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--wukong-text);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--wukong-border);
+}
+
+.wukong-search-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.wukong-search-item {
+    flex: 1;
+    min-width: 200px;
+}
+
+.wukong-search-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--wukong-text-light);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ========== 悟空CRM标签样式 ========== */
+.wukong-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+    border-radius: 4px;
+}
+
+.wukong-badge-primary {
+    background-color: rgba(66, 133, 244, 0.1);
+    color: var(--wukong-primary);
+}
+
+.wukong-badge-success {
+    background-color: rgba(52, 168, 83, 0.1);
+    color: var(--wukong-success);
+}
+
+.wukong-badge-warning {
+    background-color: rgba(251, 188, 4, 0.1);
+    color: #b8860b;
+}
+
+.wukong-badge-danger {
+    background-color: rgba(234, 67, 53, 0.1);
+    color: var(--wukong-danger);
+}
+
+/* ========== 悟空CRM分页样式 ========== */
+.wukong-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.wukong-pagination-item {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--wukong-border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--wukong-text);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.wukong-pagination-item:hover {
+    border-color: var(--wukong-primary);
+    color: var(--wukong-primary);
+    background: rgba(66, 133, 244, 0.05);
+}
+
+.wukong-pagination-item.active {
+    background: var(--wukong-primary);
+    border-color: var(--wukong-primary);
+    color: #fff;
+}
+
+.wukong-pagination-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========== 悟空CRM提示信息样式 ========== */
+.wukong-alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border-left: 4px solid;
+}
+
+.wukong-alert-info {
+    background: rgba(66, 133, 244, 0.1);
+    border-left-color: var(--wukong-primary);
+    color: var(--wukong-primary);
+}
+
+.wukong-alert-success {
+    background: rgba(52, 168, 83, 0.1);
+    border-left-color: var(--wukong-success);
+    color: var(--wukong-success);
+}
+
+.wukong-alert-warning {
+    background: rgba(251, 188, 4, 0.1);
+    border-left-color: var(--wukong-warning);
+    color: #b8860b;
+}
+
+.wukong-alert-danger {
+    background: rgba(234, 67, 53, 0.1);
+    border-left-color: var(--wukong-danger);
+    color: var(--wukong-danger);
+}
+
+/* ========== 悟空CRM统计卡片样式 ========== */
+.wukong-stats-card {
+    background: linear-gradient(135deg, var(--wukong-primary) 0%, var(--wukong-primary-dark) 100%);
+    border-radius: var(--wukong-radius);
+    padding: 24px;
+    color: #fff;
+    box-shadow: var(--wukong-shadow);
+    margin-bottom: 20px;
+}
+
+.wukong-stats-card-title {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.wukong-stats-card-value {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.wukong-stats-card-desc {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 8px;
+}
+
+/* ========== 悟空CRM页面头部样式 ========== */
+.wukong-page-header {
+    background: var(--wukong-card-bg);
+    border-radius: var(--wukong-radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--wukong-shadow);
+    border: 1px solid var(--wukong-border);
+}
+
+.wukong-page-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--wukong-text);
+    margin: 0 0 8px 0;
+}
+
+.wukong-page-description {
+    color: var(--wukong-text-light);
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ========== 悟空CRM容器样式 ========== */
+.wukong-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.wukong-main {
+    background: var(--wukong-bg);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* ========== 兼容LayUI样式 ========== */
+.admin-main {
+    background: var(--wukong-bg);
+    padding: 20px;
+}
+
+.layui-form-pane {
+    background: var(--wukong-card-bg);
+    border-radius: var(--wukong-radius);
+    padding: 24px;
+    box-shadow: var(--wukong-shadow);
+    border: 1px solid var(--wukong-border);
+}
+
+.layui-form-item {
+    margin-bottom: 20px;
+}
+
+.layui-form-label {
+    background-color: #fafafa !important;
+    border-radius: 6px 0 0 6px;
+    font-weight: 500;
+    color: var(--wukong-text);
+}
+
+.layui-input,
+.layui-textarea,
+.layui-select {
+    border: 1px solid var(--wukong-border);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.layui-input:focus,
+.layui-textarea:focus,
+.layui-select:focus {
+    border-color: var(--wukong-primary);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+.layui-btn {
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.layui-btn-primary {
+    background: var(--wukong-primary);
+    border-color: var(--wukong-primary);
+}
+
+.layui-btn-primary:hover {
+    background: var(--wukong-primary-dark);
+    border-color: var(--wukong-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.layui-btn-normal {
+    background: var(--wukong-success);
+    border-color: var(--wukong-success);
+    color: #fff;
+}
+
+.layui-btn-normal:hover {
+    background: #2d8f47;
+    border-color: #2d8f47;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52, 168, 83, 0.3);
+}
+
+.layui-btn-danger {
+    background: var(--wukong-danger);
+    border-color: var(--wukong-danger);
+}
+
+.layui-btn-danger:hover {
+    background: #d33b2c;
+    border-color: #d33b2c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(234, 67, 53, 0.3);
+}
+
+.layui-table {
+    border-radius: var(--wukong-radius);
+    overflow: hidden;
+    box-shadow: var(--wukong-shadow);
+}
+
+.layui-table thead {
+    background: #fafafa;
+}
+
+.layui-table th {
+    font-weight: 600;
+    color: var(--wukong-text);
+    border-bottom: 2px solid var(--wukong-border);
+}
+
+.layui-table td {
+    border-bottom: 1px solid var(--wukong-border);
+    color: var(--wukong-text-light);
+}
+
+.layui-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.layui-card {
+    border-radius: var(--wukong-radius);
+    box-shadow: var(--wukong-shadow);
+    border: 1px solid var(--wukong-border);
+}
+
+.layui-elem-field {
+    border-radius: var(--wukong-radius);
+    box-shadow: var(--wukong-shadow);
+    border: 1px solid var(--wukong-border);
+}
+
+.layui-field-title {
+    background: #fafafa;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--wukong-border);
+}
+
+.layui-field-title legend {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--wukong-text);
+}
+
+/* ========== 响应式设计 ========== */
+@media (max-width: 768px) {
+    .wukong-container {
+        padding: 10px;
+    }
+    
+    .wukong-card {
+        padding: 16px;
+    }
+    
+    .wukong-search-form {
+        flex-direction: column;
+    }
+    
+    .wukong-search-item {
+        width: 100%;
+    }
+}
+
+/* ========== 动画效果 ========== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.wukong-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+

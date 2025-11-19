@@ -1,0 +1,515 @@
+/**
+ * 现代化增强样式
+ * 自动美化现有的LayUI组件，无需修改HTML
+ */
+
+/* ========== 自动美化 admin-main ========== */
+.admin-main {
+    background: var(--bg-secondary, #fafafa);
+    padding: 24px;
+    border-radius: 8px;
+}
+
+/* ========== 自动美化 LayUI 表单 ========== */
+.layui-form-pane {
+    background: var(--bg-primary, #ffffff);
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.layui-form-item {
+    margin-bottom: 20px;
+}
+
+.layui-form-label {
+    background-color: #fafafa !important;
+    border-radius: 6px 0 0 6px;
+    font-weight: 500;
+    color: #262626;
+}
+
+.layui-input,
+.layui-textarea,
+.layui-select {
+    border: 1px solid #e8e8e8;
+    border-radius: 6px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.layui-input:focus,
+.layui-textarea:focus,
+.layui-select:focus {
+    border-color: #1890ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.layui-input:hover,
+.layui-textarea:hover,
+.layui-select:hover {
+    border-color: #40a9ff;
+}
+
+/* ========== 自动美化 LayUI 按钮 ========== */
+.layui-btn {
+    border-radius: 6px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+}
+
+.layui-btn-primary {
+    background: #1890ff;
+}
+
+.layui-btn-primary:hover {
+    background: #40a9ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.layui-btn-normal {
+    background: #52c41a;
+    border-color: #52c41a;
+    color: #fff;
+}
+
+.layui-btn-normal:hover {
+    background: #73d13d;
+    border-color: #73d13d;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+}
+
+.layui-btn-danger {
+    background: #ff4d4f;
+    border-color: #ff4d4f;
+}
+
+.layui-btn-danger:hover {
+    background: #ff7875;
+    border-color: #ff7875;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+}
+
+.layui-btn-warm {
+    background: #faad14;
+    border-color: #faad14;
+}
+
+.layui-btn-warm:hover {
+    background: #ffc53d;
+    border-color: #ffc53d;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(250, 173, 20, 0.3);
+}
+
+.layui-btn:active {
+    transform: translateY(0);
+}
+
+/* ========== 自动美化 LayUI 表格 ========== */
+.layui-table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.layui-table thead {
+    background: #fafafa;
+}
+
+.layui-table th {
+    font-weight: 600;
+    color: #262626;
+    border-bottom: 2px solid #e8e8e8;
+}
+
+.layui-table td {
+    border-bottom: 1px solid #e8e8e8;
+    color: #595959;
+}
+
+.layui-table tbody tr {
+    transition: all 0.3s;
+}
+
+.layui-table tbody tr:hover {
+    background: #fafafa;
+}
+
+/* ========== 自动美化 LayUI 卡片 ========== */
+.layui-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s;
+}
+
+.layui-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.layui-card-header {
+    border-bottom: 1px solid #e8e8e8;
+    padding: 16px 20px;
+    font-weight: 600;
+    color: #262626;
+}
+
+.layui-card-body {
+    padding: 20px;
+}
+
+/* ========== 自动美化 LayUI 字段集 ========== */
+.layui-elem-field {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: none;
+    overflow: hidden;
+}
+
+.layui-field-title {
+    background: #fafafa;
+    padding: 16px 20px;
+    margin: 0;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.layui-field-title legend {
+    font-size: 18px;
+    font-weight: 600;
+    color: #262626;
+    padding: 0 10px;
+}
+
+/* ========== 自动美化 LayUI 标签页 ========== */
+.layui-tab {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.layui-tab-title {
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.layui-tab-title li {
+    border-radius: 6px 6px 0 0;
+    transition: all 0.3s;
+}
+
+.layui-tab-title li:hover {
+    background: #f0f0f0;
+}
+
+.layui-tab-title .layui-this {
+    background: #fff;
+    color: #1890ff;
+    font-weight: 600;
+}
+
+.layui-tab-content {
+    padding: 20px;
+    background: #fff;
+}
+
+/* ========== 自动美化 LayUI 折叠面板 ========== */
+.layui-collapse {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.layui-colla-item {
+    border: none;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.layui-colla-item:last-child {
+    border-bottom: none;
+}
+
+.layui-colla-title {
+    background: #fafafa;
+    padding: 16px 20px;
+    font-weight: 500;
+    color: #262626;
+    transition: all 0.3s;
+}
+
+.layui-colla-title:hover {
+    background: #f0f0f0;
+}
+
+.layui-colla-content {
+    padding: 20px;
+    background: #fff;
+}
+
+/* ========== 自动美化 LayUI 上传组件 ========== */
+.layui-upload {
+    border: 2px dashed #e8e8e8;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    transition: all 0.3s;
+    background: #fafafa;
+}
+
+.layui-upload:hover {
+    border-color: #1890ff;
+    background: rgba(24, 144, 255, 0.05);
+}
+
+.layui-upload-list {
+    margin-top: 16px;
+}
+
+.layui-upload-img {
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ========== 自动美化 LayUI 分页 ========== */
+.layui-laypage {
+    margin-top: 24px;
+}
+
+.layui-laypage a,
+.layui-laypage span {
+    border-radius: 6px;
+    transition: all 0.3s;
+}
+
+.layui-laypage a:hover {
+    background: #1890ff;
+    color: #fff;
+    border-color: #1890ff;
+}
+
+.layui-laypage .layui-laypage-curr .layui-laypage-em {
+    background: #1890ff;
+    border-radius: 6px;
+}
+
+/* ========== 自动美化 LayUI 徽章 ========== */
+.layui-badge {
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 500;
+}
+
+.layui-badge-dot {
+    border-radius: 50%;
+}
+
+/* ========== 自动美化 LayUI 提示 ========== */
+.layui-layer {
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* ========== 自动美化 LayUI 导航 ========== */
+.layui-nav {
+    border-radius: 6px;
+}
+
+.layui-nav-item a {
+    transition: all 0.3s;
+}
+
+.layui-nav-item a:hover {
+    background: rgba(24, 144, 255, 0.1);
+    color: #1890ff;
+}
+
+.layui-nav .layui-this > a {
+    background: #1890ff;
+    color: #fff;
+}
+
+/* ========== 自动美化 LayUI 时间线 ========== */
+.layui-timeline {
+    padding-left: 20px;
+}
+
+.layui-timeline-item {
+    border-left: 2px solid #e8e8e8;
+    padding-left: 24px;
+    position: relative;
+}
+
+.layui-timeline-item:before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #1890ff;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #1890ff;
+}
+
+/* ========== 自动美化 LayUI 进度条 ========== */
+.layui-progress {
+    border-radius: 4px;
+    overflow: hidden;
+    background: #f0f0f0;
+}
+
+.layui-progress-bar {
+    border-radius: 4px;
+    background: linear-gradient(90deg, #1890ff, #40a9ff);
+}
+
+/* ========== 自动美化 LayUI 滑块 ========== */
+.layui-slider {
+    border-radius: 4px;
+}
+
+.layui-slider-bar {
+    background: #1890ff;
+    border-radius: 4px;
+}
+
+.layui-slider-trigger {
+    border: 2px solid #1890ff;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ========== 自动美化 LayUI 评分 ========== */
+.layui-rate {
+    color: #faad14;
+}
+
+.layui-rate-item {
+    transition: all 0.3s;
+}
+
+.layui-rate-item:hover {
+    transform: scale(1.1);
+}
+
+/* ========== 自动美化 LayUI 颜色选择器 ========== */
+.layui-colorpicker {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* ========== 自动美化 LayUI 穿梭框 ========== */
+.layui-transfer {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ========== 响应式优化 ========== */
+@media (max-width: 768px) {
+    .admin-main {
+        padding: 16px;
+    }
+    
+    .layui-form-pane {
+        padding: 16px;
+    }
+    
+    .layui-form-item {
+        flex-direction: column;
+    }
+    
+    .layui-form-label {
+        width: 100% !important;
+        text-align: left !important;
+        padding: 8px 0 !important;
+    }
+}
+
+/* ========== 动画增强 ========== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.layui-anim-upbit {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ========== 全局优化 ========== */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* ========== 输入组优化 ========== */
+.layui-input-group {
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.layui-input-group .layui-input {
+    border: none;
+    border-radius: 0;
+}
+
+.layui-input-group .layui-btn {
+    border: none;
+    border-radius: 0;
+}
+
+/* ========== 内联表单优化 ========== */
+.layui-inline {
+    margin-right: 16px;
+    margin-bottom: 16px;
+}
+
+.layui-input-inline {
+    min-width: 200px;
+}
+
+/* ========== 表格工具栏优化 ========== */
+.layui-table-tool {
+    background: #fafafa;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+/* ========== 统计卡片优化 ========== */
+.layui-col-space15 > * {
+    padding: 16px;
+}
+
+/* ========== 搜索栏优化 ========== */
+.layuiadmin-card-header-auto {
+    padding: 20px;
+    background: #fff;
+}
+
+/* ========== 总结信息优化 ========== */
+#summary-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+#summary-info span {
+    color: #fff;
+}
+
