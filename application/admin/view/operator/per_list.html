@@ -72,20 +72,6 @@
 
                        
                             <div class="layui-inline">
-                                <label class="layui-form-label">客户级别：</label>
-                                <div class="layui-input-inline">
-                                    <select name="kh_rank" id="kh_rank">
-                                        <option value="">请选择客户级别</option>
-
-                                        {volist name='khRankList' id='vo'}
-                                        <option value="{$vo.rank_name}">{$vo.rank_name}</option>
-                                        {/volist}
-
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="layui-inline">
                                 <label class="layui-form-label">客户状态：</label>
                                 <div class="layui-input-inline">
                                     <select name="status" id="kh_status">
@@ -220,14 +206,14 @@
                     }
                 },
                 { field: 'product_name', width: 80, title: '产品' },
-                { field: 'xs_area', title: '地区' },
+    
                 {
                     field: 'contact', title: '联系方式', width: 100, templet: function (res) {
                         return res.contact.join('<br>');
                     }
                 },
-                { field: 'kh_rank', title: '客户级别', sort: true },
-                { field: 'kh_status', title: '客户来源' },
+                { field: 'inquiry_name', title: '客户来源渠道' },
+                { field: 'port_name', title: '来源端口' },
                               { 
                     field: 'customer_status', 
                     title: '客户状态', 
@@ -276,10 +262,9 @@
            table.on('toolbar(table-list)', function(obj) {
   if(obj.event === 'exportAll') {
     // 获取当前查询条件（正确处理嵌套对象）
-    var formData = {
-        'keyword[team_name]': $('#team_name').val(),
-      'keyword[kh_rank]': $('#kh_rank').val(),
-      'keyword[status]': $('#kh_status').val(),
+     var formData = {
+         'keyword[team_name]': $('#team_name').val(),
+       'keyword[status]': $('#kh_status').val(),
       'keyword[contact]': $('#contact').val(),
       'keyword[product_name]': $('#product_name').val(),
       'keyword[kh_name]': $('#kh_name').val(),

@@ -239,6 +239,8 @@ class Order extends Common
             $data['split_remarks']    = Request::param('split_remarks');  // 分成备注
             $data['amount_received']  = Request::param('amount_received'); // 已收款金额
             $data['remark']           = Request::param('remark');         // 备注
+            $data['wechat_receipt_image'] = Request::param('wechat_receipt_image', ''); // 客户微信回执图
+            $data['inquiry_assign_image'] = Request::param('inquiry_assign_image', ''); // 产品询盘分配图
             $managerIds   = Request::param('product_manager/a'); // ★ 产品经理（管理员）ID 数组
             $data['status']           = '待审核';
             $data['create_time']      = date("Y-m-d H:i:s");

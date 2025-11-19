@@ -9,24 +9,30 @@ class UpFiles extends Common
     public function upload(){
         // 获取上传文件表单字段名
         $fileKey = array_keys(request()->file());
+        if (empty($fileKey)) {
+            return json(['code' => 0, 'info' => '未检测到上传文件', 'url' => '']);
+        }
+        
         // 获取表单上传文件
         $file = request()->file($fileKey['0']);
+        if (!$file) {
+            return json(['code' => 0, 'info' => '文件获取失败', 'url' => '']);
+        }
+        
         // 移动到框架应用根目录/public/uploads/ 目录下
-
         $info = $file->validate(['ext' => 'jpg,png,gif,jpeg'])->move('uploads');
         if($info){
             $result['code'] = 1;
             $result['info'] = '图片上传成功!';
-            $path=str_replace('\\','/',$info->getSaveName());
+            $path = str_replace('\\','/',$info->getSaveName());
             $result['url'] = '/uploads/'. $path;
-            return $result;
+            return json($result);
         }else{
             // 上传失败获取错误信息
-
-            $result['code'] =0;
-            $result['info'] =  $file->getError();
+            $result['code'] = 0;
+            $result['info'] = $file->getError() ?: '图片上传失败!';
             $result['url'] = '';
-            return $result;
+            return json($result);
         }
     }
     public function file(){

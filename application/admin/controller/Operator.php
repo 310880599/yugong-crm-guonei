@@ -52,53 +52,77 @@ $this->assign('adminResult', $adminResult);
     $keyword = $params['keyword'] ?? [];
     $model   = model('client');
 
-    // 如果有联系人搜索条件
-    if (!empty($keyword['contact'])) {
-        $con     = $keyword['contact'];
-        $cleaned = preg_replace('/[^\w@._#]/', '', $con);
-        $cfun =  function ($q) use ($con, $cleaned) {
-            $q->where('contact_value', 'like', '%' . $con . '%')
-                ->whereOrRaw("CONCAT(contact_extra, contact_value) like '%{$con}%'")
-                ->whereOrRaw("CONCAT(contact_extra, vdigits) like '%{$cleaned}%'");
-        };
-        $model = $model->hasWhere('contacts', $cfun)->with(['contacts' => $cfun]);
-    } else {
-        $model = $model->with('contacts');
-    }
-
     // 确保获取分页参数
     $page = $params['page'] ?? input('page', 1);
     $limit = $params['limit'] ?? input('limit', 15); // 恢复默认分页值
 
     $list = $this->_search($params, $model, function ($query, $p) {
         $keyword = $p['keyword'] ?? [];
+        
+        // 处理联系方式搜索 - 先查询联系方式获取 leads_id
+        $contactLeadsIds = [];
+        if (!empty($keyword['contact'])) {
+            $con = trim($keyword['contact']);
+            $cleaned = preg_replace('/\D+/', '', $con); // 仅保留数字
+            
+            $contactLeadsIds = Db::table('crm_contacts')
+                ->where('is_delete', 0)
+                ->where(function ($q) use ($con, $cleaned) {
+                    $q->where('contact_value', 'like', '%' . addslashes($con) . '%')
+                      ->whereOrRaw("CONCAT(contact_extra, contact_value) LIKE '%" . addslashes($con) . "%'");
+                    if ($cleaned && $cleaned !== $con) {
+                        $q->whereOr('vdigits', 'like', '%' . $cleaned . '%');
+                    }
+                })
+                ->column('leads_id');
+            
+            if (empty($contactLeadsIds)) {
+                // 如果没有匹配的联系方式，返回空结果
+                $query->where('1=0');
+                return $query;
+            }
+        }
+        
          $query->alias('c')
               ->join('admin a', 'c.pr_user = a.username', 'LEFT')
               ->field('c.*, a.team_name')
               ->append(['contact'])
               ->hidden(['contacts']);
         
-        if (!empty($keyword['kh_rank'])) {
-            $query->where('kh_rank', '=', $keyword['kh_rank']);
+        // 如果有联系方式搜索条件，添加 leads_id 过滤
+        if (!empty($contactLeadsIds)) {
+            $query->whereIn('c.id', $contactLeadsIds);
         }
+        
         if (!empty($keyword['status'])) {
-            $query->where('status', '=', $keyword['status']);
+            $query->where('c.status', '=', $keyword['status']);
         }
         if (!empty($keyword['kh_name'])) {
-            $query->where('kh_name', 'like', '%' . $keyword['kh_name'] . '%');
+            $query->where('c.kh_name', 'like', '%' . $keyword['kh_name'] . '%');
         }
         if (!empty($keyword['pr_user'])) {
-            $query->where('pr_user', '=', $keyword['pr_user']);
+            $query->where('c.pr_user', '=', $keyword['pr_user']);
         }
         if (!empty($keyword['product_name'])) {
-            $query->where('product_name', 'like', '%' . $keyword['product_name'] . '%');
+            // 产品名称搜索：先查找匹配的产品ID，然后搜索
+            $productIds = Db::table('crm_products')
+                ->where('product_name', 'like', '%' . $keyword['product_name'] . '%')
+                ->column('id');
+            if (!empty($productIds)) {
+                $query->where(function ($q) use ($keyword, $productIds) {
+                    $q->whereIn('c.product_name', $productIds)
+                      ->whereOr('c.product_name', 'like', '%' . $keyword['product_name'] . '%');
+                });
+            } else {
+                $query->where('c.product_name', 'like', '%' . $keyword['product_name'] . '%');
+            }
         }
         if (!empty($keyword['timebucket'])) {
-            $where = $this->getClientimeWhere($keyword['timebucket']);
+            $where = $this->getClientimeWhere($keyword['timebucket'], 'c');
             $query->where($where);
         }
         if (!empty($keyword['at_time'])) {
-            $where = $this->getClientimeWhere($keyword['at_time']);
+            $where = $this->getClientimeWhere($keyword['at_time'], 'c');
             $query->where($where);
         }
         if (!empty($keyword['team_name'])) {
@@ -109,21 +133,169 @@ $this->assign('adminResult', $adminResult);
                 ->column('username');
             
             if (!empty($usernames)) {
-                $query->whereIn('pr_user', $usernames);
+                $query->whereIn('c.pr_user', $usernames);
             } else {
                 // 没有匹配的用户，返回空结果
                 $query->where('1=0');
             }
         }
-        // 限制当前用户
-        $query->where(['oper_user' => Session::get('username')]);
+        
+        // 根据当前运营人员的 inquiry_id 和 port_id 匹配询盘数据
+        $current_admin = Admin::getMyInfo();
+        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
+        
+        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+            // 匹配渠道ID - 明确指定表别名 c（crm_leads）
+            $query->where('c.inquiry_id', '=', $current_admin_info['inquiry_id']);
+            
+            // port_id 是逗号分隔的多选值，需要检查交集 - 明确指定表别名 c
+            $admin_port_ids = !empty($current_admin_info['port_id']) ? array_filter(explode(',', $current_admin_info['port_id'])) : [];
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', c.port_id) > 0";
+                }
+            }
+            
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                $query->whereRaw($port_where);
+            } else {
+                // 如果没有端口ID，返回空结果
+                $query->where('1=0');
+            }
+        } else {
+            // 如果没有配置 inquiry_id 和 port_id，返回空结果
+            $query->where('1=0');
+        }
+        
         return $query;
     }, $page, $limit);
 
+    // 补充展示所需的派生字段，与 personClientSearch 保持一致
+    if (empty($list) || empty($list['data'])) {
     return [
         'code'  => 0,
         'msg'   => '获取成功!',
-        'data'  => $list['data'],
+            'data'  => [],
+            'count' => 0,
+            'rel'   => 1
+        ];
+    }
+    
+    $rows = &$list['data'];
+    $leadIds = array_column($rows, 'id');
+    
+    // 1) 批量查询所属渠道名称和运营端口名称
+    $inquiryMap = Db::table('crm_inquiry')->column('inquiry_name', 'id');
+    $portMap = Db::table('crm_inquiry_port')->column('port_name', 'id');
+    
+    // 1.5) 批量查询产品名称映射（将产品ID转换为产品名称）
+    $productMap = Db::table('crm_products')->column('product_name', 'id');
+    
+    // 2) 批量查询主/辅电话（crm_contacts：1=主，3=辅）
+    $phoneMap = [];
+    if (!empty($leadIds)) {
+        $contacts = Db::table('crm_contacts')
+            ->where('is_delete', 0)
+            ->where('leads_id', 'in', $leadIds)
+            ->where('contact_type', 'in', [1, 3])
+            ->order('id', 'asc')
+            ->field('leads_id, contact_type, contact_value')
+            ->select();
+        
+        foreach ($contacts as $c) {
+            $lid = $c['leads_id'];
+            if (!isset($phoneMap[$lid])) {
+                $phoneMap[$lid] = ['main' => '', 'aux' => ''];
+            }
+            if ($c['contact_type'] == 1 && $phoneMap[$lid]['main'] === '') {
+                $phoneMap[$lid]['main'] = $c['contact_value'];
+            } elseif ($c['contact_type'] == 3 && $phoneMap[$lid]['aux'] === '') {
+                $phoneMap[$lid]['aux'] = $c['contact_value'];
+            }
+        }
+    }
+    
+    // 3) 协同人姓名：从 admin 表按 joint_person 映射
+    $uidSet = [];
+    foreach ($rows as &$row) {
+        // 所属渠道名称（如无对应名称则用自身ID）
+        $row['inquiry_name'] = isset($inquiryMap[$row['inquiry_id']]) 
+                                ? $inquiryMap[$row['inquiry_id']] 
+                                : (string)($row['inquiry_id'] ?? '');
+        
+        // 运营端口名称（port_id 可能是逗号分隔的多选值，取第一个）
+        $port_name = '';
+        if (!empty($row['port_id'])) {
+            $port_ids = array_filter(explode(',', $row['port_id']));
+            if (!empty($port_ids)) {
+                $first_port_id = trim($port_ids[0]);
+                if ($first_port_id && isset($portMap[$first_port_id])) {
+                    $port_name = $portMap[$first_port_id];
+                } else {
+                    $port_name = (string)$first_port_id;
+                }
+            }
+        }
+        $row['port_name'] = $port_name;
+        
+        // 产品名称转换（将产品ID转换为产品名称）
+        if (!empty($row['product_name'])) {
+            // 如果 product_name 是数字，尝试从产品表中查找名称
+            if (is_numeric($row['product_name']) && isset($productMap[$row['product_name']])) {
+                $row['product_name'] = $productMap[$row['product_name']];
+            } elseif (is_numeric($row['product_name'])) {
+                // 如果是数字但找不到对应产品，保持原值
+                // $row['product_name'] = $row['product_name'];
+            }
+        }
+        
+        // 主/辅电话
+        $row['main_phone'] = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['main'] : '';
+        $row['aux_phone']  = isset($phoneMap[$row['id']]) ? $phoneMap[$row['id']]['aux'] : '';
+        
+        // joint_person 可能是 JSON 数组或逗号分隔的 ID 字符串
+        $idsArr = [];
+        if (!empty($row['joint_person'])) {
+            $jp = $row['joint_person'];
+            if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                $tmp = json_decode($jp, true);
+                if (is_array($tmp)) $idsArr = $tmp;
+            } else {
+                $idsArr = preg_split('/[,，\s]+/', $jp, -1, PREG_SPLIT_NO_EMPTY);
+            }
+        }
+        $row['_joint_ids'] = $idsArr;
+        foreach ($idsArr as $uid) {
+            $uidSet[$uid] = true;
+        }
+    }
+    unset($row);
+    
+    // 一次性把协同人的 username 查出来
+    $adminMap = [];
+    if (!empty($uidSet)) {
+        $adminMap = Db::table('admin')
+            ->where('admin_id', 'in', array_keys($uidSet))
+            ->column('username', 'admin_id');
+    }
+    
+    foreach ($rows as &$row) {
+        $names = [];
+        foreach ($row['_joint_ids'] as $uid) {
+            $names[] = isset($adminMap[$uid]) ? $adminMap[$uid] : (string)$uid;
+        }
+        $row['joint_person_names'] = $names ? implode('、', $names) : '';
+        unset($row['_joint_ids']);
+    }
+    unset($row);
+    
+    return [
+        'code'  => 0,
+        'msg'   => '获取成功!',
+        'data'  => $rows,
         'count' => $list['total'],
         'rel'   => 1
     ];
@@ -292,8 +464,27 @@ private function exportToExcel($data)
             Request::merge($params);
             return $this->personOrderSearch();
         }
+        
+        // 获取当前运营人员的渠道列表
+        $current_admin = Admin::getMyInfo();
+        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
+        $sourceList = [];
+        
+        if (!empty($current_admin_info['inquiry_id'])) {
+            // 获取当前运营人员的渠道名称
+            $inquiryInfo = Db::table('crm_inquiry')->where('id', $current_admin_info['inquiry_id'])->find();
+            if ($inquiryInfo && !empty($inquiryInfo['inquiry_name'])) {
+                $sourceList[] = $inquiryInfo['inquiry_name'];
+            }
+        }
+        
+        // 如果获取不到，使用默认列表（兼容旧数据）
+        if (empty($sourceList)) {
+            $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
+        }
+        
         $this->assign('customer_type', Order::CUSTOMER_TYPE);
-        $this->assign('sourceList', Db::name('crm_client_status')->distinct(true)->column('status_name'));
+        $this->assign('sourceList', $sourceList);
         return $this->fetch();
     }
 
@@ -301,10 +492,103 @@ private function exportToExcel($data)
     {
         $where = [];
         $client_where = [];
-        $oper_user = Session::get('username') ?? '';
-        //展示自己创建的订单
-        $where[] = ['oper_user', '=', $oper_user];
-        $client_where[] = ['oper_user', '=', $oper_user];
+        
+        // 获取当前运营人员信息
+        $current_admin = Admin::getMyInfo();
+        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
+        
+        // 根据运营人员的 inquiry_id 和 port_id 匹配订单
+        // 订单表的 source 字段存储渠道名称，source_port 字段存储端口名称
+        $order_conditions = [];
+        $client_conditions = [];
+        
+        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+            // 获取渠道名称
+            $inquiryInfo = Db::table('crm_inquiry')->where('id', $current_admin_info['inquiry_id'])->find();
+            if ($inquiryInfo && !empty($inquiryInfo['inquiry_name'])) {
+                $inquiry_name = $inquiryInfo['inquiry_name'];
+                
+                // 获取端口名称列表
+                $admin_port_ids = !empty($current_admin_info['port_id']) ? array_filter(explode(',', $current_admin_info['port_id'])) : [];
+                $port_names = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_info = Db::table('crm_inquiry_port')
+                            ->where('id', $port_id)
+                            ->where('inquiry_id', $current_admin_info['inquiry_id'])
+                            ->field('port_name')
+                            ->find();
+                        if ($port_info && !empty($port_info['port_name'])) {
+                            $port_names[] = addslashes($port_info['port_name']); // 转义防止SQL注入
+                        }
+                    }
+                }
+                
+                if (!empty($port_names)) {
+                    // 构建订单匹配条件：source = 渠道名称 AND source_port IN (端口名称列表)
+                    $port_conditions = [];
+                    foreach ($port_names as $port_name) {
+                        $port_conditions[] = "o.source_port = '{$port_name}'";
+                    }
+                    if (!empty($port_conditions)) {
+                        $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                        $order_conditions[] = "(o.source = '{$inquiry_name}' AND {$port_where})";
+                    }
+                } else {
+                    // 如果没有端口，只匹配渠道
+                    $order_conditions[] = "o.source = '{$inquiry_name}'";
+                }
+                
+                // 构建客户匹配条件：inquiry_id = 渠道ID AND port_id 包含端口ID
+                $port_id_conditions = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_id_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                    }
+                }
+                if (!empty($port_id_conditions)) {
+                    $port_id_where = '(' . implode(' OR ', $port_id_conditions) . ')';
+                    $client_conditions[] = function($query) use ($current_admin_info, $port_id_where) {
+                        $query->where('l.inquiry_id', $current_admin_info['inquiry_id'])
+                            ->whereRaw($port_id_where);
+                    };
+                } else {
+                    $client_conditions[] = ['l.inquiry_id', '=', $current_admin_info['inquiry_id']];
+                }
+            }
+        }
+        
+        // 如果没有匹配条件，返回空结果
+        if (empty($order_conditions)) {
+            return [
+                'code' => 0,
+                'msg' => '获取成功!',
+                'data' => [],
+                'count' => 0,
+                'rel' => 1,
+                'totalInquiries' => 0,
+                'successRate' => '0.00',
+                'totalMoney' => '0.00',
+                'totalProfit' => '0.00',
+            ];
+        }
+        
+        // 构建订单查询条件
+        $order_where_raw = '(' . implode(' OR ', $order_conditions) . ')';
+        $where[] = function($query) use ($order_where_raw) {
+            $query->whereRaw($order_where_raw);
+        };
+        
+        // 构建客户查询条件
+        if (!empty($client_conditions)) {
+            foreach ($client_conditions as $condition) {
+                $client_where[] = $condition;
+            }
+        }
+        $client_where[] = ['l.status', '=', 1];
+        
         //判断权限
         $page = input('page') ?? 1;
         $limit = input('limit') ?? config('pageSize');
@@ -320,8 +604,7 @@ private function exportToExcel($data)
             $timeWhere['at_time'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
             $timeWhere['to_kh_time'] = $this->buildTimeWhere($keyword['timebucket'], 'to_kh_time');
             $client_where[] =  function ($query) use ($timeWhere) {
-                $query->where(...$timeWhere['at_time']);
-                $query->whereOr(...$timeWhere['to_kh_time']);
+                $query->where([$timeWhere['at_time']])->whereOr([$timeWhere['to_kh_time']]);
             };
         }
         if (isset($keyword['min_money'])) $where[] = ['money', '>', $keyword['min_money']];
@@ -349,9 +632,11 @@ private function exportToExcel($data)
             $kh_source = strtolower($keyword['source']);
             $client_where[] = ['kh_status', 'like', "%$kh_source%"];
         }
+        
         $list = Db::table('crm_client_order')
+            ->alias('o')
             ->where($where)
-            ->order('order_time desc')
+            ->order('o.order_time desc')
             ->paginate([
                 'list_rows' => $limit,
                 'page' => $page
@@ -361,16 +646,21 @@ private function exportToExcel($data)
 
         //成单率
 
-        $totalInquiries = Db::table('crm_leads')->where('status', 1)->where($client_where)->count();
+        $totalInquiries = Db::table('crm_leads')
+            ->alias('l')
+            ->where($client_where)
+            ->count();
 
         $successOrders = $list['total'];
         $successRate = $totalInquiries > 0 ? ($successOrders / $totalInquiries * 100) : 0;
         $totalMoney = Db::table('crm_client_order')
+            ->alias('o')
             ->where($where)
-            ->sum('money');
+            ->sum('o.money');
         $totalProfit = Db::table('crm_client_order')
+            ->alias('o')
             ->where($where)
-            ->sum('profit');
+            ->sum('o.profit');
         return $result = [
             'code' => 0,
             'msg' => '获取成功!',
@@ -391,15 +681,36 @@ private function exportToExcel($data)
 
         $params  = Request::param();
 
-        //最近跟进动态  
+        //最近跟进动态 - 根据当前运营人员的 inquiry_id 和 port_id 匹配
+        $current_admin = Admin::getMyInfo();
+        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
+        $result = [];
+        
+        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+            // port_id 是逗号分隔的多选值，需要检查交集
+            $admin_port_ids = !empty($current_admin_info['port_id']) ? explode(',', $current_admin_info['port_id']) : [];
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                }
+            }
+            
+            $result = [];
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
         $result = Db::table('crm_leads')
             ->alias('l')
             ->join('crm_comment c', 'c.leads_id = l.id')
             ->join('admin a', 'c.user_id = a.admin_id')
             ->field('l.id,a.username,a.avatar,l.kh_name,c.reply_msg,c.create_date')
             ->order('c.create_date desc')
-            ->where(['l.oper_user' => Session::get('username')])
+                    ->where('l.inquiry_id', $current_admin_info['inquiry_id'])
+                    ->whereRaw($port_where)
             ->limit(10)->select();
+            }
+        }
         $this->assign('result', $result);
 
         //管理员
@@ -408,13 +719,43 @@ private function exportToExcel($data)
         //echo $strWenhou[(int)$strTimeToString[(int)date('G',time())]];
         $this->assign('wenhou', '尊敬的管理员' . $strWenhou[(int)$strTimeToString[(int)date('G', time())]]);
 
-        //跟进数据
+        //跟进数据 - 根据当前运营人员的 inquiry_id 和 port_id 匹配
         $wheretoday = [];
-        $wheretoday['oper_user'] = Session::get('username');
         $wheretoday['status'] = 1;
         $wheretoday['issuccess'] = -1;
-        $all_count = Db::table('crm_leads')->where($wheretoday)->count();
-        $today_count = Db::table('crm_leads')->where($wheretoday)->whereTime('last_up_time', 'today')->count();
+        
+        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+            $wheretoday['inquiry_id'] = $current_admin_info['inquiry_id'];
+            // port_id 是逗号分隔的多选值，需要检查交集
+            $admin_port_ids = !empty($current_admin_info['port_id']) ? explode(',', $current_admin_info['port_id']) : [];
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', port_id) > 0";
+                }
+            }
+            
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                $all_count = Db::table('crm_leads')
+                    ->where($wheretoday)
+                    ->whereRaw($port_where)
+                    ->count();
+                $today_count = Db::table('crm_leads')
+                    ->where($wheretoday)
+                    ->whereRaw($port_where)
+                    ->whereTime('last_up_time', 'today')
+                    ->count();
+            } else {
+                $all_count = 0;
+                $today_count = 0;
+            }
+        } else {
+            // 如果没有配置 inquiry_id 和 port_id，返回0
+            $all_count = 0;
+            $today_count = 0;
+        }
         if ($all_count > 0) {
             $genjinlv = $today_count / $all_count * 100;
         } else {
@@ -459,35 +800,341 @@ private function exportToExcel($data)
         $keyword  = $params['keyword'] ?? [];
         $current_admin = Admin::getMyInfo();
         $where = [$this->getOrgWhere($current_admin['org']), ['is_open', '=', 1],];
-        $l_where = [['status', '=', 1]];
+        // 对于子查询，使用不带别名的条件，直接构建时间条件而不是使用闭包
+        $l_where_sub = [['status', '=', 1]];
+        // 对于主查询，使用带别名的条件
+        $l_where = [['l.status', '=', 1]];
         $o_where = [];
         if (!empty($keyword['timebucket'])) {
-            $l_where[] = $this->getClientimeWhere($keyword['timebucket']);
+            // 子查询：直接使用 buildTimeWhere 构建条件，然后手动组合 OR
+            // 注意：buildTimeWhere 返回的格式需要包装在数组中才能用于 where 方法
+            $time_where_at = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+            $time_where_kh = $this->buildTimeWhere($keyword['timebucket'], 'to_kh_time');
+            $l_where_sub[] = function($query) use ($time_where_at, $time_where_kh) {
+                $query->where([$time_where_at])->whereOr([$time_where_kh]);
+            };
+            $l_where[] = $this->getClientimeWhere($keyword['timebucket'], 'l');
             $o_where[] = $this->buildTimeWhere($keyword['timebucket'], 'order_time');
         }
         if (!empty($keyword['at_time'])) {
-            $l_where[] = $this->getClientimeWhere($keyword['at_time']);
+            // 子查询：直接使用 buildTimeWhere 构建条件，然后手动组合 OR
+            // 注意：buildTimeWhere 返回的格式需要包装在数组中才能用于 where 方法
+            $time_where_at = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+            $time_where_kh = $this->buildTimeWhere($keyword['at_time'], 'to_kh_time');
+            $l_where_sub[] = function($query) use ($time_where_at, $time_where_kh) {
+                $query->where([$time_where_at])->whereOr([$time_where_kh]);
+            };
+            $l_where[] = $this->getClientimeWhere($keyword['at_time'], 'l');
             $o_where[] = $this->buildTimeWhere($keyword['at_time'], 'order_time');
         }
 
         //业务询盘数据
         $yw_where = array_merge($where, [['group_id', 'in', [$this->ywgid, $this->ywzgid]]]);
-        $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->order('a.username')->select();
-        $ywData_total = $this->getLeadsSubQuery($l_where)->where('a.team_name', '<>', '')->where($yw_where)->group('a.team_name')->field('a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
+        $ywData = $this->getLeadsSubQuery($l_where_sub)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(l.id) as yw_num')->order('yw_num desc')->order('a.team_name')->order('a.username')->select();
+        $ywData_total = $this->getLeadsSubQuery($l_where_sub)->where('a.team_name', '<>', '')->where($yw_where)->group('a.team_name')->field('a.team_name,count(l.id) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
 
-        //运营数据
-        $yy_where = array_merge($where, [['group_id', '=', $this->yygid]]);
-        $yyData = $this->getLeadsSubQuery($l_where, 'oper_user')->where($yy_where)->group('username,team_name,channel')->field('username,team_name,channel,count(oper_user) as yy_num')->order('yy_num', 'desc')->order('team_name')->order('channel')->order('username')->select();
-        $yyData_total = $this->getLeadsSubQuery($l_where, 'oper_user')->where('channel', '<>', '')->where($yy_where)->group('team_name,channel')->field('team_name,channel,count(oper_user) as yy_num')->order('yy_num', 'desc')->order('team_name')->order('channel')->select();
+        //运营数据 - 根据 inquiry_id 和 port_id 匹配运营人员
+        // getYyLeadsSubQuery 已经处理了所有必要的条件（组织、is_open、inquiry_id、port_id）
+        $yyData = $this->getYyLeadsSubQuery($l_where_sub)
+            ->group('a.username,a.team_name,a.inquiry_id,a.port_id')
+            ->field('a.username,a.team_name,a.inquiry_id,a.port_id,count(l.id) as yy_num')
+            ->order('yy_num', 'desc')
+            ->order('a.team_name')
+            ->order('a.username')
+            ->select();
+        
+        // 获取渠道名称用于显示
+        foreach ($yyData as &$item) {
+            if (!empty($item['inquiry_id'])) {
+                $inquiry = Db::table('crm_inquiry')->where('id', $item['inquiry_id'])->find();
+                $item['channel'] = $inquiry ? $inquiry['inquiry_name'] : '';
+            } else {
+                $item['channel'] = '';
+            }
+        }
+        
+        // 按团队名称汇总（只统计运营组人员）
+        $yyData_total = $this->getYyLeadsSubQuery($l_where_sub)
+            ->where('a.team_name', '<>', '')
+            ->group('a.team_name')
+            ->field('a.team_name,count(l.id) as yy_num')
+            ->order('yy_num', 'desc')
+            ->order('a.team_name')
+            ->select();
 
-        //产品数据
-        $oper_prod = Db::table('crm_leads')->join('admin', 'crm_leads.pr_user = admin.username')->where($where)->where($l_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->limit(10)->select();
-        $order_prod = Db::table('crm_client_order')->join('admin', 'crm_client_order.oper_user = admin.username')->where($where)->where($o_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->limit(10)->select();
+        //询盘产品数据 - 根据运营人员的 inquiry_id 和 port_id 匹配（与运营询盘汇总保持一致）
+        // 先获取所有运营人员的 inquiry_id 和 port_id
+        $yy_admins_for_prod = Db::table('admin')
+            ->where($this->getOrgWhere($current_admin['org']))
+            ->where('is_open', '=', 1)
+            ->where('inquiry_id', '<>', '')
+            ->where('inquiry_id', '<>', null)
+            ->where('port_id', '<>', '')
+            ->where('port_id', '<>', null)
+            ->field('admin_id,inquiry_id,port_id')
+            ->select();
+        
+        $oper_prod = [];
+        if (!empty($yy_admins_for_prod)) {
+            // 构建运营人员的 inquiry_id 和 port_id 匹配条件
+            $yy_conditions = [];
+            foreach ($yy_admins_for_prod as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                // 为每个 port_id 构建 FIND_IN_SET 条件
+                $port_conditions = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                    }
+                }
+                
+                if (!empty($port_conditions)) {
+                    $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                    $yy_conditions[] = "(l.inquiry_id = {$admin_inquiry_id} AND {$port_where})";
+                }
+            }
+            
+            if (!empty($yy_conditions)) {
+                $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
+                // 处理 where 条件，确保 status 字段明确指定为 l.status（因为 crm_products 表也有 status 字段）
+                $oper_prod_where = [];
+                foreach ($l_where_sub as $condition) {
+                    if (is_array($condition) && isset($condition[0])) {
+                        $field_name = $condition[0];
+                        // 如果字段名是 status，明确指定为 l.status
+                        if ($field_name === 'status') {
+                            $oper_prod_where[] = ['l.status', $condition[1] ?? '=', $condition[2] ?? 1];
+                        } else {
+                            $oper_prod_where[] = $condition;
+                        }
+                    } elseif (is_callable($condition)) {
+                        $oper_prod_where[] = $condition;
+                    } else {
+                        $oper_prod_where[] = $condition;
+                    }
+                }
+                // 通过 JOIN crm_products 表获取产品名称
+                // 按产品名称分组，而不是按产品ID分组
+                $oper_prod = Db::table('crm_leads')
+                    ->alias('l')
+                    ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
+                    ->where($oper_prod_where)
+                    ->where('l.inquiry_id', '<>', '')
+                    ->where('l.inquiry_id', '<>', null)
+                    ->where('l.port_id', '<>', '')
+                    ->where('l.port_id', '<>', null)
+                    ->where('l.product_name', '<>', '')
+                    ->where('l.product_name', '<>', null)
+                    ->whereRaw($yy_where_raw)
+                    ->group('IFNULL(p.product_name, l.product_name)')
+                    ->field('IFNULL(p.product_name, l.product_name) as product_name,count(l.id) as count')
+                    ->order('count', 'desc')
+                    ->limit(10)
+                    ->select();
+            }
+        }
+        
+        //订单产品数据 - 通过来源端口匹配运营人员
+        // 先获取所有运营人员的 inquiry_id 和 port_id
+        $yy_admins_for_order = Db::table('admin')
+            ->where($this->getOrgWhere($current_admin['org']))
+            ->where('group_id', '=', $this->yygid)
+            ->where('is_open', '=', 1)
+            ->where('inquiry_id', '<>', '')
+            ->where('inquiry_id', '<>', null)
+            ->where('port_id', '<>', '')
+            ->where('port_id', '<>', null)
+            ->field('admin_id,inquiry_id,port_id')
+            ->select();
+        
+        $order_prod = [];
+        if (!empty($yy_admins_for_order)) {
+            // 构建运营人员的匹配条件
+            // 订单表的 source_port 是端口名称（文字），需要通过 crm_inquiry_port 表转换为端口ID
+            // 然后通过端口ID匹配 admin 表中的 port_id（多选值，使用 FIND_IN_SET）
+            $yy_conditions = [];
+            foreach ($yy_admins_for_order as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                // 获取该渠道下所有端口的名称列表
+                $port_names = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_info = Db::table('crm_inquiry_port')
+                            ->where('id', $port_id)
+                            ->where('inquiry_id', $admin_inquiry_id)
+                            ->field('port_name')
+                            ->find();
+                        if ($port_info && !empty($port_info['port_name'])) {
+                            $port_names[] = addslashes($port_info['port_name']); // 转义防止SQL注入
+                        }
+                    }
+                }
+                
+                if (!empty($port_names)) {
+                    // 构建端口名称匹配条件
+                    $port_conditions = [];
+                    foreach ($port_names as $port_name) {
+                        $port_conditions[] = "o.source_port = '{$port_name}'";
+                    }
+                    if (!empty($port_conditions)) {
+                        $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                        // 还需要匹配渠道：通过 source 字段（渠道名称）匹配
+                        $inquiry_info = Db::table('crm_inquiry')
+                            ->where('id', $admin_inquiry_id)
+                            ->field('inquiry_name')
+                            ->find();
+                        if ($inquiry_info && !empty($inquiry_info['inquiry_name'])) {
+                            $inquiry_name = addslashes($inquiry_info['inquiry_name']); // 转义防止SQL注入
+                            $yy_conditions[] = "(o.source = '{$inquiry_name}' AND {$port_where})";
+                        }
+                    }
+                }
+            }
+            
+            if (!empty($yy_conditions)) {
+                $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
+                // 统计订单表中的产品名称，按相同名称统计销量
+                // 优先从主表的 product_name 字段统计，如果为空则从明细表 crm_order_item 获取
+                // 先统计主表有 product_name 的订单
+                $order_prod_main = Db::table('crm_client_order')
+                    ->alias('o')
+                    ->where($o_where)
+                    ->whereRaw($yy_where_raw)
+                    ->where('o.product_name', '<>', '')
+                    ->where('o.product_name', '<>', null)
+                    ->group('o.product_name')
+                    ->field('o.product_name,count(o.id) as count')
+                    ->select();
+                
+                // 统计主表 product_name 为空，但从明细表获取的订单
+                // 通过 JOIN 订单明细表，获取产品名称
+                $order_prod_detail = Db::table('crm_client_order')
+                    ->alias('o')
+                    ->join('crm_order_item oi', 'o.id = oi.order_id', 'INNER')
+                    ->where($o_where)
+                    ->whereRaw($yy_where_raw)
+                    ->where(function($query) {
+                        $query->where('o.product_name', '')
+                            ->whereOr('o.product_name', null);
+                    })
+                    ->where('oi.product_name', '<>', '')
+                    ->where('oi.product_name', '<>', null)
+                    ->group('oi.product_name')
+                    ->field('oi.product_name,count(oi.id) as count')
+                    ->select();
+                
+                // 合并结果，按产品名称汇总
+                $order_prod_map = [];
+                foreach ($order_prod_main as $item) {
+                    $product_name = trim($item['product_name']);
+                    if (!empty($product_name)) {
+                        if (!isset($order_prod_map[$product_name])) {
+                            $order_prod_map[$product_name] = 0;
+                        }
+                        $order_prod_map[$product_name] += $item['count'];
+                    }
+                }
+                foreach ($order_prod_detail as $item) {
+                    $product_name = trim($item['product_name']);
+                    if (!empty($product_name)) {
+                        if (!isset($order_prod_map[$product_name])) {
+                            $order_prod_map[$product_name] = 0;
+                        }
+                        $order_prod_map[$product_name] += $item['count'];
+                    }
+                }
+                
+                // 转换为数组格式并排序
+                $order_prod = [];
+                foreach ($order_prod_map as $product_name => $count) {
+                    $order_prod[] = [
+                        'product_name' => $product_name,
+                        'count' => $count
+                    ];
+                }
+                // 按销量降序排序
+                usort($order_prod, function($a, $b) {
+                    return $b['count'] - $a['count'];
+                });
+                // 限制前10条
+                $order_prod = array_slice($order_prod, 0, 10);
+            }
+        }
 
-        $xp_count = Db::table('crm_leads')->where('status', 1)->where([$this->getClientimeWhere('month')])->where('oper_user', $current_admin['username'])->count();
-        $profit = Db::table('crm_client_order')->where([$this->buildTimeWhere('month', 'order_time')])->where('oper_user', $current_admin['username'])->sum('profit');
+        // 个人询盘统计 - 根据当前运营人员的 inquiry_id 和 port_id 匹配
+        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
+        $xp_count = 0;
+        $profit = 0;
+        
+        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+            // 匹配当前运营人员的 inquiry_id 和 port_id
+            // port_id 是逗号分隔的多选值，需要检查交集
+            $admin_port_ids = !empty($current_admin_info['port_id']) ? explode(',', $current_admin_info['port_id']) : [];
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', port_id) > 0";
+                }
+            }
+            
+            $xp_count = 0;
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                // 直接使用 buildTimeWhere 构建时间条件，避免闭包问题
+                $time_where_at = $this->buildTimeWhere('month', 'at_time');
+                $time_where_kh = $this->buildTimeWhere('month', 'to_kh_time');
+                $xp_count = Db::table('crm_leads')
+                    ->where('status', 1)
+                    ->where(function($query) use ($time_where_at, $time_where_kh) {
+                        $query->where([$time_where_at])->whereOr([$time_where_kh]);
+                    })
+                    ->where('inquiry_id', $current_admin_info['inquiry_id'])
+                    ->whereRaw($port_where)
+                    ->count();
+            }
+            
+            // 业绩统计 - 根据订单中的 inquiry_id 和 port_id 匹配
+            // 订单表通过 crm_contacts 表关联到 leads 表获取 inquiry_id 和 port_id
+            $timeWhere = $this->buildTimeWhere('month', 'o.order_time');
+            // port_id 是逗号分隔的多选值，需要检查交集
+            $admin_port_ids = !empty($current_admin_info['port_id']) ? explode(',', $current_admin_info['port_id']) : [];
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                }
+            }
+            
+            $profit = 0;
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                $profit = Db::table('crm_client_order')
+                    ->alias('o')
+                    ->join('crm_contacts c', 'c.contact_value = o.cphone AND c.is_delete = 0 AND c.contact_type IN (1,3)', 'LEFT')
+                    ->join('crm_leads l', 'c.leads_id = l.id', 'LEFT')
+                    ->where([$timeWhere])
+                    ->where('l.inquiry_id', $current_admin_info['inquiry_id'])
+                    ->whereRaw($port_where)
+                    ->sum('o.profit');
+            }
+        }
         $data['xp_count'] = $xp_count;
         $data['profit'] = $profit;
+
+        //总询盘统计 - 按渠道和端口统计
+        $total_inquiry_stats = $this->getTotalInquiryStats($l_where_sub);
 
         $data['yw_data']['list'] = $ywData;
         $data['yw_data']['total'] = $ywData_total;
@@ -495,6 +1142,7 @@ private function exportToExcel($data)
         $data['yy_data']['total'] = $yyData_total;
         $data['product_data']['oper_prod'] = $oper_prod;
         $data['product_data']['order_prod'] = $order_prod;
+        $data['total_inquiry_stats'] = $total_inquiry_stats;
 
         $data['org'] = trim($current_admin['org'], $this->org_fgx);
 
@@ -510,23 +1158,117 @@ private function exportToExcel($data)
         ];
         $keyword  = $params['keyword'] ?? [];
         $current_admin = Admin::getMyInfo();
+        $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
         $where = [$this->getOrgWhere($current_admin['org']), ['is_open', '=', 1]];
-        $l_where = [['oper_user', '=', $current_admin['username']], ['status', '=', 1]];
+        
+        // 判断当前用户是业务员还是运营人员
+        $is_yw = in_array($current_admin_info['group_id'] ?? 0, [$this->ywgid, $this->ywzgid]);
+        $is_yy = ($current_admin_info['group_id'] ?? 0) == $this->yygid;
+        
+        // 对于子查询，使用不带别名的条件
+        $l_where_sub = [['status', '=', 1]];
+        // 对于主查询，使用带别名的条件
+        $l_where = [['l.status', '=', 1]];
+        
+        // 根据用户类型添加不同的过滤条件
+        if ($is_yw) {
+            // 业务员：通过 pr_user 或 oper_user 匹配
+            $l_where_sub[] = ['pr_user', '=', $current_admin['username']];
+            $l_where[] = ['l.pr_user', '=', $current_admin['username']];
+        } elseif ($is_yy && !empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+            // 运营人员：通过 inquiry_id 和 port_id 匹配
+            $admin_port_ids = !empty($current_admin_info['port_id']) ? array_filter(explode(',', $current_admin_info['port_id'])) : [];
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', port_id) > 0";
+                }
+            }
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                // 对于子查询，使用闭包处理复杂条件
+                $l_where_sub[] = function($query) use ($current_admin_info, $port_where) {
+                    $query->where('inquiry_id', $current_admin_info['inquiry_id'])
+                        ->whereRaw($port_where);
+                };
+                // 对于主查询，直接添加条件
+                $l_where[] = ['l.inquiry_id', '=', $current_admin_info['inquiry_id']];
+                $l_where[] = function($query) use ($port_where) {
+                    $query->whereRaw(str_replace('port_id', 'l.port_id', $port_where));
+                };
+            }
+        }
+        
+        // 处理时间条件 - 对于子查询，直接使用 buildTimeWhere 构建条件，然后手动组合 OR
         if (!empty($keyword['timebucket'])) {
-            $l_where[] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+            $time_where_at = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
+            $time_where_kh = $this->buildTimeWhere($keyword['timebucket'], 'to_kh_time');
+            // 对于子查询，使用闭包组合时间条件
+            $l_where_sub[] = function($query) use ($time_where_at, $time_where_kh) {
+                $query->where([$time_where_at])->whereOr([$time_where_kh]);
+            };
+            // 对于主查询，使用 getClientimeWhere 方法
+            $l_where[] = $this->getClientimeWhere($keyword['timebucket'], 'l');
         }
         if (!empty($keyword['at_time'])) {
-            $l_where[] = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+            $time_where_at = $this->buildTimeWhere($keyword['at_time'], 'at_time');
+            $time_where_kh = $this->buildTimeWhere($keyword['at_time'], 'to_kh_time');
+            // 对于子查询，使用闭包组合时间条件
+            $l_where_sub[] = function($query) use ($time_where_at, $time_where_kh) {
+                $query->where([$time_where_at])->whereOr([$time_where_kh]);
+            };
+            // 对于主查询，使用 getClientimeWhere 方法
+            $l_where[] = $this->getClientimeWhere($keyword['at_time'], 'l');
         }
 
-        //业务询盘数据
+        //业务询盘数据 - 只显示业务员的数据
         $yw_where = array_merge($where, [['group_id', 'in', [$this->ywgid, $this->ywzgid]]]);
-        $ywData = $this->getLeadsSubQuery($l_where)->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->order('a.username')->select();
-        $ywData_total = $this->getLeadsSubQuery($l_where)->where('a.team_name', '<>', '')->where($yw_where)->group('a.team_name')->field('a.team_name,count(pr_user) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
+        $ywData = $this->getLeadsSubQuery($l_where_sub, 'pr_user')->where($yw_where)->group('a.username,a.team_name')->field('a.username,a.team_name,count(l.id) as yw_num')->order('yw_num desc')->order('a.team_name')->order('a.username')->select();
+        $ywData_total = $this->getLeadsSubQuery($l_where_sub, 'pr_user')->where('a.team_name', '<>', '')->where($yw_where)->group('a.team_name')->field('a.team_name,count(l.id) as yw_num')->order('yw_num desc')->order('a.team_name')->select();
 
-
-        //产品数据
-        $oper_prod = Db::table('crm_leads')->join('admin', 'crm_leads.pr_user = admin.username')->where($where)->where($l_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->select();
+        //询盘产品数据 - 根据当前用户的类型匹配
+        $oper_prod = [];
+        if ($is_yw) {
+            // 业务员：通过 pr_user 匹配
+            $oper_prod = Db::table('crm_leads')
+                ->alias('l')
+                ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
+                ->where($l_where)
+                ->where('l.product_name', '<>', '')
+                ->where('l.product_name', '<>', null)
+                ->group('IFNULL(p.product_name, l.product_name)')
+                ->field('IFNULL(p.product_name, l.product_name) as product_name,count(l.id) as count')
+                ->order('count', 'desc')
+                ->select();
+        } elseif ($is_yy && !empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+            // 运营人员：通过 inquiry_id 和 port_id 匹配
+            $admin_port_ids = !empty($current_admin_info['port_id']) ? array_filter(explode(',', $current_admin_info['port_id'])) : [];
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                }
+            }
+            
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                $oper_prod = Db::table('crm_leads')
+                    ->alias('l')
+                    ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
+                    ->where($l_where)
+                    ->where('l.inquiry_id', $current_admin_info['inquiry_id'])
+                    ->whereRaw($port_where)
+                    ->where('l.product_name', '<>', '')
+                    ->where('l.product_name', '<>', null)
+                    ->group('IFNULL(p.product_name, l.product_name)')
+                    ->field('IFNULL(p.product_name, l.product_name) as product_name,count(l.id) as count')
+                    ->order('count', 'desc')
+                    ->select();
+            }
+        }
+        
         $data['yw_data']['list'] = $ywData;
         $data['yw_data']['total'] = $ywData_total;
         $data['product_data']['oper_prod'] = $oper_prod;
@@ -535,14 +1277,159 @@ private function exportToExcel($data)
 
     private function getLeadsSubQuery($where, $field = 'pr_user')
     {
-        $op_field = $field == 'pr_user'?'oper_user': 'pr_user';
         $current_admin = Admin::getMyInfo();
         $users = Db::table('admin')->where($this->getOrgWhere($current_admin['org']))->column('username');
+        // 处理 where 条件，将带表别名的字段转换为不带别名的（因为子查询中没有别名）
+        $sub_where = [];
+        foreach ($where as $condition) {
+            if (is_array($condition) && isset($condition[0])) {
+                // 检查是否是嵌套数组格式（如 buildTimeWhere 返回的 [[$field, '>=', $start]]）
+                if (is_array($condition[0]) && isset($condition[0][0])) {
+                    // 嵌套数组格式
+                    $nested_condition = $condition[0];
+                    $field_name = $nested_condition[0];
+                    if (is_string($field_name) && strpos($field_name, '.') !== false) {
+                        $field_name = substr($field_name, strpos($field_name, '.') + 1);
+                    }
+                    $sub_where[] = [[$field_name, $nested_condition[1] ?? '=', $nested_condition[2] ?? null]];
+                } else {
+                    // 普通数组格式
+                    $field_name = $condition[0];
+                    // 如果字段名包含表别名（如 l.status），移除别名
+                    if (is_string($field_name) && strpos($field_name, '.') !== false) {
+                        $field_name = substr($field_name, strpos($field_name, '.') + 1);
+                    }
+                    // 处理 buildTimeWhere 返回的格式：[$field, 'between time', [...]]
+                    if (count($condition) == 3 && isset($condition[1]) && $condition[1] == 'between time') {
+                        $sub_where[] = [$field_name, $condition[1], $condition[2]];
+                    } else {
+                        $sub_where[] = [$field_name, $condition[1] ?? '=', $condition[2] ?? null];
+                    }
+                }
+            } elseif (is_callable($condition)) {
+                // 闭包条件：创建一个包装闭包，确保字段名不包含表别名
+                $sub_where[] = function($query) use ($condition) {
+                    // 直接调用原闭包，因为 getClientimeWhere 已经处理了别名（传递空字符串时）
+                    $condition($query);
+                };
+            } else {
+                $sub_where[] = $condition;
+            }
+        }
         $subQuery = Db::table('crm_leads')
-            ->where($where)->where($op_field,'in',$users)
+            ->where($sub_where)->where($field,'in',$users)
             ->buildSql();
         return Db::table('admin')->alias('a')
             ->leftJoin([$subQuery => 'l'], 'a.username = l.' . $field);
+    }
+
+    /**
+     * 获取运营人员询盘数据的子查询
+     * 根据 crm_leads 的 inquiry_id 和 port_id 匹配 admin 表中的运营人员
+     * port_id 是多选字段（逗号分隔），需要检查交集
+     */
+    private function getYyLeadsSubQuery($where)
+    {
+        $current_admin = Admin::getMyInfo();
+        
+        // 处理 where 条件，将带表别名的字段转换为不带别名的（因为子查询中没有别名）
+        $sub_where = [];
+        foreach ($where as $condition) {
+            if (is_array($condition) && isset($condition[0])) {
+                // 检查是否是嵌套数组格式（如 buildTimeWhere 返回的 [[$field, '>=', $start]]）
+                if (is_array($condition[0]) && isset($condition[0][0])) {
+                    // 嵌套数组格式
+                    $nested_condition = $condition[0];
+                    $field_name = $nested_condition[0];
+                    if (is_string($field_name) && strpos($field_name, '.') !== false) {
+                        $field_name = substr($field_name, strpos($field_name, '.') + 1);
+                    }
+                    $sub_where[] = [[$field_name, $nested_condition[1] ?? '=', $nested_condition[2] ?? null]];
+                } else {
+                    // 普通数组格式
+                    $field_name = $condition[0];
+                    // 如果字段名包含表别名（如 l.status），移除别名
+                    if (is_string($field_name) && strpos($field_name, '.') !== false) {
+                        $field_name = substr($field_name, strpos($field_name, '.') + 1);
+                    }
+                    // 处理 buildTimeWhere 返回的格式：[$field, 'between time', [...]]
+                    if (count($condition) == 3 && isset($condition[1]) && $condition[1] == 'between time') {
+                        $sub_where[] = [$field_name, $condition[1], $condition[2]];
+                    } else {
+                        $sub_where[] = [$field_name, $condition[1] ?? '=', $condition[2] ?? null];
+                    }
+                }
+            } elseif (is_callable($condition)) {
+                // 闭包条件：创建一个包装闭包，确保字段名不包含表别名
+                $sub_where[] = function($query) use ($condition) {
+                    // 直接调用原闭包，因为 getClientimeWhere 已经处理了别名（传递空字符串时）
+                    $condition($query);
+                };
+            } else {
+                $sub_where[] = $condition;
+            }
+        }
+        
+        // 构建子查询：查询所有符合条件的 leads（有 inquiry_id 和 port_id）
+        $subQuery = Db::table('crm_leads')
+            ->where($sub_where)
+            ->where('inquiry_id', '<>', '')
+            ->where('inquiry_id', '<>', null)
+            ->where('port_id', '<>', '')
+            ->where('port_id', '<>', null)
+            ->buildSql();
+        
+        // 先获取所有运营人员及其 port_id 列表，用于构建 JOIN 条件
+        // 只统计用户组是运营的人员（group_id = yygid）
+        $yy_admins = Db::table('admin')
+            ->where($this->getOrgWhere($current_admin['org']))
+            ->where('group_id', '=', $this->yygid)
+            ->where('inquiry_id', '<>', '')
+            ->where('inquiry_id', '<>', null)
+            ->where('port_id', '<>', '')
+            ->where('port_id', '<>', null)
+            ->where('is_open', '=', 1)
+            ->field('admin_id,inquiry_id,port_id')
+            ->select();
+        
+        // 构建 JOIN 条件：对于每个运营人员，检查其 port_id 是否与 leads 的 port_id 有交集
+        $joinConditions = [];
+        foreach ($yy_admins as $admin) {
+            $admin_inquiry_id = $admin['inquiry_id'];
+            $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+            
+            if (empty($admin_port_ids)) continue;
+            
+            // 为每个 port_id 构建 FIND_IN_SET 条件
+            $port_conditions = [];
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                }
+            }
+            
+            if (!empty($port_conditions)) {
+                $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                $joinConditions[] = "(a.admin_id = {$admin['admin_id']} AND l.inquiry_id = {$admin_inquiry_id} AND {$port_where})";
+            }
+        }
+        
+        if (empty($joinConditions)) {
+            return Db::table('admin')->alias('a')->where('1=0');
+        }
+        
+        $joinCondition = '(' . implode(' OR ', $joinConditions) . ')';
+        
+        return Db::table('admin')->alias('a')
+            ->leftJoin([$subQuery => 'l'], $joinCondition)
+            ->where($this->getOrgWhere($current_admin['org']))
+            ->where('a.group_id', '=', $this->yygid)
+            ->where('a.inquiry_id', '<>', '')
+            ->where('a.inquiry_id', '<>', null)
+            ->where('a.port_id', '<>', '')
+            ->where('a.port_id', '<>', null)
+            ->where('a.is_open', '=', 1);
     }
 
     public function getProdAll()
@@ -567,10 +1454,227 @@ private function exportToExcel($data)
             $o_where[] = $this->buildTimeWhere($time, 'order_time');
         }
         if ($type == 'oper') {
-            $l_where[] = ['status', '=', 1];
-            $data = Db::table('crm_leads')->join('admin', 'crm_leads.pr_user = admin.username')->where($where)->where($l_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->select();
+            // 询盘产品数据 - 根据运营人员的 inquiry_id 和 port_id 匹配（与运营询盘汇总保持一致）
+            $current_admin = Admin::getMyInfo();
+            // 先获取所有运营人员的 inquiry_id 和 port_id
+            $yy_admins_for_prod = Db::table('admin')
+                ->where($this->getOrgWhere($current_admin['org']))
+                ->where('is_open', '=', 1)
+                ->where('inquiry_id', '<>', '')
+                ->where('inquiry_id', '<>', null)
+                ->where('port_id', '<>', '')
+                ->where('port_id', '<>', null)
+                ->field('admin_id,inquiry_id,port_id')
+                ->select();
+            
+            $data = [];
+            if (!empty($yy_admins_for_prod)) {
+                // 构建运营人员的 inquiry_id 和 port_id 匹配条件
+                $yy_conditions = [];
+                foreach ($yy_admins_for_prod as $admin) {
+                    $admin_inquiry_id = $admin['inquiry_id'];
+                    $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                    
+                    if (empty($admin_port_ids)) continue;
+                    
+                    // 为每个 port_id 构建 FIND_IN_SET 条件
+                    $port_conditions = [];
+                    foreach ($admin_port_ids as $port_id) {
+                        $port_id = trim($port_id);
+                        if ($port_id) {
+                            $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                        }
+                    }
+                    
+                    if (!empty($port_conditions)) {
+                        $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                        $yy_conditions[] = "(l.inquiry_id = {$admin_inquiry_id} AND {$port_where})";
+                    }
+                }
+                
+                if (!empty($yy_conditions)) {
+                    $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
+                    // 处理时间条件，转换为不带别名的格式，但 status 字段需要明确指定为 l.status
+                    $l_where_sub = [];
+                    foreach ($l_where as $condition) {
+                        if (is_array($condition) && isset($condition[0])) {
+                            $field_name = $condition[0];
+                            // 如果字段名是 status，明确指定为 l.status（因为 crm_products 表也有 status 字段）
+                            if ($field_name === 'status' || $field_name === 'l.status') {
+                                $l_where_sub[] = ['l.status', $condition[1] ?? '=', $condition[2] ?? 1];
         } else {
-            $data = Db::table('crm_client_order')->join('admin', 'crm_client_order.oper_user = admin.username')->where($where)->where($o_where)->where('product_name', '<>', '')->group('product_name')->field('product_name,count(product_name) as count')->order('count', 'desc')->select();
+                                // 如果字段名包含表别名（如 l.at_time），移除别名
+                                if (is_string($field_name) && strpos($field_name, '.') !== false) {
+                                    $field_name = substr($field_name, strpos($field_name, '.') + 1);
+                                }
+                                // 处理 buildTimeWhere 返回的格式
+                                if (count($condition) == 3 && isset($condition[1]) && $condition[1] == 'between time') {
+                                    $l_where_sub[] = [$field_name, $condition[1], $condition[2]];
+                                } else {
+                                    $l_where_sub[] = [$field_name, $condition[1] ?? '=', $condition[2] ?? null];
+                                }
+                            }
+                        } elseif (is_callable($condition)) {
+                            // 闭包条件：直接使用
+                            $l_where_sub[] = function($query) use ($condition) {
+                                $condition($query);
+                            };
+                        } else {
+                            $l_where_sub[] = $condition;
+                        }
+                    }
+                    // 添加 status 条件，明确指定为 l.status（因为 crm_products 表也有 status 字段）
+                    $l_where_sub[] = ['l.status', '=', 1];
+                    
+                    // 通过 JOIN crm_products 表获取产品名称
+                    // 按产品名称分组，而不是按产品ID分组
+                    $data = Db::table('crm_leads')
+                        ->alias('l')
+                        ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
+                        ->where($l_where_sub)
+                        ->where('l.inquiry_id', '<>', '')
+                        ->where('l.inquiry_id', '<>', null)
+                        ->where('l.port_id', '<>', '')
+                        ->where('l.port_id', '<>', null)
+                        ->where('l.product_name', '<>', '')
+                        ->where('l.product_name', '<>', null)
+                        ->whereRaw($yy_where_raw)
+                        ->group('IFNULL(p.product_name, l.product_name)')
+                        ->field('IFNULL(p.product_name, l.product_name) as product_name,count(l.id) as count')
+                        ->order('count', 'desc')
+                        ->select();
+                }
+            }
+        } else {
+            //订单产品数据 - 通过来源端口匹配运营人员
+            // 先获取所有运营人员的 inquiry_id 和 port_id
+            $yy_admins_for_order = Db::table('admin')
+                ->where($this->getOrgWhere($current_admin['org']))
+                ->where('group_id', '=', $this->yygid)
+                ->where('is_open', '=', 1)
+                ->where('inquiry_id', '<>', '')
+                ->where('inquiry_id', '<>', null)
+                ->where('port_id', '<>', '')
+                ->where('port_id', '<>', null)
+                ->field('admin_id,inquiry_id,port_id')
+                ->select();
+            
+            $data = [];
+            if (!empty($yy_admins_for_order)) {
+                // 构建运营人员的匹配条件
+                // 订单表的 source_port 是端口名称（文字），需要通过 crm_inquiry_port 表转换为端口ID
+                // 然后通过端口ID匹配 admin 表中的 port_id（多选值，使用 FIND_IN_SET）
+                $yy_conditions = [];
+                foreach ($yy_admins_for_order as $admin) {
+                    $admin_inquiry_id = $admin['inquiry_id'];
+                    $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                    
+                    if (empty($admin_port_ids)) continue;
+                    
+                    // 获取该渠道下所有端口的名称列表
+                    $port_names = [];
+                    foreach ($admin_port_ids as $port_id) {
+                        $port_id = trim($port_id);
+                        if ($port_id) {
+                            $port_info = Db::table('crm_inquiry_port')
+                                ->where('id', $port_id)
+                                ->where('inquiry_id', $admin_inquiry_id)
+                                ->field('port_name')
+                                ->find();
+                            if ($port_info && !empty($port_info['port_name'])) {
+                                $port_names[] = addslashes($port_info['port_name']); // 转义防止SQL注入
+                            }
+                        }
+                    }
+                    
+                    if (!empty($port_names)) {
+                        // 构建端口名称匹配条件
+                        $port_conditions = [];
+                        foreach ($port_names as $port_name) {
+                            $port_conditions[] = "o.source_port = '{$port_name}'";
+                        }
+                        if (!empty($port_conditions)) {
+                            $port_where = '(' . implode(' OR ', $port_conditions) . ')';
+                            // 还需要匹配渠道：通过 source 字段（渠道名称）匹配
+                            $inquiry_info = Db::table('crm_inquiry')
+                                ->where('id', $admin_inquiry_id)
+                                ->field('inquiry_name')
+                                ->find();
+                            if ($inquiry_info && !empty($inquiry_info['inquiry_name'])) {
+                                $inquiry_name = addslashes($inquiry_info['inquiry_name']); // 转义防止SQL注入
+                                $yy_conditions[] = "(o.source = '{$inquiry_name}' AND {$port_where})";
+                            }
+                        }
+                    }
+                }
+                
+                if (!empty($yy_conditions)) {
+                    $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
+                    // 统计订单表中的产品名称，按相同名称统计销量
+                    // 优先从主表的 product_name 字段统计，如果为空则从明细表 crm_order_item 获取
+                    // 先统计主表有 product_name 的订单
+                    $order_prod_main = Db::table('crm_client_order')
+                        ->alias('o')
+                        ->where($o_where)
+                        ->whereRaw($yy_where_raw)
+                        ->where('o.product_name', '<>', '')
+                        ->where('o.product_name', '<>', null)
+                        ->group('o.product_name')
+                        ->field('o.product_name,count(o.id) as count')
+                        ->select();
+                    
+                    // 统计主表 product_name 为空，但从明细表获取的订单
+                    // 通过 JOIN 订单明细表，获取产品名称
+                    $order_prod_detail = Db::table('crm_client_order')
+                        ->alias('o')
+                        ->join('crm_order_item oi', 'o.id = oi.order_id', 'INNER')
+                        ->where($o_where)
+                        ->whereRaw($yy_where_raw)
+                        ->where(function($query) {
+                            $query->where('o.product_name', '')
+                                ->whereOr('o.product_name', null);
+                        })
+                        ->where('oi.product_name', '<>', '')
+                        ->where('oi.product_name', '<>', null)
+                        ->group('oi.product_name')
+                        ->field('oi.product_name,count(oi.id) as count')
+                        ->select();
+                    
+                    // 合并结果，按产品名称汇总
+                    $order_prod_map = [];
+                    foreach ($order_prod_main as $item) {
+                        $product_name = trim($item['product_name']);
+                        if (!empty($product_name)) {
+                            if (!isset($order_prod_map[$product_name])) {
+                                $order_prod_map[$product_name] = 0;
+                            }
+                            $order_prod_map[$product_name] += $item['count'];
+                        }
+                    }
+                    foreach ($order_prod_detail as $item) {
+                        $product_name = trim($item['product_name']);
+                        if (!empty($product_name)) {
+                            if (!isset($order_prod_map[$product_name])) {
+                                $order_prod_map[$product_name] = 0;
+                            }
+                            $order_prod_map[$product_name] += $item['count'];
+                        }
+                    }
+                    
+                    // 转换为数组格式并排序
+                    $data = [];
+                    foreach ($order_prod_map as $product_name => $count) {
+                        $data[] = [
+                            'product_name' => $product_name,
+                            'count' => $count
+                        ];
+                    }
+                    // 按销量降序排序
+                    usort($data, function($a, $b) {
+                        return $b['count'] - $a['count'];
+                    });
+                }
+            }
         }
         return  json([
             'code' => 200,
@@ -611,36 +1715,89 @@ private function exportToExcel($data)
     {
         $current_admin = Admin::getMyInfo();
         $a_where = [$this->getOrgWhere($current_admin['org']), ['is_open', '=', 1], ['group_id', 'in', [$this->ywgid, $this->ywzgid, $this->yygid]]];
-        $l_where = [['status', '=', 1], $this->getClientimeWhere($timebucket)];
+        $l_where = [['status', '=', 1]];
         // 时间条件
         if (!empty($timebucket)) {
             $l_where[] = $this->getClientimeWhere($timebucket);
         }
         //时间段内所有客户
-        $leads = Db::table('crm_leads')->where($l_where)->fetchCollection()->select();
-
-        //所有业务和运营
-        $admins = Db::table('admin')
-            ->where($a_where)
-            ->where('username', '<>', '')
-            ->order('team_name,channel,username')->fetchCollection()
+        $leads = Db::table('crm_leads')
+            ->where($l_where)
+            ->where('inquiry_id', '<>', '')
+            ->where('inquiry_id', '<>', null)
+            ->where('port_id', '<>', '')
+            ->where('port_id', '<>', null)
+            ->fetchCollection()
             ->select();
 
-        //所有运营
-        $yy_admins = $admins->where('group_id', $this->yygid)->toArray();
         //所有业务
-        $yw_admins = $admins->where('group_id', 'in', [$this->ywgid, $this->ywzgid])->toArray();
-        // $cross=[['姓名',...$yy_admins,'总计']];
-        // 构建交叉数据
+        $yw_where = array_merge($a_where, [['group_id', 'in', [$this->ywgid, $this->ywzgid]]]);
+        $yw_admins = Db::table('admin')
+            ->where($yw_where)
+            ->where('username', '<>', '')
+            ->order('team_name,username')
+            ->select();
+
+        //所有运营 - 根据 inquiry_id 和 port_id 有值的记录
+        $yy_where = array_merge($a_where, [
+            ['inquiry_id', '<>', ''],
+            ['inquiry_id', '<>', null],
+            ['port_id', '<>', ''],
+            ['port_id', '<>', null]
+        ]);
+        $yy_admins = Db::table('admin')
+            ->where($yy_where)
+            ->where('username', '<>', '')
+            ->order('team_name,username')
+            ->select();
+        
+        // 构建运营人员映射表 - 由于 port_id 是逗号分隔的多选值，需要检查交集
+        $yy_map = [];
+        foreach ($yy_admins as $yy_admin) {
+            $admin_inquiry_id = $yy_admin['inquiry_id'];
+            $admin_port_ids = !empty($yy_admin['port_id']) ? array_filter(explode(',', $yy_admin['port_id'])) : [];
+            
+            // 为每个运营人员创建一个键，包含 inquiry_id 和所有 port_id
+            foreach ($admin_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $key = $admin_inquiry_id . '_' . $port_id;
+                    if (!isset($yy_map[$key])) {
+                        $yy_map[$key] = [];
+                    }
+                    $yy_map[$key][] = $yy_admin['username'];
+                }
+            }
+        }
+        
+        // 构建交叉数据 - 根据 inquiry_id 和 port_id 匹配运营人员
         $cross = [];
         foreach ($leads as $lead) {
+            if (empty($lead['pr_user'])) continue;
+            
+            // 根据 lead 的 inquiry_id 和 port_id 找到对应的运营人员
+            // port_id 可能是逗号分隔的多个值
+            $lead_inquiry_id = $lead['inquiry_id'];
+            $lead_port_ids = !empty($lead['port_id']) ? array_filter(explode(',', $lead['port_id'])) : [];
+            
+            foreach ($lead_port_ids as $port_id) {
+                $port_id = trim($port_id);
+                if ($port_id) {
+                    $key = $lead_inquiry_id . '_' . $port_id;
+                    if (isset($yy_map[$key])) {
+                        // 可能有多个运营人员匹配同一个 port_id
+                        foreach ($yy_map[$key] as $yy_username) {
             if (!isset($cross[$lead['pr_user']])) {
                 $cross[$lead['pr_user']] = [];
             }
-            if (!isset($cross[$lead['pr_user']][$lead['oper_user']])) {
-                $cross[$lead['pr_user']][$lead['oper_user']] = 1;
+                            if (!isset($cross[$lead['pr_user']][$yy_username])) {
+                                $cross[$lead['pr_user']][$yy_username] = 1;
             } else {
-                $cross[$lead['pr_user']][$lead['oper_user']]++;
+                                $cross[$lead['pr_user']][$yy_username]++;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -654,6 +1811,9 @@ private function exportToExcel($data)
             $headers[] = $yy_admin['username'];
         }
         $headers[] = '合计';
+        
+        // 转换 yy_admins 为数组格式以便后续使用
+        $yy_admins_array = $yy_admins;
 
         // 按团队处理业务人员
         $teams = [];
@@ -720,7 +1880,7 @@ private function exportToExcel($data)
     {
         $current_admin = Admin::getMyInfo();
         $a_where = [$this->getOrgWhere($current_admin['org']), ['is_open', '=', 1], ['group_id', 'in', [$this->ywgid, $this->ywzgid, $this->yygid]]];
-        $l_where = [['status', '=', 1], $this->getClientimeWhere($timebucket)];
+        $l_where = [['status', '=', 1]];
         // 时间条件
         if (!empty($timebucket)) {
             $l_where[] = $this->getClientimeWhere($timebucket);
@@ -883,5 +2043,84 @@ private function exportToExcel($data)
         $data['grandTotal'] = $grand_total;
 
         return $data;
+    }
+
+    /**
+     * 获取总询盘统计
+     * 优先统计各个渠道的端口下的询盘数据，如果该渠道的端口为空，则统计该渠道的数据
+     */
+    private function getTotalInquiryStats($l_where_sub)
+    {
+        $current_admin = Admin::getMyInfo();
+        $stats = [];
+        
+        // 获取所有渠道（启用状态的）
+        $inquiries = Db::table('crm_inquiry')
+            ->where($this->getOrgWhere($current_admin['org']))
+            ->where('status', '=', 0)
+            ->field('id, inquiry_name')
+            ->order('inquiry_name', 'asc')
+            ->select();
+        
+        foreach ($inquiries as $inquiry) {
+            $inquiry_id = $inquiry['id'];
+            $inquiry_name = $inquiry['inquiry_name'];
+            
+            // 获取该渠道下的所有端口（启用状态的）
+            $ports = Db::table('crm_inquiry_port')
+                ->where($this->getOrgWhere($current_admin['org']))
+                ->where('inquiry_id', '=', $inquiry_id)
+                ->where('status', '=', 0)
+                ->field('id, port_name')
+                ->order('port_name', 'asc')
+                ->select();
+            
+            if (!empty($ports)) {
+                // 如果有端口，按端口统计
+                foreach ($ports as $port) {
+                    $port_id = $port['id'];
+                    $port_name = $port['port_name'];
+                    
+                    // 统计该端口下的询盘数量
+                    // port_id 在 crm_leads 中是逗号分隔的多选值，需要使用 FIND_IN_SET
+                    $count = Db::table('crm_leads')
+                        ->where($l_where_sub)
+                        ->where('inquiry_id', '=', $inquiry_id)
+                        ->whereRaw("FIND_IN_SET('{$port_id}', port_id) > 0")
+                        ->count();
+                    
+                    if ($count > 0) {
+                        $stats[] = [
+                            'channel_name' => $inquiry_name,
+                            'port_name' => $port_name,
+                            'display_name' => $inquiry_name . ' - ' . $port_name,
+                            'count' => $count
+                        ];
+                    }
+                }
+            } else {
+                // 如果没有端口，统计整个渠道的询盘数量
+                $count = Db::table('crm_leads')
+                    ->where($l_where_sub)
+                    ->where('inquiry_id', '=', $inquiry_id)
+                    ->count();
+                
+                if ($count > 0) {
+                    $stats[] = [
+                        'channel_name' => $inquiry_name,
+                        'port_name' => '',
+                        'display_name' => $inquiry_name,
+                        'count' => $count
+                    ];
+                }
+            }
+        }
+        
+        // 按数量降序排序
+        usort($stats, function($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+        
+        return $stats;
     }
 }
