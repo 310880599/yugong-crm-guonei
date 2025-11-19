@@ -45,6 +45,20 @@
         // 全局变量：存储客户验证状态
         var customerValidated = false;
         
+        // **加粗产品下拉中括号内的分类名称部分** - 移到全局作用域
+        function boldCategory($select) {
+            // 找到 LayUI 渲染后下拉的所有选项元素，并将括号内的文字加粗
+            var $options = $select.next('.layui-form-select').find('dl dd');
+            $options.each(function () {
+                var text = $(this).text();
+                var match = text.match(/^(.*)\s*\((.+)\)\s*$/);
+                if (match) {
+                    // 用<span class="cat-bold">包裹分类名称部分
+                    $(this).html(match[1] + ' (<span class="cat-bold">' + match[2] + '</span>)');
+                }
+            });
+        }
+        
         // AJAX function to fetch client info by contact (no changes needed here)
         function changeyewu() {
             var contact = $("#contact").val();
@@ -469,6 +483,38 @@
                     <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%);">%</span>
                 </div>
             </div>
+            <!-- 客户微信回执图 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户微信回执图</label>
+                <div class="layui-input-4">
+                    <div class="layui-upload">
+                        <button type="button" class="layui-btn" id="upload_wechat_receipt">
+                            <i class="layui-icon">&#xe67c;</i>上传图片
+                        </button>
+                        <div class="layui-upload-list">
+                            <img class="layui-upload-img" id="wechat_receipt_preview" style="max-width: 200px; max-height: 200px; display: none;">
+                            <p id="wechat_receipt_text"></p>
+                            <input type="hidden" name="wechat_receipt_image" id="wechat_receipt_image" value="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 产品询盘分配图 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">产品询盘分配图</label>
+                <div class="layui-input-4">
+                    <div class="layui-upload">
+                        <button type="button" class="layui-btn" id="upload_inquiry_assign">
+                            <i class="layui-icon">&#xe67c;</i>上传图片
+                        </button>
+                        <div class="layui-upload-list">
+                            <img class="layui-upload-img" id="inquiry_assign_preview" style="max-width: 200px; max-height: 200px; display: none;">
+                            <p id="inquiry_assign_text"></p>
+                            <input type="hidden" name="inquiry_assign_image" id="inquiry_assign_image" value="">
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- 备注 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">备注</label>
@@ -487,11 +533,12 @@
     {include file="common/foot"/}
 
     <script>
-        layui.use(['form', 'layer', 'laydate'], function () {
+        layui.use(['form', 'layer', 'laydate', 'upload'], function () {
             var form = layui.form,
                 layer = layui.layer,
                 $ = layui.jquery,
-                laydate = layui.laydate;
+                laydate = layui.laydate,
+                upload = layui.upload;
             // 日期控件初始化
             laydate.render({
                 elem: '#orderTime',
@@ -526,21 +573,11 @@
 
 
 
-        // **加粗产品下拉中括号内的分类名称部分** 
-        function boldCategory($select) {
-            // 找到 LayUI 渲染后下拉的所有选项元素，并将括号内的文字加粗
-            var $options = $select.next('.layui-form-select').find('dl dd');
-            $options.each(function () {
-                var text = $(this).text();
-                var match = text.match(/^(.*)\s*\((.+)\)\s*$/);
-                if (match) {
-                    // 用<span class="cat-bold">包裹分类名称部分
-                    $(this).html(match[1] + ' (<span class="cat-bold">' + match[2] + '</span>)');
-                }
-            });
-        }
         // 对初始产品名称下拉选项调用 boldCategory，使分类名加粗
-        boldCategory($('select[name="product_name[]"]'));
+        // 注意：boldCategory 函数已移到全局作用域
+        setTimeout(function() {
+            boldCategory($('select[name="product_name[]"]'));
+        }, 100);
 
         // 动态根据询盘来源过滤运营人员和运营端口选项
         var yyList = {$yyList|raw};
@@ -710,13 +747,53 @@
             updateTotals();
         });
 
-        // 页面加载完成时，自动计算初始订单金额、利润和利润率
-        updateTotals();
-
-        // 当运费、税费、调试费或佣金字段的值发生变化时，实时更新总计、利润和利润率
-        $('#shipping_cost, #tax_amount, #debugging_cost, #sales_commission').on('input', function () {
+            // 页面加载完成时，自动计算初始订单金额、利润和利润率
             updateTotals();
-        });
+
+            // 当运费、税费、调试费或佣金字段的值发生变化时，实时更新总计、利润和利润率
+            $('#shipping_cost, #tax_amount, #debugging_cost, #sales_commission').on('input', function () {
+                updateTotals();
+            });
+
+            // 客户微信回执图上传
+            upload.render({
+                elem: '#upload_wechat_receipt',
+                url: '{:url("UpFiles/upload")}',
+                accept: 'images',
+                exts: 'jpg|jpeg|png',
+                done: function(res){
+                    if(res.code == 1){
+                        $('#wechat_receipt_image').val(res.url);
+                        $('#wechat_receipt_preview').attr('src', res.url).show();
+                        $('#wechat_receipt_text').html('<span style="color: #5FB878;">上传成功</span>');
+                    } else {
+                        $('#wechat_receipt_text').html('<span style="color: #FF5722;">上传失败：' + (res.info || '未知错误') + '</span>');
+                    }
+                },
+                error: function(){
+                    $('#wechat_receipt_text').html('<span style="color: #FF5722;">上传失败</span>');
+                }
+            });
+
+            // 产品询盘分配图上传
+            upload.render({
+                elem: '#upload_inquiry_assign',
+                url: '{:url("UpFiles/upload")}',
+                accept: 'images',
+                exts: 'jpg|jpeg|png',
+                done: function(res){
+                    if(res.code == 1){
+                        $('#inquiry_assign_image').val(res.url);
+                        $('#inquiry_assign_preview').attr('src', res.url).show();
+                        $('#inquiry_assign_text').html('<span style="color: #5FB878;">上传成功</span>');
+                    } else {
+                        $('#inquiry_assign_text').html('<span style="color: #FF5722;">上传失败：' + (res.info || '未知错误') + '</span>');
+                    }
+                },
+                error: function(){
+                    $('#inquiry_assign_text').html('<span style="color: #FF5722;">上传失败</span>');
+                }
+            });
 
 
 

@@ -226,6 +226,28 @@
                     { field: 'margin_rate', title: '利润率(%)', totalRow: true },
                     { field: 'order_time', title: '成交时间' },
                     { field: 'source', title: '询盘来源' },
+                    { 
+                        field: 'wechat_receipt_image', 
+                        title: '客户微信回执图', 
+                        width: 120,
+                        templet: function(res){
+                            if(res.wechat_receipt_image){
+                                return '<img src="' + res.wechat_receipt_image + '" style="max-width: 100px; max-height: 100px; cursor: pointer;" onclick="previewImage(\'' + res.wechat_receipt_image + '\')">';
+                            }
+                            return '-';
+                        }
+                    },
+                    { 
+                        field: 'inquiry_assign_image', 
+                        title: '产品询盘分配图', 
+                        width: 120,
+                        templet: function(res){
+                            if(res.inquiry_assign_image){
+                                return '<img src="' + res.inquiry_assign_image + '" style="max-width: 100px; max-height: 100px; cursor: pointer;" onclick="previewImage(\'' + res.inquiry_assign_image + '\')">';
+                            }
+                            return '-';
+                        }
+                    },
                     { field: 'pr_user', title: '负责人', hide: false },
                     { field: 'team_name', title: '团队', hide: false },
                 ]],
@@ -279,6 +301,19 @@
         /*添加*/
         function resetForm() {
             document.getElementById('searchForm').reset();
+        }
+        
+        // 预览图片
+        function previewImage(url) {
+            if (!url) return;
+            layer.open({
+                type: 1,
+                title: '图片预览',
+                shadeClose: true,
+                shade: 0.8,
+                area: ['90%', '90%'],
+                content: '<div style="text-align: center; padding: 20px;"><img src="' + url + '" style="max-width: 100%; max-height: 100%;"></div>'
+            });
         }
     </script>
 
