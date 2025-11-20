@@ -14,39 +14,144 @@
     <link rel="stylesheet" href="/static/common/css/font.css" media="all">
 
     <style>
-
-        .filtrate-warp{
-            margin-bottom: 10px;
+        /* 隐藏模板脚本标签，避免在页面上显示为代码 */
+        script[type="text/html"] {
+            display: none !important;
         }
 
-        .filtrate-warp .title{
-            padding: 5px 12px 7px 12px;
+        /* 筛选区域样式优化 */
+        .filtrate-warp {
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .filtrate-warp .title {
+            padding: 8px 16px;
             font-size: 14px;
-            font-weight: normal;
+            font-weight: 500;
             text-align: left;
             cursor: pointer;
             width: 90px;
-            background-color: transparent!important;
-            color: black!important;
+            background-color: transparent !important;
+            color: #333 !important;
+            border-radius: 4px;
+            transition: all 0.3s ease;
         }
 
-        .filtrate-warp .title:hover{
-            color: black;
+        .filtrate-warp .title:hover {
+            color: #1890ff !important;
+            background-color: #f0f7ff !important;
         }
 
-        .filtrate-warp .flag{
-            padding: 6px 12px 6px 12px;
+        .filtrate-warp .flag {
+            padding: 8px 16px;
             cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
         }
 
-        .filtrate-warp .flag:hover{
-            color: black;
+        .filtrate-warp .flag:hover {
+            color: #1890ff;
+            background-color: #f0f7ff;
         }
 
-        .filtrate-warp .layui-badge:hover{
-            color: white!important;
+        .filtrate-warp .layui-badge:hover {
+            color: white !important;
+            transform: scale(1.05);
+            transition: transform 0.2s ease;
         }
 
+        /* 表格样式优化 */
+        .layui-table {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .layui-table thead tr {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .layui-table thead th {
+            color: #fff;
+            font-weight: 600;
+            padding: 15px 10px;
+        }
+
+        .layui-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .layui-table tbody tr:hover {
+            background-color: #f5f7fa;
+            transform: scale(1.01);
+        }
+
+        .layui-table tbody td {
+            padding: 12px 10px;
+        }
+
+        /* 按钮样式优化 */
+        .layui-btn {
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .layui-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .layui-btn-xs {
+            padding: 4px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            margin: 0 3px;
+            line-height: 14px !important;
+        }
+
+        /* 工具栏按钮组优化 */
+        #topBtn {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        #topBtn .layui-btn {
+            margin: 0;
+        }
+
+        /* 主容器优化 */
+        .admin-main {
+            padding: 15px;
+            background: #f5f7fa;
+            border-radius: 8px;
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+            .layui-table {
+                font-size: 12px;
+            }
+
+            .layui-btn-xs {
+                padding: 2px 8px;
+                font-size: 11px;
+            }
+
+            #topBtn {
+                padding: 10px;
+            }
+        }
+
+        /* 加载动画优化 */
+        .layui-layer-loading {
+            border-radius: 50%;
+        }
     </style>
 
 </head>

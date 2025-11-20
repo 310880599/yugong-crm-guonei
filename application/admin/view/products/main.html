@@ -1,6 +1,212 @@
 {include file="common/head"/}
 <link rel="stylesheet" type="text/css" href="/static/admin/css/admin.css" />
 <link rel="stylesheet" type="text/css" href="/static/admin/css/panel.css" />
+<style>
+    /* 隐藏模板脚本标签，避免在页面上显示为代码 */
+    script[type="text/html"] {
+        display: none !important;
+    }
+
+    /* 高级查询区域优化 */
+    .layui-elem-field {
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e8e8e8;
+        overflow: hidden;
+        background: #fafafa;
+    }
+
+    .layui-elem-field legend {
+        font-size: 16px;
+        font-weight: 600;
+        background: #6695ea;
+        border-radius: 8px;
+        color: #fff;
+        padding: 10px 15px;
+    }
+
+    .layui-form-label {
+        font-weight: 500;
+        color: #555;
+    }
+
+    .layui-input, .layui-select {
+        border-radius: 4px;
+        border: 1px solid #d9d9d9;
+        transition: all 0.3s ease;
+    }
+
+    .layui-input:focus, .layui-select:focus {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+    }
+
+    /* 查询按钮优化 */
+    .layuiadmin-btn-list {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .layuiadmin-btn-list:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+    }
+
+    /* 卡片头部样式优化 */
+    .layui-card-header.tongji {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .layui-card-header.tongji i {
+        color: #fff !important;
+    }
+
+    .layui-card-header.tongji button {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #fff;
+        transition: all 0.3s ease;
+    }
+
+    .layui-card-header.tongji button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 自定义搜索框样式优化 */
+    .custom-select-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+
+    .custom-select-search {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #d9d9d9;
+        border-radius: 4px;
+        height: 32px;
+        line-height: 20px;
+        box-sizing: border-box;
+        transition: all 0.3s ease;
+    }
+
+    .custom-select-search:focus {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+        outline: none;
+    }
+
+    .custom-select-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #d9d9d9;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .custom-select-dropdown div {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.2s ease;
+    }
+
+    .custom-select-dropdown div:hover {
+        background-color: #f0f7ff;
+        color: #1890ff;
+    }
+
+    .custom-select-dropdown div:last-child {
+        border-bottom: none;
+    }
+
+    /* 滚动条美化 */
+    .custom-select-dropdown::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-select-dropdown::-webkit-scrollbar-thumb {
+        background-color: #888;
+        border-radius: 3px;
+    }
+
+    .custom-select-dropdown::-webkit-scrollbar-thumb:hover {
+        background-color: #555;
+    }
+
+    .custom-select-dropdown::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    /* 主容器优化 */
+    .admin-main {
+        padding: 15px;
+        background: #f5f7fa;
+        border-radius: 8px;
+    }
+
+    /* 行间距优化 */
+    .layui-row.layui-col-space15 {
+        margin-bottom: 20px;
+    }
+
+    /* 按钮样式优化 */
+    .layui-btn {
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .layui-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 响应式优化 */
+    @media (max-width: 768px) {
+        .layui-form-item {
+            margin-bottom: 10px;
+        }
+
+        .layui-col-md8,
+        .layui-col-md4 {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .layui-card-header.tongji {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .layui-card-header.tongji button {
+            width: 100%;
+        }
+    }
+
+    /* 加载动画优化 */
+    .layui-layer-loading {
+        border-radius: 50%;
+    }
+</style>
 <div class="admin-main layui-anim layui-anim-upbit">
 
     <!--  核心指标 -->
@@ -254,7 +460,7 @@
             // 创建搜索输入框
             var $searchInput = $('<input type="text" class="custom-select-search" placeholder="' + placeholder + '" ' +
                 'id="' + id + '"' +
-                'style="width: 100%; padding: 6px 8px; border: 1px solid #e6e6e6; border-radius: 2px; height: 32px; line-height: 20px; box-sizing: border-box;">');
+                'style="width: 100%; padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 4px; height: 32px; line-height: 20px; box-sizing: border-box;">');
             // 克隆原始 select 并设置为透明
             var $originalSelect = $select.clone();
             $originalSelect.addClass('custom-select-original');
@@ -269,7 +475,7 @@
             });
 
             // 创建下拉框
-            var $dropdown = $('<div class="custom-select-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e6e6e6; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000; display: none;"></div>');
+            var $dropdown = $('<div class="custom-select-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d9d9d9; border-top: none; border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);"></div>');
 
             // 组装元素
             $wrapper.append($searchInput);
@@ -302,17 +508,29 @@
                 $dropdown.empty();
 
                 if (filteredOptions.length === 0) {
-                    $dropdown.append('<div style="padding: 8px; color: #999;">无匹配结果</div>');
+                    $dropdown.append('<div style="padding: 8px 12px; color: #999; text-align: center;">无匹配结果</div>');
                     $searchInput.val('');
                 } else {
                     filteredOptions.forEach(function (option) {
-                        var $item = $('<div style="padding: 8px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">' + option.text + '</div>');
+                        var $item = $('<div style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: all 0.2s ease;">' + option.text + '</div>');
                         $item.on('click', function () {
                             $searchInput.val(option.text);
                             $originalSelect.val(option.value);
                             $dropdown.hide();
                             // 触发change事件
                             $originalSelect.trigger('change');
+                        });
+                        $item.on('mouseenter', function () {
+                            $(this).css({
+                                'background-color': '#f0f7ff',
+                                'color': '#1890ff'
+                            });
+                        });
+                        $item.on('mouseleave', function () {
+                            $(this).css({
+                                'background-color': '',
+                                'color': ''
+                            });
                         });
                         $dropdown.append($item);
                     });

@@ -2,44 +2,168 @@
 <link rel="stylesheet" type="text/css" href="/static/admin/css/admin.css" />
 
 <style>
+    /* 隐藏模板脚本标签，避免在页面上显示为代码 */
+    script[type="text/html"] {
+        display: none !important;
+    }
+
+    /* 输入组样式优化 */
     .layui-input-group .layui-input {
         flex: 1;
-        border-radius: 0;
+        border-radius: 4px;
+        border: 1px solid #d9d9d9;
+        transition: all 0.3s ease;
+    }
+
+    .layui-input-group .layui-input:focus {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
     }
 
     .layui-input-group .layui-btn {
-        border-radius: 0;
+        border-radius: 4px;
+        transition: all 0.3s ease;
     }
 
+    .layui-input-group .layui-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 消息样式优化 */
     .msg {
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
         line-height: 1.6;
         width: 100%;
         max-height: 3.2em;
         word-break: break-all;
+        color: #666;
+        transition: all 0.3s ease;
     }
 
+    .msg:hover {
+        color: #333;
+    }
+
+    /* 卡片状态样式优化 */
     .layuiadmin-card-status dd div.layui-status-img a {
         width: 32px !important;
         height: 32px !important;
+        border-radius: 50%;
+        transition: all 0.3s ease;
     }
 
+    .layuiadmin-card-status dd div.layui-status-img a:hover {
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 大字体样式优化 */
     .layuiadmin-big-font {
         font-size: 26px;
-        font-weight: bold;
+        font-weight: 600;
         text-align: center;
-        padding: 10px 0;
+        padding: 15px 0;
+        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* 高级查询区域优化 */
+    .layui-elem-field {
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e8e8e8;
+        overflow: hidden;
+        background: #fafafa;
+    }
+
+    .layui-elem-field legend {
+        font-size: 16px;
+        font-weight: 600;
+        background: #6695ea;
+        border-radius: 8px;
+        color: #fff;
+        padding: 10px 15px;
+    }
+
+    .layui-form-label {
+        font-weight: 500;
+        color: #555;
+    }
+
+    .layui-input, .layui-select {
+        border-radius: 4px;
+        border: 1px solid #d9d9d9;
+        transition: all 0.3s ease;
+    }
+
+    .layui-input:focus, .layui-select:focus {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+    }
+
+    /* 查询按钮优化 */
+    .layuiadmin-btn-list {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .layuiadmin-btn-list:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+    }
+
+    /* 卡片头部样式优化 */
+    .layui-card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
+    }
+
+    .layui-card-header i {
+        color: #fff !important;
+    }
+
+    .layui-card-header button {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #fff;
+        transition: all 0.3s ease;
+    }
+
+    .layui-card-header button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     /* 限制折叠高度 */
     .fold-card {
         border-radius: 8px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
         margin-bottom: 20px;
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .fold-card:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     }
 
     .table-wrapper {
@@ -48,14 +172,13 @@
 
     .table-scroll {
         max-height: 500px;
-        /* 折叠高度 */
         overflow: hidden;
         transition: max-height 0.3s ease;
+        border-radius: 0 0 8px 8px;
     }
 
     .table-scroll.expanded {
         max-height: 1000px;
-        /* 展开高度，可根据需要调整 */
         overflow: auto;
     }
 
@@ -66,19 +189,83 @@
     }
 
     .table-scroll::-webkit-scrollbar-thumb {
-        background-color: rgba(0, 0, 0, 0.2);
+        background-color: #888;
+        border-radius: 3px;
+        transition: background-color 0.3s ease;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb:hover {
+        background-color: #555;
+    }
+    .layui-btn-xs{
+        line-height: 15px !important;
+    }
+    .layui-card-header{
+        line-height: 14px !important;
+    }
+    .table-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
         border-radius: 3px;
     }
 
-    .table-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    /* 按钮样式 */
+    /* 按钮样式优化 */
     .toggle-table {
         float: right;
         cursor: pointer;
         margin-top: -2px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        padding: 4px 12px;
+        font-size: 12px;
+    }
+
+    .toggle-table:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 主容器优化 */
+    .admin-main {
+        padding: 15px;
+        background: #f5f7fa;
+        border-radius: 8px;
+    }
+
+    /* 行间距优化 */
+    .layui-row.layui-col-space15 {
+        margin-bottom: 20px;
+    }
+
+    /* 响应式优化 */
+    @media (max-width: 768px) {
+        .layui-form-item {
+            margin-bottom: 10px;
+        }
+
+        .layui-col-md8,
+        .layui-col-md4 {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .layui-card-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .layui-card-header button {
+            width: 100%;
+        }
+
+        .layuiadmin-big-font {
+            font-size: 20px;
+        }
+    }
+
+    /* 加载动画优化 */
+    .layui-layer-loading {
+        border-radius: 50%;
     }
 </style>
 
