@@ -829,6 +829,10 @@
             // 手动上传压缩后的图片
             function uploadCompressedImage(blob, fileName, uploadUrl, progressCallback, successCallback, errorCallback) {
                 var formData = new FormData();
+                // 确保文件名有正确的扩展名
+                if (!fileName.toLowerCase().endsWith('.jpg') && !fileName.toLowerCase().endsWith('.jpeg')) {
+                    fileName = fileName.replace(/\.[^/.]+$/, '') + '.jpg';
+                }
                 formData.append('file', blob, fileName);
                 
                 var xhr = new XMLHttpRequest();
@@ -848,10 +852,10 @@
                             var res = JSON.parse(xhr.responseText);
                             if (successCallback) successCallback(res);
                         } catch(e) {
-                            if (errorCallback) errorCallback('响应解析失败');
+                            if (errorCallback) errorCallback('响应解析失败: ' + e.message);
                         }
                     } else {
-                        if (errorCallback) errorCallback('上传失败，状态码：' + xhr.status);
+                        if (errorCallback) errorCallback('上传失败，状态码：' + xhr.status + '，响应：' + xhr.responseText);
                     }
                 }, false);
                 
@@ -861,6 +865,8 @@
                 }, false);
                 
                 xhr.open('POST', uploadUrl);
+                // 不手动设置 Content-Type，让浏览器自动设置 multipart/form-data
+                // 这样 ThinkPHP 才能正确解析文件
                 xhr.send(formData);
             }
 

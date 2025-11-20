@@ -9,13 +9,404 @@
     <link rel="stylesheet" href="/static/admin/css/login.css" />
     <link rel="stylesheet" href="/static/common/css/font.css" />
     <style>
+        /* 科技感登录页面样式优化 */
+        .icon-key{
+            display: block !important;
+            margin-top: 17px !important;
+        }
+        .icon-user{
+            display: block !important;
+            margin-top: 17px !important;
+        }
+        .login .large-header{
+            background-image: none !important;
+        }
+        .btn-blog{
+            line-height: 17px !important;
+        }
+
+        /* 全局性能优化 */
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            transform: translateZ(0); /* 启用硬件加速 */
+            -webkit-transform: translateZ(0);
+        }
+        /* 科技感背景 - 性能优化版 */
+        .beg-login-bg {
+            background: #0a0e27;
+            background-image: 
+                /* 网格线 - 简化 */
+                linear-gradient(rgba(102, 126, 234, 0.12) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(102, 126, 234, 0.12) 1px, transparent 1px),
+                /* 大光晕 - 减少数量 */
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.35) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.35) 0%, transparent 50%);
+            background-size: 
+                80px 80px,
+                80px 80px,
+                800px 800px,
+                700px 700px;
+            background-position: 
+                0 0,
+                0 0,
+                0 0,
+                100% 100%;
+            position: relative;
+            overflow: hidden;
+            min-height: 100vh;
+            /* 使用 transform 代替 background-position 提升性能 */
+            will-change: transform;
+        }
+
+        /* 动态光效层 - 简化并优化 */
+        .beg-login-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(102, 126, 234, 0.4) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 70%, rgba(118, 75, 162, 0.4) 0%, transparent 55%);
+            animation: pulse 12s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+            will-change: opacity, transform;
+            transform: translateZ(0); /* GPU 加速 */
+        }
+
+        /* 粒子星星层 - 减少粒子数量 */
+        .beg-login-bg::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.8), transparent),
+                radial-gradient(2px 2px at 60% 70%, rgba(102, 126, 234, 0.8), transparent),
+                radial-gradient(1.5px 1.5px at 50% 50%, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 80% 20%, rgba(79, 172, 254, 0.6), transparent),
+                radial-gradient(2px 2px at 90% 80%, rgba(118, 75, 162, 0.8), transparent);
+            background-size: 100% 100%;
+            background-position: 0% 0%;
+            animation: stars 30s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+            will-change: background-position, opacity;
+            transform: translateZ(0); /* GPU 加速 */
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 0.4;
+                transform: translateZ(0) scale(1);
+            }
+            50% { 
+                opacity: 0.7;
+                transform: translateZ(0) scale(1.03);
+            }
+        }
+
+        @keyframes stars {
+            0% { 
+                background-position: 0% 0%;
+                opacity: 0.7;
+            }
+            100% { 
+                background-position: 100% 100%;
+                opacity: 0.9;
+            }
+        }
+
+        /* 登录框玻璃态效果 - 性能优化 */
+        .beg-login-box {
+            background: rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+                0 0 60px rgba(102, 126, 234, 0.5);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            z-index: 20 !important;
+            will-change: transform;
+            transform: translateZ(0); /* GPU 加速 */
+        }
+
+        .beg-login-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+            animation: shine 4s infinite;
+            pointer-events: none;
+            will-change: transform;
+            transform: translateZ(0); /* GPU 加速 */
+        }
+
+        @keyframes shine {
+            0% { transform: translateZ(0) translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateZ(0) translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .beg-login-box:hover {
+            box-shadow: 
+                0 12px 48px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+                0 0 80px rgba(102, 126, 234, 0.7);
+            transform: translateZ(0) translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.35);
+        }
+
+        /* 标题样式 - 性能优化 */
+        .beg-login-box header h1 {
+            color: #fff !important;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
+                         0 0 40px rgba(102, 126, 234, 0.8),
+                         0 0 60px rgba(102, 126, 234, 0.6);
+            font-weight: 600;
+            letter-spacing: 2px;
+            position: relative;
+            animation: glow 3s ease-in-out infinite alternate;
+            will-change: text-shadow;
+        }
+
+        @keyframes glow {
+            from { 
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(102, 126, 234, 0.8); 
+            }
+            to { 
+                text-shadow: 0 0 25px rgba(255, 255, 255, 0.7), 0 0 50px rgba(102, 126, 234, 0.9); 
+            }
+        }
+
+        /* 输入框科技感样式 */
+        .beg-login-main .layui-form-item {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .beg-login-main .layui-input {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 12px !important;
+            color: #fff !important;
+            padding: 12px 15px 12px 45px !important;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .beg-login-main .layui-input::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        .beg-login-main .layui-input:focus {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-color: rgba(102, 126, 234, 0.8) !important;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5),
+                        0 0 40px rgba(102, 126, 234, 0.3),
+                        inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
+            outline: none;
+            transform: translateZ(0) translateY(-2px);
+            will-change: transform;
+        }
+
+        /* 输入框图标 */
+        .beg-login-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .beg-login-main .layui-form-item:focus-within .beg-login-icon {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* 记住密码容器 */
         .remember-password-container {
             display: flex;
             justify-content: flex-end;
             margin-bottom: 15px;
         }
+
         .remember-password-container .layui-form-checkbox[lay-skin="primary"] {
             margin-top: 0;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .remember-password-container .layui-form-checkbox[lay-skin="primary"] span {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* 登录按钮科技感样式 */
+        .btn-submit, .btn-blog {
+            width: 100% !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 12px 0 !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            color: #fff !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4),
+                        0 0 20px rgba(102, 126, 234, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit::before, .btn-blog::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-submit:hover::before, .btn-blog:hover::before {
+            left: 100%;
+        }
+
+        .btn-submit:hover, .btn-blog:hover {
+            transform: translateZ(0) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6),
+                        0 0 30px rgba(102, 126, 234, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+            will-change: transform;
+        }
+
+        .btn-submit:active, .btn-blog:active {
+            transform: translateZ(0) translateY(0);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4) !important;
+        }
+
+        /* 页脚样式 */
+        .beg-login-box footer {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .beg-login-box footer p {
+            color: rgba(255, 255, 255, 0.8) !important;
+            text-align: center;
+            font-size: 14px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Canvas 背景增强 */
+        #demo-canvas {
+            opacity: 0.25;
+            mix-blend-mode: screen;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 确保登录框在所有背景之上 */
+        .beg-login-box {
+            position: relative;
+            z-index: 20 !important;
+        }
+
+        /* 添加连接线效果 - 性能优化 */
+        .large-header {
+            position: relative;
+            z-index: 2;
+        }
+
+        .large-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.12) 50%, transparent 100%),
+                linear-gradient(0deg, transparent 0%, rgba(79, 172, 254, 0.12) 50%, transparent 100%);
+            background-size: 300px 300px, 300px 300px;
+            animation: gridMove 25s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.5;
+            will-change: background-position;
+            transform: translateZ(0); /* GPU 加速 */
+        }
+
+        @keyframes gridMove {
+            0% { 
+                background-position: 0 0, 0 0;
+            }
+            100% { 
+                background-position: 300px 300px, 300px 300px;
+            }
+        }
+
+        /* 确保主标题区域在背景之上 */
+        .main-title {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* 容器优化 */
+        .container.login {
+            position: relative;
+            z-index: 2;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+            .beg-login-box {
+                margin: 20px;
+                border-radius: 15px;
+            }
+
+            .beg-login-box header h1 {
+                font-size: 20px;
+            }
+
+            .beg-login-main .layui-input {
+                padding: 10px 12px 10px 40px !important;
+            }
+        }
+    
+#demo-canvas{
+    display: none !important;
+}
+        /* 加载动画优化 */
+        .layui-layer-loading {
+            border-radius: 50%;
         }
     </style>
 </head>
@@ -23,7 +414,7 @@
 <div class="container login">
     <div class="content">
         <div id="large-header" class="large-header">
-            <canvas id="demo-canvas"></canvas>
+            <!-- <canvas id="demo-canvas"></canvas> -->
             <div class="main-title">
                 <div class="beg-login-box">
                     <header>
