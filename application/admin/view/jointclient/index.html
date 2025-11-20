@@ -252,6 +252,7 @@
                         return "<a href='{:url(\"dialogue\")}?id=" + res.id + "'>" + (res.kh_name || '') + "</a>";
                     }
                 },
+                { field: 'product_name', title: '产品名称' }, 
                 { field: 'inquiry_name', title: '所属渠道' },   // 【新增】渠道下拉
                 { field: 'port_name',    title: '运营端口' },       // 【新增】运营端口下拉
                 { field: 'main_phone', title: '主电话' },
@@ -262,6 +263,26 @@
                 { field: 'pr_user', title: '负责人' },
                 { field: 'at_time', title: '创建时间', sort: true },
                 { field: 'ut_time', title: '更新时间', sort: true },
+                { field: 'original_creation_time', title: '原来创建时间', width: 150,  hide: false,
+                    templet: function(d){
+                    var v = d.original_creation_time;
+                    if (!v) return '';
+                    // 如果是纯数字（秒级时间戳）
+                    if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                    // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                    return v;
+                    }
+                },
+                { field: 'original_modification_time', title: '原来修改时间', width: 150,  hide: false,
+                    templet: function(d){
+                    var v = d.original_modification_time;
+                    if (!v) return '';
+                    // 如果是纯数字（秒级时间戳）
+                    if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
+                    // 已经是 'YYYY-MM-DD HH:mm:ss' 字符串，直接显示
+                    return v;
+                    }
+                },
                 { fixed: 'right', width: 160, align: 'center', toolbar: '#action' }
             ]];
 
