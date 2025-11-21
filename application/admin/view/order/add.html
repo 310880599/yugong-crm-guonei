@@ -301,23 +301,29 @@
                     <textarea id="country" name="country" placeholder="请输入发货详细地址" class="layui-textarea"></textarea>
                 </div>
             </div>
-            <!-- 客户名称 -->
+            <!-- 用户属性选择 -->
             <div class="layui-form-item">
-                <label class="layui-form-label">客户名称</label>
+                <label class="layui-form-label">用户属性<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" id="cname" name="cname" lay-verify="required" value="{$kh_name}"
-                        placeholder="请输入客户名称" class="layui-input">
+                    <select name="customer_type_flag" id="customer_type_flag" lay-verify="required" lay-filter="customer_type_flag">
+                        <option value="">请选择用户属性</option>
+                        <option value="0">公司</option>
+                        <option value="1">个人</option>
+                    </select>
                 </div>
             </div>
-            <!-- 客户公司 -->
-            <div class="layui-form-item">
-                <label class="layui-form-label">客户公司</label>
-                <div class="layui-input-4">
-                    <input type="text" id="client_company" name="client_company" lay-verify="required" value=""
+            <!-- 原有"客户公司"表单项，增加下拉列表容器 -->
+            <div class="layui-form-item" id="client_company_item" style="display: none;">
+                <label class="layui-form-label">客户公司<span style="color:red;">*</span></label>
+                <div class="layui-input-4" style="position: relative;"><!-- 替换：增加 position: relative; 以定位下拉列表 -->
+                    <input type="text" id="client_company" name="client_company" value=""
                         placeholder="请输入客户公司" class="layui-input">
+                    <div id="companyList" class="suggestion-list" 
+                        style="position:absolute; top:38px; left:0; z-index:9999; background:#FFF; border:1px solid #ccc; display:none;"><!-- 新增：联想下拉列表容器 -->
+                    </div>
                 </div>
             </div>
-            <!-- 客户负责人 -->
+        
             <div class="layui-form-item">
                 <label class="layui-form-label">客户负责人</label>
                 <div class="layui-input-4">
@@ -686,6 +692,29 @@
             }
             form.render('select');
         });
+        
+        // 用户属性选择变化时的处理
+        form.on('select(customer_type_flag)', function (data) {
+            var customerTypeFlag = data.value;
+            var $clientCompanyItem = $('#client_company_item');
+            var $clientCompanyInput = $('#client_company');
+            
+            if (customerTypeFlag === '0') {
+                // 选择"公司"：显示客户公司字段并设置为必填
+                $clientCompanyItem.show();
+                $clientCompanyInput.attr('lay-verify', 'required');
+                // 重新渲染表单验证
+                form.render();
+            } else if (customerTypeFlag === '1') {
+                // 选择"个人"：隐藏客户公司字段并移除必填验证
+                $clientCompanyItem.hide();
+                $clientCompanyInput.removeAttr('lay-verify');
+                $clientCompanyInput.val(''); // 清空值
+                $('#companyList').hide(); // 隐藏下拉列表
+                // 重新渲染表单验证
+                form.render();
+            }
+        });
 
         // **为新增产品行准备选项HTML** 
         // 获取初始产品名称下拉的所有选项HTML（包括"请选择"和产品列表）
@@ -1037,6 +1066,22 @@
                 return false;
             }
             
+            // 检查用户属性是否已选择
+            var customerTypeFlag = $("#customer_type_flag").val();
+            if (!customerTypeFlag || customerTypeFlag === '') {
+                layer.msg('请选择用户属性（公司或个人）', { icon: 2, time: 2000 });
+                return false;
+            }
+            
+            // 如果选择"公司"，检查客户公司是否已填写
+            if (customerTypeFlag === '0') {
+                var clientCompany = $("#client_company").val();
+                if (!clientCompany || clientCompany.trim() === '') {
+                    layer.msg('选择"公司"时，客户公司为必填项', { icon: 2, time: 2000 });
+                    return false;
+                }
+            }
+            
             // 如果客户未验证或验证失败，先触发验证
             if (!customerValidated) {
                 // 先触发一次 changeyewu 验证
@@ -1095,6 +1140,123 @@
             return false;
         });
         }); // 闭合 layui.use
+    </script>
+    <!-- 在页面底部新增脚本，实现联想下拉功能 -->
+    <script>
+        // 新增：客户公司输入联想下拉功能脚本
+        $(function(){
+            var searchTimer = null; // 防抖定时器
+            var currentRequest = null; // 当前请求对象，用于取消未完成的请求
+            
+            // 监听客户公司输入框的输入事件
+            $('#client_company').on('input', function(){
+                var keyword = $.trim($(this).val());
+                
+                // 取消之前的定时器
+                if (searchTimer) {
+                    clearTimeout(searchTimer);
+                }
+                
+                // 取消之前的请求
+                if (currentRequest && currentRequest.readyState !== 4) {
+                    currentRequest.abort();
+                }
+                
+                if (keyword.length < 2) {
+                    // 少于2个字符不触发联想，下拉列表隐藏
+                    $('#companyList').hide();
+                    return;
+                }
+                
+                // 显示加载提示
+                $('#companyList').html('<div style="padding:10px; text-align:center; color:#999;">正在搜索...</div>').show();
+                
+                // 防抖处理：延迟500ms后执行搜索
+                searchTimer = setTimeout(function(){
+                    // 发起 AJAX 请求获取企业名称联想列表
+                    currentRequest = $.ajax({
+                        type: 'GET',
+                        url: "{:url('Order/searchCompany')}" + "?keyword=" + encodeURIComponent(keyword),
+                        dataType: 'json',
+                        timeout: 10000, // 10秒超时
+                        success: function(res) {
+                            if (res.code === 0) {
+                                var dataList = res.data || [];
+                                if (dataList.length > 0) {
+                                    var listHtml = '';
+                                    $.each(dataList, function(index, name) {
+                                        // 高亮匹配的关键词
+                                        var highlightedName = name;
+                                        if (keyword) {
+                                            var regex = new RegExp('(' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+                                            highlightedName = name.replace(regex, '<strong style="color:#1E9FFF;">$1</strong>');
+                                        }
+                                        // 构造下拉项，每项显示企业名称
+                                        listHtml += '<div class="suggestion-item" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0;" onmouseover="this.style.backgroundColor=\'#f5f5f5\'" onmouseout="this.style.backgroundColor=\'#fff\'">' + highlightedName + '</div>';
+                                    });
+                                    $('#companyList').html(listHtml).show();
+                                } else {
+                                    // 无匹配结果时显示提示
+                                    $('#companyList').html('<div style="padding:10px; text-align:center; color:#999;">未找到匹配的企业</div>').show();
+                                }
+                            } else {
+                                // API返回错误
+                                console.error('企业名称搜索失败:', res.msg || '未知错误');
+                                $('#companyList').html('<div style="padding:10px; text-align:center; color:#ff5722;">搜索失败: ' + (res.msg || '未知错误') + '</div>').show();
+                                // 3秒后自动隐藏错误提示
+                                setTimeout(function(){
+                                    $('#companyList').hide();
+                                }, 3000);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            if (status === 'abort') {
+                                // 请求被取消，不显示错误
+                                return;
+                            }
+                            console.error('企业名称联想接口请求失败:', status, error);
+                            var errorMsg = '网络请求失败';
+                            if (status === 'timeout') {
+                                errorMsg = '请求超时，请稍后重试';
+                            } else if (xhr.status === 0) {
+                                errorMsg = '网络连接失败';
+                            } else if (xhr.status >= 500) {
+                                errorMsg = '服务器错误，请稍后重试';
+                            }
+                            $('#companyList').html('<div style="padding:10px; text-align:center; color:#ff5722;">' + errorMsg + '</div>').show();
+                            // 3秒后自动隐藏错误提示
+                            setTimeout(function(){
+                                $('#companyList').hide();
+                            }, 3000);
+                        },
+                        complete: function() {
+                            currentRequest = null;
+                        }
+                    });
+                }, 500); // 防抖延迟500ms
+            });
+            
+            // 点击联想下拉项时，将企业名称填入输入框，并隐藏列表
+            $(document).on('click', '.suggestion-item', function(){
+                var companyName = $(this).text().replace(/<[^>]*>/g, ''); // 移除HTML标签，获取纯文本
+                $('#client_company').val(companyName);
+                $('#companyList').hide();
+            });
+            
+            // 当输入框失去焦点时，稍作延迟后隐藏下拉列表（避免点击选中时过早隐藏）
+            $('#client_company').on('blur', function(){
+                setTimeout(function(){
+                    $('#companyList').hide();
+                }, 200);
+            });
+            
+            // 点击页面其他地方时隐藏下拉列表
+            $(document).on('click', function(e){
+                if (!$(e.target).closest('#client_company, #companyList').length) {
+                    $('#companyList').hide();
+                }
+            });
+        });
     </script>
 </body>
 

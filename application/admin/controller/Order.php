@@ -158,6 +158,7 @@ class Order extends Common
             // ====== 验证客户是否属于当前用户或协同人 ======
             $contact = Request::param('contact');
             $leadsId = null; // 保存客户ID，用于后续更新成交状态
+            $custinfo = null; // 保存客户信息，用于后续填充cname等字段
             if (!empty($contact)) {
                 $currentUsername = Session::get('username');
                 $currentAdminId = Session::get('aid');
@@ -208,8 +209,56 @@ class Order extends Common
             // ====== 读取主表字段 ======
             $data = [];
             $data['contact']          = Request::param('contact');        // 客户联系方式
-            $data['cname']            = Request::param('cname');          // 客户名称
-            $data['client_company']            = Request::param('client_company'); // 客户公司
+            $data['cname']            = Request::param('cname', '');       // 客户名称
+            
+            // 如果cname为空，尝试从已查询的客户信息中获取
+            if (empty($data['cname']) && $custinfo && !empty($custinfo['kh_name'])) {
+                $data['cname'] = $custinfo['kh_name'];
+            }
+            
+            // 如果cname仍然为空，尝试再次查询（防止前面验证失败的情况）
+            if (empty($data['cname']) && !empty($contact)) {
+                // 查找客户信息
+                $coninfo = Db::name('crm_contacts')->where('is_delete', 0)->where(function ($query) use ($contact) {
+                    $_contact = trim(preg_replace('/[+\-\s]/', '', $contact));
+                    $query->whereRaw("CONCAT(contact_extra, contact_value) = '{$contact}'")
+                        ->whereOr('contact_value', $contact);
+                    if ($contact != $_contact) {
+                        $query->whereOr('contact_value', $_contact)
+                            ->whereOrRaw("CONCAT(contact_extra, contact_value) = '{$_contact}'");
+                    }
+                })->find();
+                
+                if ($coninfo && !empty($coninfo['leads_id'])) {
+                    $tempCustinfo = Db::name('crm_leads')->where('id', $coninfo['leads_id'])->find();
+                    if ($tempCustinfo && !empty($tempCustinfo['kh_name'])) {
+                        $data['cname'] = $tempCustinfo['kh_name'];
+                    }
+                }
+            }
+            
+            // 如果cname仍然为空，返回错误
+            if (empty($data['cname'])) {
+                return json(['code' => -200, 'msg' => '客户名称不能为空，请先输入联系方式并验证客户信息']);
+            }
+            
+            // 用户属性：0=公司，1=个人
+            $data['customer_type_flag'] = Request::param('customer_type_flag', 0);
+            $data['customer_type_flag'] = in_array($data['customer_type_flag'], ['0', '1']) ? (int)$data['customer_type_flag'] : 0;
+            
+            // 客户公司：如果是公司（0）则必填，如果是个人（1）则可以为空
+            $clientCompany = Request::param('client_company', '');
+            if ($data['customer_type_flag'] == 0) {
+                // 公司类型，客户公司必填
+                if (empty(trim($clientCompany))) {
+                    return json(['code' => -200, 'msg' => '选择"公司"时，客户公司为必填项']);
+                }
+                $data['client_company'] = trim($clientCompany);
+            } else {
+                // 个人类型，客户公司可以为空
+                $data['client_company'] = '';
+            }
+            
             $data['province']         = Request::param('province', '');  // 省份
             $data['city']             = Request::param('city', '');       // 城市
             $data['country']          = Request::param('country');        // 发货地址
@@ -765,7 +814,24 @@ class Order extends Common
             $data = [];
             $data['contact']          = Request::param('contact');        // 客户联系方式
             $data['cname']            = Request::param('cname');          // 客户名称
-            $data['client_company']   = Request::param('client_company'); // 客户公司
+            
+            // 用户属性：0=公司，1=个人
+            $data['customer_type_flag'] = Request::param('customer_type_flag', 0);
+            $data['customer_type_flag'] = in_array($data['customer_type_flag'], ['0', '1']) ? (int)$data['customer_type_flag'] : 0;
+            
+            // 客户公司：如果是公司（0）则必填，如果是个人（1）则可以为空
+            $clientCompany = Request::param('client_company', '');
+            if ($data['customer_type_flag'] == 0) {
+                // 公司类型，客户公司必填
+                if (empty(trim($clientCompany))) {
+                    return json(['code' => -200, 'msg' => '选择"公司"时，客户公司为必填项']);
+                }
+                $data['client_company'] = trim($clientCompany);
+            } else {
+                // 个人类型，客户公司可以为空
+                $data['client_company'] = '';
+            }
+            
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
             $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）
@@ -1916,4 +1982,255 @@ class Order extends Common
             'totalProfit' => number_format($totalProfit, 2),
         ];
     }
+
+    // 新增：根据关键词通过启信开放平台模糊搜索企业名称
+    public function searchCompany()
+    {
+        // 获取关键词参数
+        $keyword = Request::param('keyword', '');
+        $keyword = trim($keyword);
+        
+        // 调试模式：如果传入debug=1参数，返回原始API响应
+        $debug = Request::param('debug', 0);
+        
+        if (empty($keyword)) {
+            // 如果关键词为空，返回空列表
+            return json(['code' => 0, 'msg' => '无关键词', 'data' => []]);
+        }
+        
+        // 如果关键词长度小于2，返回空列表
+        if (mb_strlen($keyword) < 2) {
+            return json(['code' => 0, 'msg' => '关键词至少需要2个字符', 'data' => []]);
+        }
+        
+        try {
+            // 签名验证：获取当前时间戳并生成签名 Token
+            $appkey = config('qixin_appkey');
+            $secretKey = config('qixin_secret_key');
+            
+            // 检查配置是否存在
+            if (empty($appkey) || empty($secretKey)) {
+                return json(['code' => 500, 'msg' => '启信API配置缺失，请联系管理员', 'data' => []]);
+            }
+            
+            // 生成毫秒级时间戳（13位）
+            $timestamp = round(microtime(true) * 1000);
+            
+            // 生成签名：md5(appkey + timestamp + secret_key)，注意是不带+号的字符串拼接
+            $sign = md5($appkey . $timestamp . $secretKey);
+            
+            // 构造启信开放平台 API 请求 URL（只有keyword参数在URL中）
+            $url = "https://api.qixin.com/APIService/v2/search/advSearch?keyword=" . urlencode($keyword);
+            
+            // 使用 cURL 发起 GET 请求
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10); // 增加超时时间到10秒
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5); // 连接超时5秒
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // 如果SSL证书有问题，可以设置为false
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            
+            // 设置HTTP Headers（根据文档要求）
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Auth-Version: 2.0',  // 固定值2.0
+                'appkey: ' . $appkey,
+                'timestamp: ' . $timestamp,
+                'sign: ' . $sign,
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            ]);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            
+            if (curl_errno($ch)) {
+                // 请求失败，返回错误信息
+                $error = curl_error($ch);
+                curl_close($ch);
+                return json(['code' => 500, 'msg' => "启信API请求失败: {$error}", 'data' => []]);
+            }
+            
+            curl_close($ch);
+            
+            // 检查HTTP状态码
+            if ($httpCode != 200) {
+                return json(['code' => 500, 'msg' => "启信API返回错误，HTTP状态码: {$httpCode}", 'data' => []]);
+            }
+            
+            // 解析 JSON 响应数据
+            $data = json_decode($response, true);
+            if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+                // 调试：记录原始响应
+                \think\facade\Log::write('启信API原始响应: ' . $response, 'error');
+                return json(['code' => 500, 'msg' => '启信API返回数据格式错误: ' . json_last_error_msg(), 'data' => []]);
+            }
+            
+            // 调试：记录解析后的数据结构（仅在调试模式下）
+            if (config('app.app_debug')) {
+                \think\facade\Log::write('启信API响应数据: ' . json_encode($data, JSON_UNESCAPED_UNICODE), 'info');
+            }
+            
+            // 检查API返回的错误
+            if (isset($data['code']) && $data['code'] != 0) {
+                $errorMsg = isset($data['message']) ? $data['message'] : (isset($data['msg']) ? $data['msg'] : '未知错误');
+                return json(['code' => 500, 'msg' => "启信API错误: {$errorMsg}", 'data' => []]);
+            }
+            
+            // 检查是否有status字段且不为成功（根据文档，status是字符串类型）
+            if (isset($data['status'])) {
+                $status = (string)$data['status'];
+                // status为"200"或"0"表示成功
+                if ($status !== '200' && $status !== '0') {
+                    $errorMsg = isset($data['message']) ? $data['message'] : (isset($data['msg']) ? $data['msg'] : '查询失败');
+                    return json(['code' => 500, 'msg' => "启信API错误: {$errorMsg} (status: {$status})", 'data' => []]);
+                }
+            }
+            
+            // 提取企业名称列表 - 根据文档，数据在 data.items 中
+            $nameList = [];
+            
+            // 方式1: 检查 data.items 字段（根据文档的标准格式）
+            if (isset($data['data']['items']) && is_array($data['data']['items'])) {
+                foreach ($data['data']['items'] as $item) {
+                    if (isset($item['name']) && !empty(trim($item['name']))) {
+                        $nameList[] = trim($item['name']);
+                    }
+                }
+            }
+            
+            // 方式2: 兼容直接 items 字段（数组格式）
+            if (empty($nameList) && isset($data['items']) && is_array($data['items'])) {
+                foreach ($data['items'] as $item) {
+                    // 支持多种字段名：name, companyName, entName, enterpriseName
+                    $companyName = '';
+                    if (isset($item['name'])) {
+                        $companyName = $item['name'];
+                    } elseif (isset($item['companyName'])) {
+                        $companyName = $item['companyName'];
+                    } elseif (isset($item['entName'])) {
+                        $companyName = $item['entName'];
+                    } elseif (isset($item['enterpriseName'])) {
+                        $companyName = $item['enterpriseName'];
+                    } elseif (isset($item['title'])) {
+                        $companyName = $item['title'];
+                    }
+                    
+                    if (!empty(trim($companyName))) {
+                        $nameList[] = trim($companyName);
+                    }
+                }
+            }
+            
+            // 方式2: 检查 data 字段（如果items为空）
+            if (empty($nameList) && isset($data['data']) && is_array($data['data'])) {
+                foreach ($data['data'] as $item) {
+                    $companyName = '';
+                    if (isset($item['name'])) {
+                        $companyName = $item['name'];
+                    } elseif (isset($item['companyName'])) {
+                        $companyName = $item['companyName'];
+                    } elseif (isset($item['entName'])) {
+                        $companyName = $item['entName'];
+                    } elseif (isset($item['enterpriseName'])) {
+                        $companyName = $item['enterpriseName'];
+                    } elseif (isset($item['title'])) {
+                        $companyName = $item['title'];
+                    }
+                    
+                    if (!empty(trim($companyName))) {
+                        $nameList[] = trim($companyName);
+                    }
+                }
+            }
+            
+            // 方式3: 检查 result 字段
+            if (empty($nameList) && isset($data['result']) && is_array($data['result'])) {
+                foreach ($data['result'] as $item) {
+                    $companyName = '';
+                    if (isset($item['name'])) {
+                        $companyName = $item['name'];
+                    } elseif (isset($item['companyName'])) {
+                        $companyName = $item['companyName'];
+                    } elseif (isset($item['entName'])) {
+                        $companyName = $item['entName'];
+                    } elseif (isset($item['enterpriseName'])) {
+                        $companyName = $item['enterpriseName'];
+                    } elseif (isset($item['title'])) {
+                        $companyName = $item['title'];
+                    }
+                    
+                    if (!empty(trim($companyName))) {
+                        $nameList[] = trim($companyName);
+                    }
+                }
+            }
+            
+            // 方式4: 如果data本身就是数组
+            if (empty($nameList) && is_array($data) && isset($data[0])) {
+                foreach ($data as $item) {
+                    if (is_array($item)) {
+                        $companyName = '';
+                        if (isset($item['name'])) {
+                            $companyName = $item['name'];
+                        } elseif (isset($item['companyName'])) {
+                            $companyName = $item['companyName'];
+                        } elseif (isset($item['entName'])) {
+                            $companyName = $item['entName'];
+                        } elseif (isset($item['enterpriseName'])) {
+                            $companyName = $item['enterpriseName'];
+                        } elseif (isset($item['title'])) {
+                            $companyName = $item['title'];
+                        }
+                        
+                        if (!empty(trim($companyName))) {
+                            $nameList[] = trim($companyName);
+                        }
+                    }
+                }
+            }
+            
+            // 去重
+            $nameList = array_unique($nameList);
+            $nameList = array_values($nameList);
+            
+            // 限制返回数量，最多返回20条
+            $nameList = array_slice($nameList, 0, 20);
+            
+            // 如果仍然没有数据，记录调试信息
+            if (empty($nameList) && config('app.app_debug')) {
+                \think\facade\Log::write('启信API未找到企业数据，响应结构: ' . json_encode($data, JSON_UNESCAPED_UNICODE), 'info');
+            }
+            
+            // 调试模式：返回原始响应数据
+            if ($debug == 1) {
+                return json([
+                    'code' => 0,
+                    'msg' => '调试模式',
+                    'data' => $nameList,
+                    'debug' => [
+                        'keyword' => $keyword,
+                        'api_url' => $url,
+                        'headers' => [
+                            'Auth-Version' => '2.0',
+                            'appkey' => $appkey,
+                            'timestamp' => $timestamp,
+                            'sign' => $sign
+                        ],
+                        'raw_response' => $response,
+                        'parsed_data' => $data,
+                        'http_code' => $httpCode
+                    ]
+                ]);
+            }
+            
+            // 返回企业名称列表（JSON 格式）
+            return json(['code' => 0, 'msg' => empty($nameList) ? '未找到匹配的企业' : '获取成功', 'data' => $nameList]);
+            
+        } catch (\Exception $e) {
+            // 捕获异常
+            return json(['code' => 500, 'msg' => '搜索企业名称时发生异常: ' . $e->getMessage(), 'data' => []]);
+        }
+    }
+
+    
 }

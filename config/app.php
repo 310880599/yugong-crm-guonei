@@ -166,6 +166,9 @@ return [
     'addwater' => false,
     'watertext' => 'Meyoo',
     'version' => '6.0',
+    // 启信开放平台 API配置（新增）
+    'qixin_appkey' => '3bd77bc4-ebed-4b9b-a8c1-8fee088a60cd', // 新增：启信开放平台 AppKey
+    'qixin_secret_key' => '1d100ac5-f11f-48f1-bbeb-950755a55976', // 新增：启信开放平台 SecretKey
     'middleware' => [
         \app\http\middleware\TrimStrings::class
     ],
