@@ -155,6 +155,10 @@
                                         });
                                         if (portMatched) {
                                             layui.form.render('select');
+                                            // 确保搜索功能正常
+                                            setTimeout(function() {
+                                                layui.form.render('select');
+                                            }, 50);
                                         }
                                     }, 200);
                                 } else {
@@ -347,8 +351,8 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">运营端口</label>
                 <div class="layui-input-4">
-                    <select name="source_port" id="source_port" lay-search>
-                        <option value="">请先选择询盘来源</option>
+                    <select name="source_port" id="source_port" lay-search lay-verify="">
+                        <option value="">请先选择询盘来源（选择后可搜索端口）</option>
                     </select>
                 </div>
             </div>
@@ -668,14 +672,19 @@
             var $sourcePort = $('#source_port');
             $sourcePort.empty();
             if (shops.length > 0) {
-                $sourcePort.append('<option value="">请选择运营端口</option>');
+                $sourcePort.append('<option value="">请选择运营端口（支持搜索）</option>');
                 $.each(shops, function (index, shop) {
                     $sourcePort.append('<option value="' + shop.id + '">' + shop.name + '</option>');
                 });
             } else {
                 $sourcePort.append('<option value="">该来源暂无店铺数据</option>');
             }
+            // 确保重新渲染select，使lay-search搜索功能生效
             form.render('select');
+            // 延迟一下确保渲染完成
+            setTimeout(function() {
+                form.render('select');
+            }, 50);
         };
         
         form.on('select(kh_status)', function (data) {

@@ -145,12 +145,12 @@
                     </select>
                 </div>
             </div>
-            <!-- 运营端口 port_id 下拉框（多选） -->
+            <!-- 运营端口 port_id 下拉框（多选，支持模糊搜索） -->
             <div class="layui-form-item">
                 <label class="layui-form-label">运营端口<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <select name="port_id[]" id="port_id" multiple>
-                        <option value="">请选择运营端口</option>
+                    <select name="port_id[]" id="port_id" multiple lay-search>
+                        <option value="">请选择运营端口（支持搜索）</option>
                         {volist name="portList" id="pt"} 
                             <option value="{$pt.id}" {if isset($selectedPorts) && in_array($pt.id, $selectedPorts)}selected{/if}>{$pt.port_name}</option>
                         {/volist}
@@ -293,7 +293,7 @@
                     // 发起 AJAX 请求获取该渠道的端口列表
                     $.get("{:url('Client/getPortsByInquiry')}", { inquiry_id: inquiryId }, function(res) {
                         // 默认先添加“请选择运营端口”提示选项
-                        $portSelect.append('<option value="">请选择运营端口</option>');
+                        $portSelect.append('<option value="">请选择运营端口（支持搜索）</option>');
                         if (res.code === 0) {
                             var ports = res.data;
                             if (ports.length > 0) {
@@ -309,12 +309,21 @@
                             // 接口返回错误，提示加载失败
                             layer.msg(res.msg || '获取端口数据失败', {icon: 5});
                         }
-                        form.render('select');  // 重新渲染下拉框UI
+                        // 重新渲染下拉框UI，确保搜索功能正常
+                        form.render('select');
+                        // 延迟一下确保搜索功能完全初始化
+                        setTimeout(function() {
+                            form.render('select');
+                        }, 50);
                     }, 'json');
                 } else {
                     // 未选择任何渠道时，恢复默认提示选项
-                    $portSelect.append('<option value="">请选择运营端口</option>');
+                    $portSelect.append('<option value="">请选择运营端口（支持搜索）</option>');
                     form.render('select');
+                    // 延迟一下确保搜索功能完全初始化
+                    setTimeout(function() {
+                        form.render('select');
+                    }, 50);
                 }
             });
 
