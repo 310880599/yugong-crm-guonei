@@ -301,12 +301,15 @@
                     <textarea id="country" name="country" placeholder="请输入发货详细地址" class="layui-textarea"></textarea>
                 </div>
             </div>
-            <!-- 客户名称 -->
+            <!-- 原有“客户公司”表单项，增加下拉列表容器 -->
             <div class="layui-form-item">
-                <label class="layui-form-label">客户名称</label>
-                <div class="layui-input-4">
-                    <input type="text" id="cname" name="cname" lay-verify="required" value="{$kh_name}"
-                        placeholder="请输入客户名称" class="layui-input">
+                <label class="layui-form-label">客户公司</label>
+                <div class="layui-input-4" style="position: relative;"><!-- 替换：增加 position: relative; 以定位下拉列表 -->
+                    <input type="text" id="client_company" name="client_company" lay-verify="required" value=""
+                        placeholder="请输入客户公司" class="layui-input">
+                    <div id="companyList" class="suggestion-list" 
+                        style="position:absolute; top:38px; left:0; z-index:9999; background:#FFF; border:1px solid #ccc; display:none;"><!-- 新增：联想下拉列表容器 -->
+                    </div>
                 </div>
             </div>
             <!-- 客户公司 -->
@@ -1095,6 +1098,61 @@
             return false;
         });
         }); // 闭合 layui.use
+    </script>
+    <!-- 在页面底部新增脚本，实现联想下拉功能 -->
+    <script>
+        // 新增：客户公司输入联想下拉功能脚本
+        $(function(){
+            // 监听客户公司输入框的输入事件
+            $('#client_company').on('input', function(){
+                var keyword = $.trim($(this).val());
+                if (keyword.length < 2) {
+                    // 少于2个字符不触发联想，下拉列表隐藏
+                    $('#companyList').hide();
+                    return;
+                }
+                // 发起 AJAX 请求获取企业名称联想列表
+                $.ajax({
+                    type: 'GET',
+                    url: "{:url('Order/searchCompany')}" + "?keyword=" + encodeURIComponent(keyword),
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            var dataList = res.data || [];
+                            if (dataList.length > 0) {
+                                var listHtml = '';
+                                $.each(dataList, function(index, name) {
+                                    // 构造下拉项，每项显示企业名称
+                                    listHtml += '<div class="suggestion-item" style="padding:5px; cursor:pointer;">' + name + '</div>';
+                                });
+                                $('#companyList').html(listHtml).show();
+                            } else {
+                                // 无匹配结果时隐藏下拉列表
+                                $('#companyList').hide();
+                            }
+                        } else {
+                            $('#companyList').hide();
+                        }
+                    },
+                    error: function() {
+                        console.error('企业名称联想接口请求失败');
+                        $('#companyList').hide();
+                    }
+                });
+            });
+            // 点击联想下拉项时，将企业名称填入输入框，并隐藏列表
+            $(document).on('click', '.suggestion-item', function(){
+                var companyName = $(this).text();
+                $('#client_company').val(companyName);
+                $('#companyList').hide();
+            });
+            // 当输入框失去焦点时，稍作延迟后隐藏下拉列表（避免点击选中时过早隐藏）
+            $('#client_company').on('blur', function(){
+                setTimeout(function(){
+                    $('#companyList').hide();
+                }, 200);
+            });
+        });
     </script>
 </body>
 

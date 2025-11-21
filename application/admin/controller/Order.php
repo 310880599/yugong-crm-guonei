@@ -1916,4 +1916,58 @@ class Order extends Common
             'totalProfit' => number_format($totalProfit, 2),
         ];
     }
+
+    // 新增：根据关键词通过启信开放平台模糊搜索企业名称
+    public function searchCompany()
+    {
+        // 判断是否为 AJAX 请求
+        if (request()->isAjax()) {
+            // 获取关键词参数
+            $keyword = Request::param('keyword');
+            if (!$keyword) {
+                // 如果关键词为空，返回空列表
+                return json(['code' => 0, 'msg' => '无关键词', 'data' => []]);
+            }
+            // 签名验证：获取当前时间戳并生成签名 Token
+            $appkey = config('qixin_appkey');
+            $secretKey = config('qixin_secret_key');
+            $timestamp = time(); 
+            $token = md5($appkey . $timestamp . $secretKey);
+            // 构造启信开放平台 API 请求 URL
+            $url = "https://api.qixin.com/APIService/v2/search/advSearch?keyword=" 
+                 . urlencode($keyword) . "&appkey={$appkey}&timestamp={$timestamp}&token={$token}";
+            // 使用 cURL 发起 GET 请求
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            $response = curl_exec($ch);
+            if (curl_errno($ch)) {
+                // 请求失败，返回错误信息
+                $error = curl_error($ch);
+                curl_close($ch);
+                return json(['code' => 500, 'msg' => "启信API请求失败: {$error}", 'data' => []]);
+            }
+            curl_close($ch);
+            // 解析 JSON 响应数据
+            $data = json_decode($response, true);
+            if (!$data) {
+                return json(['code' => 500, 'msg' => '启信API返回数据格式错误', 'data' => []]);
+            }
+            // 提取企业名称列表
+            $nameList = [];
+            if (isset($data['items'])) {
+                foreach ($data['items'] as $item) {
+                    if (!empty($item['name'])) {
+                        $nameList[] = $item['name'];
+                    }
+                }
+            }
+            // 返回企业名称列表（JSON 格式）
+            return json(['code' => 0, 'msg' => '获取成功', 'data' => $nameList]);
+        }
+        // 如非 AJAX 请求，这里可根据需要添加相应处理
+    }
+
+    
 }
