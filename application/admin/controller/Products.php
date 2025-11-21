@@ -1107,7 +1107,7 @@ class Products extends Common
                 ->select();
         }
 
-        //订单产品按国家统计
+        //订单产品按国家统计（使用省市二级联动数据）
         $order_prod_country = [];
         if (!empty($yy_conditions_order)) {
             $yy_where_raw = '(' . implode(' OR ', $yy_conditions_order) . ')';
@@ -1117,14 +1117,25 @@ class Products extends Common
             }
             
             // 先查询 crm_client_order 中 product_name 不为空的记录
+            // 查询province、city和country字段，在PHP层面组合
             $result1 = Db::table('crm_client_order o')
                 ->where($o_where)
                 ->whereRaw($yy_where_raw)
                 ->where('o.product_name', '<>', '')
                 ->where('o.product_name', '<>', null)
-                ->where('o.country', '<>', '')
-                ->group('o.product_name,o.country')
-                ->field('o.product_name,o.country,count(*) as count')
+                ->where(function($query) {
+                    $query->where(function($q) {
+                        $q->where('o.province', '<>', '')
+                          ->where('o.province', '<>', null)
+                          ->where('o.city', '<>', '')
+                          ->where('o.city', '<>', null);
+                    })->whereOr(function($q) {
+                        $q->where('o.country', '<>', '')
+                          ->where('o.country', '<>', null);
+                    });
+                })
+                ->field('o.product_name, o.province, o.city, o.country, count(*) as count')
+                ->group('o.product_name, o.province, o.city, o.country')
                 ->select();
             
             // 再查询 crm_order_item 中的记录
@@ -1136,19 +1147,39 @@ class Products extends Common
                 ->whereOr('o.product_name', '=', null)
                 ->where('oi.product_name', '<>', '')
                 ->where('oi.product_name', '<>', null)
-                ->where('o.country', '<>', '')
-                ->group('oi.product_name,o.country')
-                ->field('oi.product_name,o.country,count(*) as count')
+                ->where(function($query) {
+                    $query->where(function($q) {
+                        $q->where('o.province', '<>', '')
+                          ->where('o.province', '<>', null)
+                          ->where('o.city', '<>', '')
+                          ->where('o.city', '<>', null);
+                    })->whereOr(function($q) {
+                        $q->where('o.country', '<>', '')
+                          ->where('o.country', '<>', null);
+                    });
+                })
+                ->field('oi.product_name, o.province, o.city, o.country, count(*) as count')
+                ->group('oi.product_name, o.province, o.city, o.country')
                 ->select();
             
-            // 合并结果
+            // 合并结果，在PHP层面组合省市
             $merged = [];
             foreach ($result1 as $item) {
-                $key = $item['product_name'] . '|' . $item['country'];
+                // 组合省市：如果有province和city，则组合为"省份 城市"，否则使用country
+                $region = '';
+                if (!empty($item['province']) && !empty($item['city'])) {
+                    $region = trim($item['province']) . ' ' . trim($item['city']);
+                } elseif (!empty($item['country'])) {
+                    $region = $item['country'];
+                } else {
+                    continue; // 跳过没有地区信息的记录
+                }
+                
+                $key = $item['product_name'] . '|' . $region;
                 if (!isset($merged[$key])) {
                     $merged[$key] = [
                         'product_name' => $item['product_name'],
-                        'country' => $item['country'],
+                        'country' => $region,
                         'count' => 0
                     ];
                 }
@@ -1156,11 +1187,21 @@ class Products extends Common
             }
             
             foreach ($result2 as $item) {
-                $key = $item['product_name'] . '|' . $item['country'];
+                // 组合省市：如果有province和city，则组合为"省份 城市"，否则使用country
+                $region = '';
+                if (!empty($item['province']) && !empty($item['city'])) {
+                    $region = trim($item['province']) . ' ' . trim($item['city']);
+                } elseif (!empty($item['country'])) {
+                    $region = $item['country'];
+                } else {
+                    continue; // 跳过没有地区信息的记录
+                }
+                
+                $key = $item['product_name'] . '|' . $region;
                 if (!isset($merged[$key])) {
                     $merged[$key] = [
                         'product_name' => $item['product_name'],
-                        'country' => $item['country'],
+                        'country' => $region,
                         'count' => 0
                     ];
                 }

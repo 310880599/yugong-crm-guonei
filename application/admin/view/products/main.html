@@ -354,13 +354,15 @@
 
     })
 
-    // 产品排行筛选功能 - 支持合并单元格
+    // 产品排行筛选功能 - 支持合并单元格和模糊查询
     function filterList(selector, table, column = 0) {
         var selectedName = $(selector).val();
         var totalSum = 0;
         var $table = $(table);
         var $rows = $table.find('tbody tr');
         var mergeColumn = 0; // 只处理第一列的合并单元格
+        // 地区筛选（column=1）使用模糊查询，其他列使用精确匹配
+        var useFuzzySearch = (column === 1);
 
         function toggleRows(startIndex, rowspan, show) {
             for (var i = 0; i < rowspan; i++) {
@@ -389,15 +391,26 @@
             } else if (column === mergeColumn) {
                 // 如果筛选的是合并列
                 name = $mergeCell.text().trim();
-                shouldShow = (name === selectedName);
+                if (useFuzzySearch) {
+                    shouldShow = (name.indexOf(selectedName) !== -1);
+                } else {
+                    shouldShow = (name === selectedName);
+                }
             } else {
                 // 搜索的是非合并列 → 遍历整个合并组
                 for (var i = 0; i < rowspan; i++) {
                     var $subRow = $rows.eq(rowIndex + i);
                     var name = $subRow.find('td:eq(' + column + ')').text().trim();
-                    if (name === selectedName) {
-                        shouldShow = true;
-                        break;
+                    if (useFuzzySearch) {
+                        if (name.indexOf(selectedName) !== -1) {
+                            shouldShow = true;
+                            break;
+                        }
+                    } else {
+                        if (name === selectedName) {
+                            shouldShow = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -420,6 +433,58 @@
             $('#input_product_filter' + i).val('');
 
             filterList('#country_filter' + i, '#list_table' + i, 1);
+        });
+        // 地区搜索框输入时实时筛选（模糊查询）
+        $(document).on('input', '#input_country_filter' + i, function () {
+            var searchTerm = $(this).val().trim();
+            var totalSum = 0;
+            var $table = $('#list_table' + i);
+            var $rows = $table.find('tbody tr');
+            var mergeColumn = 0;
+
+            function toggleRows(startIndex, rowspan, show) {
+                for (var j = 0; j < rowspan; j++) {
+                    var $r = $rows.eq(startIndex + j);
+                    if ($r.length > 0) {
+                        show ? $r.show() : $r.hide();
+                        if (show) {
+                            var num = Number($r.find('td:last').text().replace(/,/g, '').trim()) || 0;
+                            totalSum += num;
+                        }
+                    }
+                }
+            }
+
+            for (var rowIndex = 0; rowIndex < $rows.length; rowIndex++) {
+                var $row = $rows.eq(rowIndex);
+                if ($row.find('td').length === 0) continue;
+
+                var $mergeCell = $row.find('td:eq(' + mergeColumn + ')');
+                var rowspan = $mergeCell.attr('rowspan') ? parseInt($mergeCell.attr('rowspan')) : 1;
+
+                var shouldShow = false;
+
+                if (!searchTerm) {
+                    shouldShow = true;
+                } else {
+                    // 模糊查询地区列（第2列，索引为1）
+                    for (var k = 0; k < rowspan; k++) {
+                        var $subRow = $rows.eq(rowIndex + k);
+                        var regionName = $subRow.find('td:eq(1)').text().trim();
+                        if (regionName.indexOf(searchTerm) !== -1) {
+                            shouldShow = true;
+                            break;
+                        }
+                    }
+                }
+                toggleRows(rowIndex, rowspan, shouldShow);
+                rowIndex += rowspan - 1;
+            }
+
+            $table.closest('.layui-card').find('.total span').text(totalSum);
+            // 清空产品筛选
+            $('#product_filter' + i).val('');
+            $('#input_product_filter' + i).val('');
         });
     }
 

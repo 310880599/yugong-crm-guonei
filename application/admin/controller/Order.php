@@ -210,6 +210,8 @@ class Order extends Common
             $data['contact']          = Request::param('contact');        // 客户联系方式
             $data['cname']            = Request::param('cname');          // 客户名称
             $data['client_company']            = Request::param('client_company'); // 客户公司
+            $data['province']         = Request::param('province', '');  // 省份
+            $data['city']             = Request::param('city', '');       // 城市
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
             $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）

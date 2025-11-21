@@ -18,6 +18,7 @@
     <script src="/static/admin/js/select.js"></script>
     <script src="/static/plugins/layui/layui.js"></script>
     <script src="/static/admin/js/xm-select.js"></script>
+    <script src="/static/admin/js/china-provinces-cities.js"></script>
     <style>
         .layui-form-pane .layui-form-label {
             width: 110px;
@@ -275,9 +276,27 @@
                     <label id="checklabel"></label>
                 </div>
             </div>
-            <!-- 发货地址 -->
+            <!-- 省市选择 -->
             <div class="layui-form-item">
-                <label class="layui-form-label">发货地址<span style="color:red;">*</span></label>
+                <label class="layui-form-label">所在省市</label>
+                <div class="layui-input-4">
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <select name="province" id="province" lay-search lay-filter="province_select">
+                                <option value="">请选择省份</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <select name="city" id="city" lay-search>
+                                <option value="">请先选择省份</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 收货地址 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">收货地址<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
                     <textarea id="country" name="country" placeholder="请输入发货详细地址" class="layui-textarea"></textarea>
                 </div>
@@ -600,7 +619,32 @@
             // 渲染现有的下拉框（包括产品名称、询盘来源等）
             form.render('select');
 
-
+            // 初始化省市联动下拉框
+            var $provinceSelect = $('#province');
+            var $citySelect = $('#city');
+            
+            // 填充省份下拉框
+            $.each(chinaProvincesCities, function(provinceName, cities) {
+                $provinceSelect.append('<option value="' + provinceName + '">' + provinceName + '</option>');
+            });
+            form.render('select');
+            
+            // 省份选择变化时，更新城市下拉框
+            form.on('select(province_select)', function(data) {
+                var selectedProvince = data.value;
+                $citySelect.empty();
+                
+                if (selectedProvince && chinaProvincesCities[selectedProvince]) {
+                    var cities = chinaProvincesCities[selectedProvince];
+                    $citySelect.append('<option value="">请选择城市</option>');
+                    $.each(cities, function(index, cityName) {
+                        $citySelect.append('<option value="' + cityName + '">' + cityName + '</option>');
+                    });
+                } else {
+                    $citySelect.append('<option value="">请先选择省份</option>');
+                }
+                form.render('select');
+            });
 
         // 对初始产品名称下拉选项调用 boldCategory，使分类名加粗
         // 注意：boldCategory 函数已移到全局作用域
