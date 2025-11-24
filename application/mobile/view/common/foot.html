@@ -10,5 +10,41 @@
 <script src="/static/mobile/js/vendor/swiper.min.js"></script>
 <script src="/static/mobile/js/vendor/materialize.min.js"></script>
 <script src="/static/mobile/js/main.js"></script>
+<script>
+(function () {
+    document.addEventListener('keydown', function (e) {
+        var key = e.key || e.keyCode || e.which;
+        if (key !== 'Escape' && key !== 'Esc' && key !== 27) {
+            return;
+        }
+
+        try {
+            var topLayer = (top && top.layui && top.layui.layer) ? top.layui.layer : null;
+            if (!topLayer && window.layui && window.layui.layer) {
+                topLayer = window.layui.layer;
+            }
+
+            if (!topLayer) {
+                return;
+            }
+
+            var closed = false;
+            if (window !== top && window.name && typeof topLayer.getFrameIndex === 'function') {
+                var index = topLayer.getFrameIndex(window.name);
+                if (typeof index !== 'undefined') {
+                    topLayer.close(index);
+                    closed = true;
+                }
+            }
+
+            if (!closed) {
+                topLayer.closeAll();
+            }
+        } catch (err) {
+            // ignore
+        }
+    });
+})();
+</script>
 </body>
 </html>

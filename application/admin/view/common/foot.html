@@ -5,52 +5,44 @@
 <!-- xmSelect 多选插件 JS -->
 <script src="/static/admin/js/xm-select.js"></script>
 <script>
-layui.use(['layer'], function () {
-    var layer = layui.layer;
-
+(function () {
+    // 统一的 ESC 关闭弹窗逻辑，所有包含此脚本的页面都会生效
     document.addEventListener('keydown', function (e) {
-        e = e || window.event;
-        var keyCode = e.keyCode || e.which;
+        var key = e.key || e.keyCode || e.which;
+        if (key !== 'Escape' && key !== 'Esc' && key !== 27) {
+            return;
+        }
 
-        // ESC 键
-        if (keyCode === 27) {
-            try {
-                // 优先拿到最顶层的 layer（一般所有弹窗都在 top 里）
-                var topLayer = null;
-                if (top && top.layui && top.layui.layer) {
-                    topLayer = top.layui.layer;
-                } else if (layui && layui.layer) {
-                    topLayer = layui.layer;
-                }
-                if (!topLayer) {
-                    return;
-                }
-
-                // 1) 如果自己是在 iframe 里，尝试只关闭“当前这一层”
-                var closed = false;
-                if (window !== top && window.name) {
-                    try {
-                        var index = topLayer.getFrameIndex(window.name);
-                        if (typeof index !== 'undefined') {
-                            topLayer.close(index);
-                            closed = true;
-                        }
-                    } catch (err) {
-                        // 忽略
-                    }
-                }
-
-                // 2) 如果上面没关掉（比如不是 layer 的 iframe），那就直接把所有 layer 都关掉
-                if (!closed) {
-                    // 不加类型参数，关闭所有类型（page / iframe / msg 等）
-                    topLayer.closeAll();
-                }
-            } catch (err) {
-                // 忽略异常
+        try {
+            // 优先使用顶层的 layer，保证 iframe 弹窗也能被捕获
+            var topLayer = (top && top.layui && top.layui.layer) ? top.layui.layer : null;
+            if (!topLayer && window.layui && window.layui.layer) {
+                topLayer = window.layui.layer;
             }
+
+            if (!topLayer) {
+                return;
+            }
+
+            // 如果当前页面在 iframe 中，先尝试只关闭当前这一层
+            var closed = false;
+            if (window !== top && window.name && typeof topLayer.getFrameIndex === 'function') {
+                var index = topLayer.getFrameIndex(window.name);
+                if (typeof index !== 'undefined') {
+                    topLayer.close(index);
+                    closed = true;
+                }
+            }
+
+            // 如果不是 iframe 弹窗或无法定位具体窗口，则关闭所有 layer 弹窗
+            if (!closed) {
+                topLayer.closeAll();
+            }
+        } catch (err) {
+            // 忽略异常，避免影响页面其他逻辑
         }
     });
-});
+})();
 </script>
 
 
