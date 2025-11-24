@@ -3,7 +3,7 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">销售产品排行</div>
+                <div class="layui-card-header">销售产品汇总</div>
                 <div class="filter-bar">
                     <div class="total">合计：<span>{$data['product_data']['order_prod'] ? $data['product_data']['order_prod']|array_column='count'|array_sum : 0}</span></div>
                 </div>
@@ -34,7 +34,7 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">询盘产品排行</div>
+                <div class="layui-card-header">询盘产品汇总</div>
                     <div class="filter-bar">
                     <div class="total">合计：<span>{$data['product_data']['oper_prod'] ? $data['product_data']['oper_prod']|array_column='count'|array_sum : 0}</span></div>
                 </div>
@@ -69,7 +69,7 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">销售产品厂家排行</div>
+                <div class="layui-card-header">销售产品厂家汇总</div>
                 <div class="filter-bar">
                     <div class="total">合计：<span>{$data['product_data']['order_prod_category'] ? $data['product_data']['order_prod_category']|array_column='count'|array_sum : 0}</span></div>
                 </div>
@@ -100,7 +100,7 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">询盘产品厂家排行</div>
+                <div class="layui-card-header">询盘产品厂家汇总</div>
                 <div class="filter-bar">
                     <div class="total">合计：<span>{$data['product_data']['oper_prod_category'] ? $data['product_data']['oper_prod_category']|array_column='count'|array_sum : 0}</span></div>
                 </div>
@@ -135,7 +135,7 @@
         <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">销售产品地区排行</div>
+                <div class="layui-card-header">销售产品地区汇总</div>
                 <div class="filter-bar">
                     {php}
                         if($data['product_data']['order_prod_country']){
@@ -195,7 +195,7 @@
         <!-- <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">询盘产品地区排行</div>
+                <div class="layui-card-header">询盘产品地区汇总</div>
                 <div class="filter-bar">
                     {php}
                         if($data['product_data']['order_prod_country']){
@@ -259,7 +259,7 @@
         <!-- <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">销售产品分类地区排行</div>
+                <div class="layui-card-header">销售产品分类地区汇总</div>
                             <div class="filter-bar">
                     {php}
                         if($data['product_data']['order_prod_country']){
@@ -319,7 +319,7 @@
         <!-- <div class="layui-col-md6">
             <div class="layui-card fold-card export">
 
-                <div class="layui-card-header">询盘产品分类地区排行</div>
+                <div class="layui-card-header">询盘产品分类地区汇总</div>
                             <div class="filter-bar">
                     {php}
                         if($data['product_data']['order_prod_country']){
