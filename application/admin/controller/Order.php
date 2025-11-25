@@ -2005,10 +2005,14 @@ class Order extends Common
             return json(['code' => 0, 'msg' => '参数错误', 'data' => []]);
         }
         
-        // 查询订单明细
+        // 查询订单明细，关联产品表获取供应商信息（category_name）
         $items = Db::table('crm_order_item')
-            ->where('order_id', 'in', $orderIds)
-            ->order('order_id asc, line_no asc')
+            ->alias('oi')
+            ->leftJoin('crm_products p', 'oi.product_id = p.id')
+            ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+            ->where('oi.order_id', 'in', $orderIds)
+            ->order('oi.order_id asc, oi.line_no asc')
+            ->field('oi.*, c.category_name as supplier')
             ->select();
         
         // 获取产品经理名称
@@ -2036,6 +2040,10 @@ class Order extends Common
             $item['manager_name'] = isset($managerMap[$item['manager_id']]) 
                 ? $managerMap[$item['manager_id']] 
                 : '';
+            // 如果没有从产品表获取到供应商，尝试从明细表本身获取
+            if (empty($item['supplier']) && isset($item['supplier'])) {
+                $item['supplier'] = $item['supplier'] ?? '';
+            }
         }
         unset($item);
         

@@ -647,12 +647,16 @@
                                 
                                 // 订单主表字段
                                 if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
-                                     'shipping_cost', 'invoice_type', 'invoice_amount', 'tax_amount', 
+                                     'shipping_cost', 'invoice_amount', 'tax_amount', 
                                      'debugging_cost', 'sales_commission', 'split_remarks', 
                                      'bank_account', 'source', 'amount_received', 'profit', 
                                      'margin_rate', 'joint_person', 'client_company', 
                                      'create_time', 'ut_time'].includes(col.field)) {
                                     value = item[col.field] || '';
+                                }
+                                else if (col.field === 'invoice_type') {
+                                    // 票种信息
+                                    value = item['invoice_type'] || '';
                                 }
                                 else if (col.field === 'create_time_original') {
                                     value = item['create_time'] || '';
@@ -719,12 +723,16 @@
                             
                             // 订单主表字段
                             if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
-                                 'shipping_cost', 'invoice_type', 'invoice_amount', 'tax_amount', 
+                                 'shipping_cost', 'invoice_amount', 'tax_amount', 
                                  'debugging_cost', 'sales_commission', 'split_remarks', 
                                  'source', 'amount_received', 'profit', 
                                  'margin_rate', 'joint_person', 'client_company', 
                                  'create_time', 'ut_time'].includes(col.field)) {
                                 value = item[col.field] || '';
+                            }
+                            else if (col.field === 'invoice_type') {
+                                // 票种信息
+                                value = item['invoice_type'] || '';
                             }
                             else if (col.field === 'bank_account') {
                                 // 收款账户可能是ID，需要转换为账户名称
