@@ -285,6 +285,7 @@ class Order extends Common
             $data['at_user']          = Session::get('username');         // 创建人
             $data['order_time']       = Request::param('order_time');     // 成交时间
             $data['shipping_cost']    = Request::param('shipping_cost');  // 估算运费
+            $data['invoice_type']     = Request::param('invoice_type');    // 票种性质（普票、专票、不开票）
             $data['invoice_amount']   = Request::param('invoice_amount'); // 开票金额
             $data['tax_amount']       = Request::param('tax_amount');     // 税费金额
             $data['debugging_cost']   = Request::param('debugging_cost'); // 调试费
@@ -856,6 +857,7 @@ class Order extends Common
             
             $data['order_time']       = Request::param('order_time');     // 成交时间
             $data['shipping_cost']    = Request::param('shipping_cost');  // 估算运费
+            $data['invoice_type']     = Request::param('invoice_type');    // 票种性质（普票、专票、不开票）
             $data['invoice_amount']   = Request::param('invoice_amount'); // 开票金额
             $data['tax_amount']       = Request::param('tax_amount');     // 税费金额
             $data['debugging_cost']   = Request::param('debugging_cost'); // 调试费
@@ -1305,6 +1307,7 @@ class Order extends Common
             $data['team_name']        = Request::param('team_name');      // 团队名称
             $data['order_time']       = Request::param('order_time');     // 成交时间
             $data['shipping_cost']    = Request::param('shipping_cost');  // 估算运费
+            $data['invoice_type']     = Request::param('invoice_type');    // 票种性质（普票、专票、不开票）
             $data['invoice_amount']   = Request::param('invoice_amount'); // 开票金额
             $data['tax_amount']       = Request::param('tax_amount');     // 税费金额
             $data['debugging_cost']   = Request::param('debugging_cost'); // 调试费

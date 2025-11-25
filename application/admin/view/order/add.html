@@ -476,10 +476,23 @@
                         placeholder="请输入估算运费" class="layui-input">
                 </div>
             </div>
+            <!-- 票种性质 -->
             <div class="layui-form-item">
+                <label class="layui-form-label">票种性质<span style="color:red;">*</span></label>
+                <div class="layui-input-4">
+                    <select name="invoice_type" id="invoice_type" lay-verify="required" lay-filter="invoice_type">
+                        <option value="">请选择票种性质</option>
+                        <option value="普票">普票</option>
+                        <option value="专票">专票</option>
+                        <option value="不开票">不开票</option>
+                    </select>
+                </div>
+            </div>
+            <!-- 票种/票金额 -->
+            <div class="layui-form-item" id="invoice_amount_item" style="display: none;">
                 <label class="layui-form-label">票种/票金额<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" id="invoice_amount" name="invoice_amount" lay-verify="required"
+                    <input type="text" id="invoice_amount" name="invoice_amount" lay-verify=""
                         placeholder="请输入开票金额" class="layui-input">
                 </div>
             </div>
@@ -720,6 +733,28 @@
                 $clientCompanyInput.removeAttr('lay-verify');
                 $clientCompanyInput.val(''); // 清空值
                 $('#companyList').hide(); // 隐藏下拉列表
+                // 重新渲染表单验证
+                form.render();
+            }
+        });
+        
+        // 票种性质选择变化时的处理
+        form.on('select(invoice_type)', function (data) {
+            var invoiceType = data.value;
+            var $invoiceAmountItem = $('#invoice_amount_item');
+            var $invoiceAmountInput = $('#invoice_amount');
+            
+            if (invoiceType === '不开票') {
+                // 选择"不开票"：隐藏票种金额字段并移除必填验证
+                $invoiceAmountItem.hide();
+                $invoiceAmountInput.removeAttr('lay-verify');
+                $invoiceAmountInput.val(''); // 清空值
+                // 重新渲染表单验证
+                form.render();
+            } else if (invoiceType === '普票' || invoiceType === '专票') {
+                // 选择"普票"或"专票"：显示票种金额字段并设置为必填
+                $invoiceAmountItem.show();
+                $invoiceAmountInput.attr('lay-verify', 'required');
                 // 重新渲染表单验证
                 form.render();
             }
@@ -1087,6 +1122,22 @@
                 var clientCompany = $("#client_company").val();
                 if (!clientCompany || clientCompany.trim() === '') {
                     layer.msg('选择"公司"时，客户公司为必填项', { icon: 2, time: 2000 });
+                    return false;
+                }
+            }
+            
+            // 检查票种性质是否已选择
+            var invoiceType = $("#invoice_type").val();
+            if (!invoiceType || invoiceType === '') {
+                layer.msg('请选择票种性质', { icon: 2, time: 2000 });
+                return false;
+            }
+            
+            // 如果选择"普票"或"专票"，检查票种金额是否已填写
+            if (invoiceType === '普票' || invoiceType === '专票') {
+                var invoiceAmount = $("#invoice_amount").val();
+                if (!invoiceAmount || invoiceAmount.trim() === '') {
+                    layer.msg('选择"普票"或"专票"时，票种金额为必填项', { icon: 2, time: 2000 });
                     return false;
                 }
             }
