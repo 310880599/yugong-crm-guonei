@@ -584,6 +584,12 @@ class Products extends Common
     // 获取询盘产品排行数据
     private function getOperProdData($org, $timebucket)
     {
+        // 构建查询条件
+        $l_where = [['l.status', '=', 1]];
+        if (!empty($timebucket)) {
+            $l_where[] = $this->getClientimeWhere($timebucket, 'l');
+        }
+        
         // 获取所有运营人员的 inquiry_id 和 port_id
         $yy_admins = Db::table('admin')
             ->where($this->getOrgWhere($org))
@@ -595,56 +601,44 @@ class Products extends Common
             ->field('inquiry_id,port_id')
             ->select();
         
-        if (empty($yy_admins)) {
-            return [];
-        }
-        
-        // 构建运营人员匹配条件
-        $yy_conditions = [];
-        foreach ($yy_admins as $admin) {
-            $admin_inquiry_id = $admin['inquiry_id'];
-            $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
-            
-            if (empty($admin_port_ids)) continue;
-            
-            $port_conditions = [];
-            foreach ($admin_port_ids as $port_id) {
-                $port_id = trim($port_id);
-                if ($port_id) {
-                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
-                }
-            }
-            
-            if (!empty($port_conditions)) {
-                $yy_conditions[] = "(l.inquiry_id = '{$admin_inquiry_id}' AND (" . implode(' OR ', $port_conditions) . "))";
-            }
-        }
-        
-        if (empty($yy_conditions)) {
-            return [];
-        }
-        
-        $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
-        
-        // 构建查询条件
-        $l_where = [['l.status', '=', 1]];
-        if (!empty($timebucket)) {
-            $l_where[] = $this->getClientimeWhere($timebucket, 'l');
-        }
-        
-        // 查询询盘产品数据，通过 JOIN crm_products 获取产品名称
-        $result = Db::table('crm_leads')
+        // 构建查询
+        $query = Db::table('crm_leads')
             ->alias('l')
             ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
             ->where($l_where)
-            ->where('l.inquiry_id', '<>', '')
-            ->where('l.inquiry_id', '<>', null)
-            ->where('l.port_id', '<>', '')
-            ->where('l.port_id', '<>', null)
             ->where('l.product_name', '<>', '')
-            ->where('l.product_name', '<>', null)
-            ->whereRaw($yy_where_raw)
-            ->group('IFNULL(p.product_name, l.product_name)')
+            ->where('l.product_name', '<>', null);
+        
+        // 如果有运营人员，添加运营人员匹配条件；否则查询所有数据
+        if (!empty($yy_admins)) {
+            $yy_conditions = [];
+            foreach ($yy_admins as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                $port_conditions = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                    }
+                }
+                
+                if (!empty($port_conditions)) {
+                    $yy_conditions[] = "(l.inquiry_id = '{$admin_inquiry_id}' AND (" . implode(' OR ', $port_conditions) . "))";
+                }
+            }
+            
+            if (!empty($yy_conditions)) {
+                $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
+                $query->whereRaw($yy_where_raw);
+            }
+        }
+        
+        // 查询询盘产品数据，通过 JOIN crm_products 获取产品名称
+        $result = $query->group('IFNULL(p.product_name, l.product_name)')
             ->field('IFNULL(p.product_name, l.product_name) as product_name,count(l.id) as count')
             ->order('count', 'desc')
             ->select();
@@ -655,6 +649,12 @@ class Products extends Common
     // 获取销售产品排行数据
     private function getOrderProdData($org, $timebucket)
     {
+        // 构建查询条件
+        $o_where = [];
+        if (!empty($timebucket)) {
+            $o_where[] = $this->buildTimeWhere($timebucket, 'order_time');
+        }
+        
         // 获取所有运营人员的 inquiry_id 和 port_id
         $yy_admins = Db::table('admin')
             ->where($this->getOrgWhere($org))
@@ -666,88 +666,88 @@ class Products extends Common
             ->field('inquiry_id,port_id')
             ->select();
         
-        if (empty($yy_admins)) {
-            return [];
-        }
-        
-        // 构建运营人员匹配条件
-        // 订单表的 source 是渠道名称，source_port 是端口名称（文字）
-        $yy_conditions = [];
-        foreach ($yy_admins as $admin) {
-            $admin_inquiry_id = $admin['inquiry_id'];
-            $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
-            
-            if (empty($admin_port_ids)) continue;
-            
-            // 获取该渠道下所有端口的名称列表
-            $port_names = [];
-            $inquiry_name = '';
-            $inquiry_info = Db::table('crm_inquiry')
-                ->where('id', $admin_inquiry_id)
-                ->field('inquiry_name')
-                ->find();
-            if ($inquiry_info) {
-                $inquiry_name = addslashes($inquiry_info['inquiry_name']);
-            }
-            
-            foreach ($admin_port_ids as $port_id) {
-                $port_id = trim($port_id);
-                if ($port_id) {
-                    $port_info = Db::table('crm_inquiry_port')
-                        ->where('id', $port_id)
-                        ->where('inquiry_id', $admin_inquiry_id)
-                        ->field('port_name')
-                        ->find();
-                    if ($port_info && !empty($port_info['port_name'])) {
-                        $port_names[] = addslashes($port_info['port_name']);
+        // 构建运营人员匹配条件（如果有运营人员）
+        $yy_where_raw = null;
+        if (!empty($yy_admins)) {
+            $yy_conditions = [];
+            foreach ($yy_admins as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                // 获取该渠道下所有端口的名称列表
+                $port_names = [];
+                $inquiry_name = '';
+                $inquiry_info = Db::table('crm_inquiry')
+                    ->where('id', $admin_inquiry_id)
+                    ->field('inquiry_name')
+                    ->find();
+                if ($inquiry_info) {
+                    $inquiry_name = addslashes($inquiry_info['inquiry_name']);
+                }
+                
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_info = Db::table('crm_inquiry_port')
+                            ->where('id', $port_id)
+                            ->where('inquiry_id', $admin_inquiry_id)
+                            ->field('port_name')
+                            ->find();
+                        if ($port_info && !empty($port_info['port_name'])) {
+                            $port_names[] = addslashes($port_info['port_name']);
+                        }
                     }
                 }
+                
+                if (!empty($inquiry_name) && !empty($port_names)) {
+                    $port_conditions = [];
+                    foreach ($port_names as $port_name) {
+                        $port_conditions[] = "o.source_port = '{$port_name}'";
+                    }
+                    $yy_conditions[] = "(o.source = '{$inquiry_name}' AND (" . implode(' OR ', $port_conditions) . "))";
+                }
             }
             
-            if (!empty($inquiry_name) && !empty($port_names)) {
-                $port_conditions = [];
-                foreach ($port_names as $port_name) {
-                    $port_conditions[] = "o.source_port = '{$port_name}'";
-                }
-                $yy_conditions[] = "(o.source = '{$inquiry_name}' AND (" . implode(' OR ', $port_conditions) . "))";
+            if (!empty($yy_conditions)) {
+                $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
             }
-        }
-        
-        if (empty($yy_conditions)) {
-            return [];
-        }
-        
-        $yy_where_raw = '(' . implode(' OR ', $yy_conditions) . ')';
-        
-        // 构建查询条件
-        $o_where = [];
-        if (!empty($timebucket)) {
-            $o_where[] = $this->buildTimeWhere($timebucket, 'order_time');
         }
         
         // 查询销售产品数据
         // 先查询 crm_client_order 中 product_name 不为空的记录
-        $result1 = Db::table('crm_client_order')
+        $query1 = Db::table('crm_client_order')
             ->alias('o')
             ->where($o_where)
             ->where('o.product_name', '<>', '')
-            ->where('o.product_name', '<>', null)
-            ->whereRaw($yy_where_raw)
-            ->group('o.product_name')
+            ->where('o.product_name', '<>', null);
+        
+        if ($yy_where_raw) {
+            $query1->whereRaw($yy_where_raw);
+        }
+        
+        $result1 = $query1->group('o.product_name')
             ->field('o.product_name,count(o.id) as count')
             ->select();
         
         // 再查询 crm_order_item 中 product_name 不为空的记录（当 crm_client_order.product_name 为空时）
-        $result2 = Db::table('crm_client_order')
+        $query2 = Db::table('crm_client_order')
             ->alias('o')
             ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
             ->where($o_where)
-            ->where('o.product_name', '=', '')
-            ->whereOr('o.product_name', '=', null)
+            ->where(function($query) {
+                $query->where('o.product_name', '=', '')
+                    ->whereOr('o.product_name', '=', null);
+            })
             ->where('oi.product_name', '<>', '')
-            ->where('oi.product_name', '<>', null)
-            ->whereRaw($yy_where_raw)
-            ->group('oi.product_name')
+            ->where('oi.product_name', '<>', null);
+        
+        if ($yy_where_raw) {
+            $query2->whereRaw($yy_where_raw);
+        }
+        
+        $result2 = $query2->group('oi.product_name')
             ->field('oi.product_name,count(o.id) as count')
             ->select();
         
@@ -783,6 +783,17 @@ class Products extends Common
     //产品按分类统计
     public function productCategoryCount($org, $timebucket)
     {
+        // 构建查询条件
+        $l_where = [['l.status', '=', 1]];
+        if (!empty($timebucket)) {
+            $l_where[] = $this->getClientimeWhere($timebucket, 'l');
+        }
+        
+        $o_where = [];
+        if (!empty($timebucket)) {
+            $o_where[] = $this->buildTimeWhere($timebucket, 'order_time');
+        }
+        
         // 获取所有运营人员
         $yy_admins = Db::table('admin')
             ->where($this->getOrgWhere($org))
@@ -794,171 +805,171 @@ class Products extends Common
             ->field('inquiry_id,port_id')
             ->select();
         
-        if (empty($yy_admins)) {
-            return ['oper_prod_category' => [], 'order_prod_category' => []];
-        }
-        
         // 构建询盘产品匹配条件
         $yy_conditions_oper = [];
-        foreach ($yy_admins as $admin) {
-            $admin_inquiry_id = $admin['inquiry_id'];
-            $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
-            
-            if (empty($admin_port_ids)) continue;
-            
-            $port_conditions = [];
-            foreach ($admin_port_ids as $port_id) {
-                $port_id = trim($port_id);
-                if ($port_id) {
-                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+        if (!empty($yy_admins)) {
+            foreach ($yy_admins as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                $port_conditions = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                    }
                 }
-            }
-            
-            if (!empty($port_conditions)) {
-                $yy_conditions_oper[] = "(l.inquiry_id = '{$admin_inquiry_id}' AND (" . implode(' OR ', $port_conditions) . "))";
+                
+                if (!empty($port_conditions)) {
+                    $yy_conditions_oper[] = "(l.inquiry_id = '{$admin_inquiry_id}' AND (" . implode(' OR ', $port_conditions) . "))";
+                }
             }
         }
         
         // 构建订单产品匹配条件
         $yy_conditions_order = [];
-        foreach ($yy_admins as $admin) {
-            $admin_inquiry_id = $admin['inquiry_id'];
-            $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
-            
-            if (empty($admin_port_ids)) continue;
-            
-            $port_names = [];
-            $inquiry_name = '';
-            $inquiry_info = Db::table('crm_inquiry')
-                ->where('id', $admin_inquiry_id)
-                ->field('inquiry_name')
-                ->find();
-            if ($inquiry_info) {
-                $inquiry_name = addslashes($inquiry_info['inquiry_name']);
-            }
-            
-            foreach ($admin_port_ids as $port_id) {
-                $port_id = trim($port_id);
-                if ($port_id) {
-                    $port_info = Db::table('crm_inquiry_port')
-                        ->where('id', $port_id)
-                        ->where('inquiry_id', $admin_inquiry_id)
-                        ->field('port_name')
-                        ->find();
-                    if ($port_info && !empty($port_info['port_name'])) {
-                        $port_names[] = addslashes($port_info['port_name']);
+        if (!empty($yy_admins)) {
+            foreach ($yy_admins as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                $port_names = [];
+                $inquiry_name = '';
+                $inquiry_info = Db::table('crm_inquiry')
+                    ->where('id', $admin_inquiry_id)
+                    ->field('inquiry_name')
+                    ->find();
+                if ($inquiry_info) {
+                    $inquiry_name = addslashes($inquiry_info['inquiry_name']);
+                }
+                
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_info = Db::table('crm_inquiry_port')
+                            ->where('id', $port_id)
+                            ->where('inquiry_id', $admin_inquiry_id)
+                            ->field('port_name')
+                            ->find();
+                        if ($port_info && !empty($port_info['port_name'])) {
+                            $port_names[] = addslashes($port_info['port_name']);
+                        }
                     }
                 }
-            }
-            
-            if (!empty($inquiry_name) && !empty($port_names)) {
-                $port_conditions = [];
-                foreach ($port_names as $port_name) {
-                    $port_conditions[] = "o.source_port = '{$port_name}'";
+                
+                if (!empty($inquiry_name) && !empty($port_names)) {
+                    $port_conditions = [];
+                    foreach ($port_names as $port_name) {
+                        $port_conditions[] = "o.source_port = '{$port_name}'";
+                    }
+                    $yy_conditions_order[] = "(o.source = '{$inquiry_name}' AND (" . implode(' OR ', $port_conditions) . "))";
                 }
-                $yy_conditions_order[] = "(o.source = '{$inquiry_name}' AND (" . implode(' OR ', $port_conditions) . "))";
             }
         }
         
         //询盘产品按分类统计
         $oper_prod_category = [];
+        $query_oper = Db::table('crm_leads l')
+            ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
+            ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
+            ->where([$this->getOrgWhere($org, 'p')])
+            ->where($l_where)
+            ->where('l.product_name', '<>', '')
+            ->where('l.product_name', '<>', null)
+            ->where('c.category_name', '<>', '')
+            ->where('c.category_name', '<>', null);
+        
         if (!empty($yy_conditions_oper)) {
             $yy_where_raw = '(' . implode(' OR ', $yy_conditions_oper) . ')';
-            $l_where = [['l.status', '=', 1]];
-            if (!empty($timebucket)) {
-                $l_where[] = $this->getClientimeWhere($timebucket, 'l');
-            }
-            
-            $oper_prod_category = Db::table('crm_leads l')
-                ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
-                ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
-                ->where($l_where)
-                ->where('l.inquiry_id', '<>', '')
-                ->where('l.inquiry_id', '<>', null)
-                ->where('l.port_id', '<>', '')
-                ->where('l.port_id', '<>', null)
-                ->where('l.product_name', '<>', '')
-                ->where('l.product_name', '<>', null)
-                ->whereRaw($yy_where_raw)
-                ->where('c.category_name', '<>', '')
-                ->where('c.category_name', '<>', null)
-                ->group('c.category_name')
-                ->field('c.category_name,count(*) as count')
-                ->order('c.category_name', 'asc')
-                ->order('count', 'desc')
-                ->select();
+            $query_oper->whereRaw($yy_where_raw);
         }
+        
+        $oper_prod_category = $query_oper->group('c.category_name')
+            ->field('c.category_name,count(*) as count')
+            ->order('c.category_name', 'asc')
+            ->order('count', 'desc')
+            ->select();
         
         //订单产品按分类统计
         $order_prod_category = [];
+        $yy_where_raw_order = null;
         if (!empty($yy_conditions_order)) {
-            $yy_where_raw = '(' . implode(' OR ', $yy_conditions_order) . ')';
-            $o_where = [];
-            if (!empty($timebucket)) {
-                $o_where[] = $this->buildTimeWhere($timebucket, 'order_time');
-            }
-            
-            // 先查询 crm_client_order 中 product_name 不为空的记录
-            $result1 = Db::table('crm_client_order o')
-                ->join('crm_products p', 'o.product_name = p.product_name', 'LEFT')
-                ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
-                ->where($o_where)
-                ->whereRaw($yy_where_raw)
-                ->where('o.product_name', '<>', '')
-                ->where('o.product_name', '<>', null)
-                ->where('c.category_name', '<>', '')
-                ->where('c.category_name', '<>', null)
-                ->group('c.category_name')
-                ->field('c.category_name,count(*) as count')
-                ->select();
-            
-            // 再查询 crm_order_item 中的记录
-            $result2 = Db::table('crm_client_order o')
-                ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
-                ->join('crm_products p', 'oi.product_name = p.product_name', 'LEFT')
-                ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
-                ->where($o_where)
-                ->whereRaw($yy_where_raw)
-                ->where('o.product_name', '=', '')
-                ->whereOr('o.product_name', '=', null)
-                ->where('oi.product_name', '<>', '')
-                ->where('oi.product_name', '<>', null)
-                ->where('c.category_name', '<>', '')
-                ->where('c.category_name', '<>', null)
-                ->group('c.category_name')
-                ->field('c.category_name,count(*) as count')
-                ->select();
-            
-            // 合并结果
-            $merged = [];
-            foreach ($result1 as $item) {
-                $category_name = $item['category_name'];
-                if (!isset($merged[$category_name])) {
-                    $merged[$category_name] = ['category_name' => $category_name, 'count' => 0];
-                }
-                $merged[$category_name]['count'] += $item['count'];
-            }
-            
-            foreach ($result2 as $item) {
-                $category_name = $item['category_name'];
-                if (!isset($merged[$category_name])) {
-                    $merged[$category_name] = ['category_name' => $category_name, 'count' => 0];
-                }
-                $merged[$category_name]['count'] += $item['count'];
-            }
-            
-            // 转换为数组并按数量排序
-            $order_prod_category = array_values($merged);
-            usort($order_prod_category, function($a, $b) {
-                if ($a['category_name'] == $b['category_name']) {
-                    return $b['count'] - $a['count'];
-                }
-                return strcmp($a['category_name'], $b['category_name']);
-            });
+            $yy_where_raw_order = '(' . implode(' OR ', $yy_conditions_order) . ')';
         }
+        
+        // 先查询 crm_client_order 中 product_name 不为空的记录
+        $query1 = Db::table('crm_client_order o')
+            ->join('crm_products p', 'o.product_name = p.product_name', 'LEFT')
+            ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
+            ->where([$this->getOrgWhere($org, 'p')])
+            ->where($o_where)
+            ->where('o.product_name', '<>', '')
+            ->where('o.product_name', '<>', null)
+            ->where('c.category_name', '<>', '')
+            ->where('c.category_name', '<>', null);
+        
+        if ($yy_where_raw_order) {
+            $query1->whereRaw($yy_where_raw_order);
+        }
+        
+        $result1 = $query1->group('c.category_name')
+            ->field('c.category_name,count(*) as count')
+            ->select();
+        
+        // 再查询 crm_order_item 中的记录
+        $query2 = Db::table('crm_client_order o')
+            ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
+            ->join('crm_products p', 'oi.product_name = p.product_name', 'LEFT')
+            ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
+            ->where([$this->getOrgWhere($org, 'p')])
+            ->where($o_where)
+            ->where(function($query) {
+                $query->where('o.product_name', '=', '')
+                    ->whereOr('o.product_name', '=', null);
+            })
+            ->where('oi.product_name', '<>', '')
+            ->where('oi.product_name', '<>', null)
+            ->where('c.category_name', '<>', '')
+            ->where('c.category_name', '<>', null);
+        
+        if ($yy_where_raw_order) {
+            $query2->whereRaw($yy_where_raw_order);
+        }
+        
+        $result2 = $query2->group('c.category_name')
+            ->field('c.category_name,count(*) as count')
+            ->select();
+        
+        // 合并结果
+        $merged = [];
+        foreach ($result1 as $item) {
+            $category_name = $item['category_name'];
+            if (!isset($merged[$category_name])) {
+                $merged[$category_name] = ['category_name' => $category_name, 'count' => 0];
+            }
+            $merged[$category_name]['count'] += $item['count'];
+        }
+        
+        foreach ($result2 as $item) {
+            $category_name = $item['category_name'];
+            if (!isset($merged[$category_name])) {
+                $merged[$category_name] = ['category_name' => $category_name, 'count' => 0];
+            }
+            $merged[$category_name]['count'] += $item['count'];
+        }
+        
+        // 转换为数组并按数量排序
+        $order_prod_category = array_values($merged);
+        usort($order_prod_category, function($a, $b) {
+            if ($a['category_name'] == $b['category_name']) {
+                return $b['count'] - $a['count'];
+            }
+            return strcmp($a['category_name'], $b['category_name']);
+        });
         
         return ['oper_prod_category' => $oper_prod_category ?: [], 'order_prod_category' => $order_prod_category ?: []];
     }
@@ -966,6 +977,17 @@ class Products extends Common
     //产品按国家统计
     public function productCountryCount($org, $timebucket)
     {
+        // 构建查询条件
+        $l_where = [['l.status', '=', 1]];
+        if (!empty($timebucket)) {
+            $l_where[] = $this->getClientimeWhere($timebucket, 'l');
+        }
+        
+        $o_where = [];
+        if (!empty($timebucket)) {
+            $o_where[] = $this->buildTimeWhere($timebucket, 'order_time');
+        }
+        
         // 获取所有运营人员
         $yy_admins = Db::table('admin')
             ->where($this->getOrgWhere($org))
@@ -977,190 +999,179 @@ class Products extends Common
             ->field('inquiry_id,port_id')
             ->select();
         
-        if (empty($yy_admins)) {
-            return [
-                'oper_prod_country' => [],
-                'oper_prod_category_country' => [],
-                'order_prod_country' => [],
-                'order_prod_category_country' => [],
-            ];
-        }
-        
         // 构建询盘产品匹配条件
         $yy_conditions_oper = [];
-        foreach ($yy_admins as $admin) {
-            $admin_inquiry_id = $admin['inquiry_id'];
-            $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
-            
-            if (empty($admin_port_ids)) continue;
-            
-            $port_conditions = [];
-            foreach ($admin_port_ids as $port_id) {
-                $port_id = trim($port_id);
-                if ($port_id) {
-                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+        if (!empty($yy_admins)) {
+            foreach ($yy_admins as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                $port_conditions = [];
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                    }
                 }
-            }
-            
-            if (!empty($port_conditions)) {
-                $yy_conditions_oper[] = "(l.inquiry_id = '{$admin_inquiry_id}' AND (" . implode(' OR ', $port_conditions) . "))";
+                
+                if (!empty($port_conditions)) {
+                    $yy_conditions_oper[] = "(l.inquiry_id = '{$admin_inquiry_id}' AND (" . implode(' OR ', $port_conditions) . "))";
+                }
             }
         }
         
         // 构建订单产品匹配条件
         $yy_conditions_order = [];
-        foreach ($yy_admins as $admin) {
-            $admin_inquiry_id = $admin['inquiry_id'];
-            $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
-            
-            if (empty($admin_port_ids)) continue;
-            
-            $port_names = [];
-            $inquiry_name = '';
-            $inquiry_info = Db::table('crm_inquiry')
-                ->where('id', $admin_inquiry_id)
-                ->field('inquiry_name')
-                ->find();
-            if ($inquiry_info) {
-                $inquiry_name = addslashes($inquiry_info['inquiry_name']);
-            }
-            
-            foreach ($admin_port_ids as $port_id) {
-                $port_id = trim($port_id);
-                if ($port_id) {
-                    $port_info = Db::table('crm_inquiry_port')
-                        ->where('id', $port_id)
-                        ->where('inquiry_id', $admin_inquiry_id)
-                        ->field('port_name')
-                        ->find();
-                    if ($port_info && !empty($port_info['port_name'])) {
-                        $port_names[] = addslashes($port_info['port_name']);
+        if (!empty($yy_admins)) {
+            foreach ($yy_admins as $admin) {
+                $admin_inquiry_id = $admin['inquiry_id'];
+                $admin_port_ids = !empty($admin['port_id']) ? array_filter(explode(',', $admin['port_id'])) : [];
+                
+                if (empty($admin_port_ids)) continue;
+                
+                $port_names = [];
+                $inquiry_name = '';
+                $inquiry_info = Db::table('crm_inquiry')
+                    ->where('id', $admin_inquiry_id)
+                    ->field('inquiry_name')
+                    ->find();
+                if ($inquiry_info) {
+                    $inquiry_name = addslashes($inquiry_info['inquiry_name']);
+                }
+                
+                foreach ($admin_port_ids as $port_id) {
+                    $port_id = trim($port_id);
+                    if ($port_id) {
+                        $port_info = Db::table('crm_inquiry_port')
+                            ->where('id', $port_id)
+                            ->where('inquiry_id', $admin_inquiry_id)
+                            ->field('port_name')
+                            ->find();
+                        if ($port_info && !empty($port_info['port_name'])) {
+                            $port_names[] = addslashes($port_info['port_name']);
+                        }
                     }
                 }
-            }
-            
-            if (!empty($inquiry_name) && !empty($port_names)) {
-                $port_conditions = [];
-                foreach ($port_names as $port_name) {
-                    $port_conditions[] = "o.source_port = '{$port_name}'";
+                
+                if (!empty($inquiry_name) && !empty($port_names)) {
+                    $port_conditions = [];
+                    foreach ($port_names as $port_name) {
+                        $port_conditions[] = "o.source_port = '{$port_name}'";
+                    }
+                    $yy_conditions_order[] = "(o.source = '{$inquiry_name}' AND (" . implode(' OR ', $port_conditions) . "))";
                 }
-                $yy_conditions_order[] = "(o.source = '{$inquiry_name}' AND (" . implode(' OR ', $port_conditions) . "))";
             }
         }
         
         //询盘产品按国家统计
         $oper_prod_country = [];
+        $query_oper = Db::table('crm_leads l')
+            ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
+            ->where([$this->getOrgWhere($org, 'p')])
+            ->where($l_where)
+            ->where('l.product_name', '<>', '')
+            ->where('l.product_name', '<>', null)
+            ->where('l.xs_area', '<>', '');
+        
         if (!empty($yy_conditions_oper)) {
             $yy_where_raw = '(' . implode(' OR ', $yy_conditions_oper) . ')';
-            $l_where = [['l.status', '=', 1]];
-            if (!empty($timebucket)) {
-                $l_where[] = $this->getClientimeWhere($timebucket, 'l');
-            }
-            
-            $oper_prod_country = Db::table('crm_leads l')
-                ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
-                ->where($l_where)
-                ->where('l.inquiry_id', '<>', '')
-                ->where('l.inquiry_id', '<>', null)
-                ->where('l.port_id', '<>', '')
-                ->where('l.port_id', '<>', null)
-                ->where('l.product_name', '<>', '')
-                ->where('l.product_name', '<>', null)
-                ->whereRaw($yy_where_raw)
-                ->where('l.xs_area', '<>', '')
-                ->group('IFNULL(p.product_name, l.product_name),l.xs_area')
-                ->field('IFNULL(p.product_name, l.product_name) as product_name,l.xs_area,count(*) as count')
-                ->order('product_name', 'asc')
-                ->order('count', 'desc')
-                ->select();
+            $query_oper->whereRaw($yy_where_raw);
         }
+        
+        $oper_prod_country = $query_oper->group('IFNULL(p.product_name, l.product_name),l.xs_area')
+            ->field('IFNULL(p.product_name, l.product_name) as product_name,l.xs_area as country,count(*) as count')
+            ->order('product_name', 'asc')
+            ->order('count', 'desc')
+            ->select();
 
         //询盘产品分类按国家统计
         $oper_prod_category_country = [];
+        $query_oper_cat = Db::table('crm_leads l')
+            ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
+            ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
+            ->where([$this->getOrgWhere($org, 'p')])
+            ->where($l_where)
+            ->where('l.product_name', '<>', '')
+            ->where('l.product_name', '<>', null)
+            ->where('c.category_name', '<>', '')
+            ->where('c.category_name', '<>', null)
+            ->where('l.xs_area', '<>', '');
+        
         if (!empty($yy_conditions_oper)) {
             $yy_where_raw = '(' . implode(' OR ', $yy_conditions_oper) . ')';
-            $l_where = [['l.status', '=', 1]];
-            if (!empty($timebucket)) {
-                $l_where[] = $this->getClientimeWhere($timebucket, 'l');
-            }
-            
-            $oper_prod_category_country = Db::table('crm_leads l')
-                ->join('crm_products p', 'l.product_name = p.id', 'LEFT')
-                ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
-                ->where($l_where)
-                ->where('l.inquiry_id', '<>', '')
-                ->where('l.inquiry_id', '<>', null)
-                ->where('l.port_id', '<>', '')
-                ->where('l.port_id', '<>', null)
-                ->where('l.product_name', '<>', '')
-                ->where('l.product_name', '<>', null)
-                ->whereRaw($yy_where_raw)
-                ->where('c.category_name', '<>', '')
-                ->where('c.category_name', '<>', null)
-                ->where('l.xs_area', '<>', '')
-                ->group('c.category_name,l.xs_area')
-                ->field('c.category_name,l.xs_area,count(*) as count')
-                ->order('c.category_name', 'asc')
-                ->order('count', 'desc')
-                ->select();
+            $query_oper_cat->whereRaw($yy_where_raw);
         }
+        
+        $oper_prod_category_country = $query_oper_cat->group('c.category_name,l.xs_area')
+            ->field('c.category_name,l.xs_area as country,count(*) as count')
+            ->order('c.category_name', 'asc')
+            ->order('count', 'desc')
+            ->select();
 
         //订单产品按国家统计（使用省市二级联动数据）
         $order_prod_country = [];
+        $yy_where_raw_order = null;
         if (!empty($yy_conditions_order)) {
-            $yy_where_raw = '(' . implode(' OR ', $yy_conditions_order) . ')';
-            $o_where = [];
-            if (!empty($timebucket)) {
-                $o_where[] = $this->buildTimeWhere($timebucket, 'order_time');
-            }
-            
-            // 先查询 crm_client_order 中 product_name 不为空的记录
-            // 查询province、city和country字段，在PHP层面组合
-            $result1 = Db::table('crm_client_order o')
-                ->where($o_where)
-                ->whereRaw($yy_where_raw)
-                ->where('o.product_name', '<>', '')
-                ->where('o.product_name', '<>', null)
-                ->where(function($query) {
-                    $query->where(function($q) {
-                        $q->where('o.province', '<>', '')
-                          ->where('o.province', '<>', null)
-                          ->where('o.city', '<>', '')
-                          ->where('o.city', '<>', null);
-                    })->whereOr(function($q) {
-                        $q->where('o.country', '<>', '')
-                          ->where('o.country', '<>', null);
-                    });
-                })
-                ->field('o.product_name, o.province, o.city, o.country, count(*) as count')
-                ->group('o.product_name, o.province, o.city, o.country')
-                ->select();
-            
-            // 再查询 crm_order_item 中的记录
-            $result2 = Db::table('crm_client_order o')
-                ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
-                ->where($o_where)
-                ->whereRaw($yy_where_raw)
-                ->where('o.product_name', '=', '')
-                ->whereOr('o.product_name', '=', null)
-                ->where('oi.product_name', '<>', '')
-                ->where('oi.product_name', '<>', null)
-                ->where(function($query) {
-                    $query->where(function($q) {
-                        $q->where('o.province', '<>', '')
-                          ->where('o.province', '<>', null)
-                          ->where('o.city', '<>', '')
-                          ->where('o.city', '<>', null);
-                    })->whereOr(function($q) {
-                        $q->where('o.country', '<>', '')
-                          ->where('o.country', '<>', null);
-                    });
-                })
-                ->field('oi.product_name, o.province, o.city, o.country, count(*) as count')
-                ->group('oi.product_name, o.province, o.city, o.country')
-                ->select();
+            $yy_where_raw_order = '(' . implode(' OR ', $yy_conditions_order) . ')';
+        }
+        
+        // 先查询 crm_client_order 中 product_name 不为空的记录
+        // 查询province、city和country字段，在PHP层面组合
+        $query1 = Db::table('crm_client_order o')
+            ->where($o_where)
+            ->where('o.product_name', '<>', '')
+            ->where('o.product_name', '<>', null)
+            ->where(function($query) {
+                $query->where(function($q) {
+                    $q->where('o.province', '<>', '')
+                      ->where('o.province', '<>', null)
+                      ->where('o.city', '<>', '')
+                      ->where('o.city', '<>', null);
+                })->whereOr(function($q) {
+                    $q->where('o.country', '<>', '')
+                      ->where('o.country', '<>', null);
+                });
+            });
+        
+        if ($yy_where_raw_order) {
+            $query1->whereRaw($yy_where_raw_order);
+        }
+        
+        $result1 = $query1->field('o.product_name, o.province, o.city, o.country, count(*) as count')
+            ->group('o.product_name, o.province, o.city, o.country')
+            ->select();
+        
+        // 再查询 crm_order_item 中的记录
+        $query2 = Db::table('crm_client_order o')
+            ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
+            ->where($o_where)
+            ->where(function($query) {
+                $query->where('o.product_name', '=', '')
+                    ->whereOr('o.product_name', '=', null);
+            })
+            ->where('oi.product_name', '<>', '')
+            ->where('oi.product_name', '<>', null)
+            ->where(function($query) {
+                $query->where(function($q) {
+                    $q->where('o.province', '<>', '')
+                      ->where('o.province', '<>', null)
+                      ->where('o.city', '<>', '')
+                      ->where('o.city', '<>', null);
+                })->whereOr(function($q) {
+                    $q->where('o.country', '<>', '')
+                      ->where('o.country', '<>', null);
+                });
+            });
+        
+        if ($yy_where_raw_order) {
+            $query2->whereRaw($yy_where_raw_order);
+        }
+        
+        $result2 = $query2->field('oi.product_name, o.province, o.city, o.country, count(*) as count')
+            ->group('oi.product_name, o.province, o.city, o.country')
+            ->select();
             
             // 合并结果，在PHP层面组合省市
             $merged = [];
@@ -1220,83 +1231,86 @@ class Products extends Common
         
         //订单产品分类按国家统计
         $order_prod_category_country = [];
-        if (!empty($yy_conditions_order)) {
-            $yy_where_raw = '(' . implode(' OR ', $yy_conditions_order) . ')';
-            $o_where = [];
-            if (!empty($timebucket)) {
-                $o_where[] = $this->buildTimeWhere($timebucket, 'order_time');
-            }
-            
-            // 先查询 crm_client_order 中 product_name 不为空的记录
-            $result1 = Db::table('crm_client_order o')
-                ->join('crm_products p', 'o.product_name = p.product_name', 'LEFT')
-                ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
-                ->where($o_where)
-                ->whereRaw($yy_where_raw)
-                ->where('o.product_name', '<>', '')
-                ->where('o.product_name', '<>', null)
-                ->where('c.category_name', '<>', '')
-                ->where('c.category_name', '<>', null)
-                ->where('o.country', '<>', '')
-                ->group('c.category_name,o.country')
-                ->field('c.category_name,o.country,count(*) as count')
-                ->select();
-            
-            // 再查询 crm_order_item 中的记录
-            $result2 = Db::table('crm_client_order o')
-                ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
-                ->join('crm_products p', 'oi.product_name = p.product_name', 'LEFT')
-                ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
-                ->where($o_where)
-                ->whereRaw($yy_where_raw)
-                ->where('o.product_name', '=', '')
-                ->whereOr('o.product_name', '=', null)
-                ->where('oi.product_name', '<>', '')
-                ->where('oi.product_name', '<>', null)
-                ->where('c.category_name', '<>', '')
-                ->where('c.category_name', '<>', null)
-                ->where('o.country', '<>', '')
-                ->group('c.category_name,o.country')
-                ->field('c.category_name,o.country,count(*) as count')
-                ->select();
-            
-            // 合并结果
-            $merged = [];
-            foreach ($result1 as $item) {
-                $key = $item['category_name'] . '|' . $item['country'];
-                if (!isset($merged[$key])) {
-                    $merged[$key] = [
-                        'category_name' => $item['category_name'],
-                        'country' => $item['country'],
-                        'count' => 0
-                    ];
-                }
-                $merged[$key]['count'] += $item['count'];
-            }
-            
-            foreach ($result2 as $item) {
-                $key = $item['category_name'] . '|' . $item['country'];
-                if (!isset($merged[$key])) {
-                    $merged[$key] = [
-                        'category_name' => $item['category_name'],
-                        'country' => $item['country'],
-                        'count' => 0
-                    ];
-                }
-                $merged[$key]['count'] += $item['count'];
-            }
-            
-            // 转换为数组并按分类名称和数量排序
-            $order_prod_category_country = array_values($merged);
-            usort($order_prod_category_country, function($a, $b) {
-                if ($a['category_name'] == $b['category_name']) {
-                    return $b['count'] - $a['count'];
-                }
-                return strcmp($a['category_name'], $b['category_name']);
-            });
+        
+        // 先查询 crm_client_order 中 product_name 不为空的记录
+        $query_cat1 = Db::table('crm_client_order o')
+            ->join('crm_products p', 'o.product_name = p.product_name', 'LEFT')
+            ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
+            ->where([$this->getOrgWhere($org, 'p')])
+            ->where($o_where)
+            ->where('o.product_name', '<>', '')
+            ->where('o.product_name', '<>', null)
+            ->where('c.category_name', '<>', '')
+            ->where('c.category_name', '<>', null)
+            ->where('o.country', '<>', '');
+        
+        if ($yy_where_raw_order) {
+            $query_cat1->whereRaw($yy_where_raw_order);
         }
+        
+        $result_cat1 = $query_cat1->group('c.category_name,o.country')
+            ->field('c.category_name,o.country,count(*) as count')
+            ->select();
+        
+        // 再查询 crm_order_item 中的记录
+        $query_cat2 = Db::table('crm_client_order o')
+            ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
+            ->join('crm_products p', 'oi.product_name = p.product_name', 'LEFT')
+            ->join('crm_product_category c', 'p.category_id = c.id', 'LEFT')
+            ->where([$this->getOrgWhere($org, 'p')])
+            ->where($o_where)
+            ->where(function($query) {
+                $query->where('o.product_name', '=', '')
+                    ->whereOr('o.product_name', '=', null);
+            })
+            ->where('oi.product_name', '<>', '')
+            ->where('oi.product_name', '<>', null)
+            ->where('c.category_name', '<>', '')
+            ->where('c.category_name', '<>', null)
+            ->where('o.country', '<>', '');
+        
+        if ($yy_where_raw_order) {
+            $query_cat2->whereRaw($yy_where_raw_order);
+        }
+        
+        $result_cat2 = $query_cat2->group('c.category_name,o.country')
+            ->field('c.category_name,o.country,count(*) as count')
+            ->select();
+            
+        // 合并结果
+        $merged_cat = [];
+        foreach ($result_cat1 as $item) {
+            $key = $item['category_name'] . '|' . $item['country'];
+            if (!isset($merged_cat[$key])) {
+                $merged_cat[$key] = [
+                    'category_name' => $item['category_name'],
+                    'country' => $item['country'],
+                    'count' => 0
+                ];
+            }
+            $merged_cat[$key]['count'] += $item['count'];
+        }
+        
+        foreach ($result_cat2 as $item) {
+            $key = $item['category_name'] . '|' . $item['country'];
+            if (!isset($merged_cat[$key])) {
+                $merged_cat[$key] = [
+                    'category_name' => $item['category_name'],
+                    'country' => $item['country'],
+                    'count' => 0
+                ];
+            }
+            $merged_cat[$key]['count'] += $item['count'];
+        }
+        
+        // 转换为数组并按分类名称和数量排序
+        $order_prod_category_country = array_values($merged_cat);
+        usort($order_prod_category_country, function($a, $b) {
+            if ($a['category_name'] == $b['category_name']) {
+                return $b['count'] - $a['count'];
+            }
+            return strcmp($a['category_name'], $b['category_name']);
+        });
         
         return [
             'oper_prod_country' => $oper_prod_country ?: [],
