@@ -536,10 +536,50 @@
                     },
                     dataType: 'json',
                     success: function(res) {
-                        layer.close(loading);
                         if (res.code === 0 && res.data) {
-                            generateBeautifiedExcel(res.data);
+                            // 为每个订单获取订单明细数据
+                            const orderIds = res.data.map(item => item.id);
+                            $.ajax({
+                                url: '{:url("Order/getOrderItems")}',
+                                type: 'POST',
+                                data: { order_ids: orderIds },
+                                dataType: 'json',
+                                success: function(itemsRes) {
+                                    layer.close(loading);
+                                    if (itemsRes.code === 0 && itemsRes.data) {
+                                        // 将订单明细数据合并到订单数据中
+                                        const itemsMap = {};
+                                        itemsRes.data.forEach(item => {
+                                            if (!itemsMap[item.order_id]) {
+                                                itemsMap[item.order_id] = [];
+                                            }
+                                            itemsMap[item.order_id].push(item);
+                                        });
+                                        
+                                        res.data.forEach(order => {
+                                            order.order_items = itemsMap[order.id] || [];
+                                        });
+                                        
+                                        generateBeautifiedExcel(res.data);
+                                    } else {
+                                        // 如果没有明细数据，仍然导出主表数据
+                                        res.data.forEach(order => {
+                                            order.order_items = [];
+                                        });
+                                        generateBeautifiedExcel(res.data);
+                                    }
+                                },
+                                error: function() {
+                                    layer.close(loading);
+                                    // 如果获取明细失败，仍然导出主表数据
+                                    res.data.forEach(order => {
+                                        order.order_items = [];
+                                    });
+                                    generateBeautifiedExcel(res.data);
+                                }
+                            });
                         } else {
+                            layer.close(loading);
                             layer.msg('获取数据失败：' + (res.msg || '未知错误'), { icon: 2 });
                         }
                     },
@@ -552,57 +592,171 @@
 
             // 生成美化的 Excel
             function generateBeautifiedExcel(data) {
-                // 定义列配置（排除操作列和隐藏的ID列）
+                // 定义列配置（按照用户要求的顺序）
                 const columns = [
-                    { field: 'order_no', title: '订单编号', width: 20 },
-                    { field: 'contact', title: '联系方式', width: 15 },
-                    { field: 'cname', title: '客户名称', width: 20 },
-                    { field: 'client_company', title: '客户公司', width: 20 },
+                    { field: 'team_name', title: '团队', width: 15 },
+                    { field: 'at_user', title: '提交人', width: 15 },
+                    { field: 'order_time', title: '成交日期', width: 20, type: 'date' },
                     { field: 'country', title: '发货详细地址', width: 25 },
-                    { field: 'customer_type', title: '客户性质', width: 15 },
+                    { field: 'cname', title: '客户姓名', width: 20 },
+                    { field: 'product_manager', title: '产品经理', width: 15 },
                     { field: 'product_name', title: '产品名称', width: 20 },
-                    { field: 'money', title: '成交金额(￥)', width: 15, type: 'number' },
-                    { field: 'profit', title: '利润', width: 15, type: 'number' },
-                    { field: 'margin_rate', title: '利润率(%)', width: 15, type: 'number' },
-                    { field: 'ticheng', title: '提成金额', width: 15, type: 'number' },
+                    { field: 'spec_model', title: '规格型号', width: 20 },
+                    { field: 'supplier', title: '供应商手动录入', width: 20 },
+                    { field: 'unit', title: '单位', width: 10 },
+                    { field: 'qty', title: '数量', width: 10, type: 'number' },
+                    { field: 'unit_price', title: '销售单价', width: 15, type: 'number' },
+                    { field: 'total_price', title: '售价合计', width: 15, type: 'number' },
+                    { field: 'purchase_price', title: '进价合计', width: 15, type: 'number' },
                     { field: 'shipping_cost', title: '估算运费', width: 15, type: 'number' },
+                    { field: 'invoice_type', title: '票种', width: 12 },
                     { field: 'invoice_amount', title: '开票金额', width: 15, type: 'number' },
                     { field: 'tax_amount', title: '税费金额', width: 15, type: 'number' },
                     { field: 'debugging_cost', title: '调试费', width: 15, type: 'number' },
                     { field: 'sales_commission', title: '佣金', width: 15, type: 'number' },
                     { field: 'split_remarks', title: '分成备注', width: 20 },
+                    { field: 'bank_account', title: '收款账户手动录入', width: 20 },
+                    { field: 'source', title: '客户来源手动录入', width: 20 },
                     { field: 'amount_received', title: '已收款金额', width: 15, type: 'number' },
-                    { field: 'bank_account', title: '收款账户', width: 20 },
-                    { field: 'source', title: '运营渠道', width: 15 },
-                    { field: 'source_port', title: '运营端口', width: 15 },
-                    { field: 'pr_user', title: '负责人', width: 15 },
-                    { field: 'team_name', title: '团队', width: 15 },
+                    { field: 'profit', title: '预估毛利润', width: 15, type: 'number' },
+                    { field: 'margin_rate', title: '预估利润率', width: 15, type: 'number' },
                     { field: 'joint_person', title: '协同人', width: 20 },
-                    { field: 'order_time', title: '成交时间', width: 20, type: 'date' },
+                    { field: 'client_company', title: '客户公司全称', width: 25 },
+                    { field: 'product_name_summary', title: '咨询产品', width: 20 },
+                    { field: 'create_time_original', title: '原创建时间', width: 20, type: 'date' },
+                    { field: 'ut_time_original', title: '原修改时间', width: 20, type: 'date' },
+                    { field: 'old_crm_data', title: '老crm转移数据', width: 20 },
                     { field: 'create_time', title: '创建时间', width: 20, type: 'date' },
-                    { field: 'at_user', title: '创建人', width: 15 },
-                    { field: 'ut_time', title: '更新时间', width: 20, type: 'date' },
-                    { field: 'status', title: '业绩状态', width: 15 },
-                    { field: 'remark', title: '备注', width: 30 }
+                    { field: 'ut_time', title: '修改时间', width: 20, type: 'date' }
                 ];
 
                 // 构建表头
                 const headers = columns.map(col => col.title);
                 
-                // 构建数据行
-                const rows = data.map(item => {
-                    return columns.map(col => {
-                        let value = item[col.field] || '';
-                        // 格式化数字
-                        if (col.type === 'number' && value !== '') {
-                            value = parseFloat(value) || 0;
-                        }
-                        // 格式化日期
-                        if (col.type === 'date' && value) {
-                            value = value.toString().substring(0, 19);
-                        }
-                        return value;
-                    });
+                // 构建数据行 - 需要展开产品明细，每个产品明细一行
+                const rows = [];
+                data.forEach(item => {
+                    // 获取订单明细数据（如果存在）
+                    const orderItems = item.order_items || [];
+                    
+                    if (orderItems && orderItems.length > 0) {
+                        // 如果有产品明细，每个明细一行
+                        orderItems.forEach((itemDetail, index) => {
+                            const row = columns.map(col => {
+                                let value = '';
+                                
+                                // 订单主表字段
+                                if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
+                                     'shipping_cost', 'invoice_type', 'invoice_amount', 'tax_amount', 
+                                     'debugging_cost', 'sales_commission', 'split_remarks', 
+                                     'bank_account', 'source', 'amount_received', 'profit', 
+                                     'margin_rate', 'joint_person', 'client_company', 
+                                     'create_time', 'ut_time'].includes(col.field)) {
+                                    value = item[col.field] || '';
+                                }
+                                else if (col.field === 'create_time_original') {
+                                    value = item['create_time'] || '';
+                                }
+                                else if (col.field === 'ut_time_original') {
+                                    value = item['ut_time'] || '';
+                                }
+                                else if (col.field === 'bank_account') {
+                                    // 收款账户可能是ID，需要转换为账户名称
+                                    value = item['bank_account_name'] || item['bank_account'] || '';
+                                }
+                                // 产品明细字段
+                                else if (col.field === 'product_manager') {
+                                    value = itemDetail.manager_name || '';
+                                }
+                                else if (col.field === 'product_name') {
+                                    value = itemDetail.product_name || '';
+                                }
+                                else if (col.field === 'spec_model') {
+                                    value = itemDetail.spec_model || '';
+                                }
+                                else if (col.field === 'supplier') {
+                                    value = itemDetail.supplier || ''; // 可能不存在
+                                }
+                                else if (col.field === 'unit') {
+                                    value = itemDetail.unit || '';
+                                }
+                                else if (col.field === 'qty') {
+                                    value = itemDetail.qty || 0;
+                                }
+                                else if (col.field === 'unit_price') {
+                                    value = itemDetail.unit_price || 0;
+                                }
+                                else if (col.field === 'total_price') {
+                                    value = itemDetail.total_price || 0;
+                                }
+                                else if (col.field === 'purchase_price') {
+                                    value = itemDetail.purchase_price || 0;
+                                }
+                                else if (col.field === 'product_name_summary') {
+                                    value = item.product_name || ''; // 主表的产品名称摘要
+                                }
+                                else if (col.field === 'old_crm_data') {
+                                    value = item.old_crm_data || ''; // 可能不存在
+                                }
+                                
+                                // 格式化数字
+                                if (col.type === 'number' && value !== '') {
+                                    value = parseFloat(value) || 0;
+                                }
+                                // 格式化日期
+                                if (col.type === 'date' && value) {
+                                    value = value.toString().substring(0, 19);
+                                }
+                                
+                                return value;
+                            });
+                            rows.push(row);
+                        });
+                    } else {
+                        // 如果没有产品明细，只导出订单主表数据，产品相关字段为空
+                        const row = columns.map(col => {
+                            let value = '';
+                            
+                            // 订单主表字段
+                            if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
+                                 'shipping_cost', 'invoice_type', 'invoice_amount', 'tax_amount', 
+                                 'debugging_cost', 'sales_commission', 'split_remarks', 
+                                 'source', 'amount_received', 'profit', 
+                                 'margin_rate', 'joint_person', 'client_company', 
+                                 'create_time', 'ut_time'].includes(col.field)) {
+                                value = item[col.field] || '';
+                            }
+                            else if (col.field === 'bank_account') {
+                                // 收款账户可能是ID，需要转换为账户名称
+                                value = item['bank_account_name'] || item['bank_account'] || '';
+                            }
+                            else if (col.field === 'create_time_original') {
+                                value = item['create_time'] || '';
+                            }
+                            else if (col.field === 'ut_time_original') {
+                                value = item['ut_time'] || '';
+                            }
+                            else if (col.field === 'product_name_summary') {
+                                value = item.product_name || ''; // 主表的产品名称摘要
+                            }
+                            else if (col.field === 'old_crm_data') {
+                                value = item.old_crm_data || ''; // 可能不存在
+                            }
+                            // 产品明细字段留空
+                            
+                            // 格式化数字
+                            if (col.type === 'number' && value !== '') {
+                                value = parseFloat(value) || 0;
+                            }
+                            // 格式化日期
+                            if (col.type === 'date' && value) {
+                                value = value.toString().substring(0, 19);
+                            }
+                            
+                            return value;
+                        });
+                        rows.push(row);
+                    }
                 });
 
                 // 创建工作簿

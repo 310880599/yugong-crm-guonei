@@ -1961,6 +1961,17 @@ class Order extends Common
                     $order['product_name'] = $firstItem['product_name'];
                 }
             }
+            
+            // 转换收款账户ID为账户名称
+            if (!empty($order['bank_account'])) {
+                $accountInfo = Db::name('crm_receive_account')
+                    ->where('id', $order['bank_account'])
+                    ->field('account')
+                    ->find();
+                if ($accountInfo) {
+                    $order['bank_account_name'] = $accountInfo['account'];
+                }
+            }
         }
         unset($order);
 
@@ -1984,6 +1995,51 @@ class Order extends Common
             'totalMoney' => number_format($totalMoney, 2),
             'totalProfit' => number_format($totalProfit, 2),
         ];
+    }
+
+    // 获取订单明细数据（用于导出）
+    public function getOrderItems()
+    {
+        $orderIds = Request::param('order_ids/a', []);
+        if (empty($orderIds)) {
+            return json(['code' => 0, 'msg' => '参数错误', 'data' => []]);
+        }
+        
+        // 查询订单明细
+        $items = Db::table('crm_order_item')
+            ->where('order_id', 'in', $orderIds)
+            ->order('order_id asc, line_no asc')
+            ->select();
+        
+        // 获取产品经理名称
+        $managerIds = [];
+        foreach ($items as $item) {
+            if (!empty($item['manager_id'])) {
+                $managerIds[] = $item['manager_id'];
+            }
+        }
+        $managerIds = array_unique($managerIds);
+        
+        $managerMap = [];
+        if (!empty($managerIds)) {
+            $managers = Db::table('admin')
+                ->where('admin_id', 'in', $managerIds)
+                ->field('admin_id, username')
+                ->select();
+            foreach ($managers as $manager) {
+                $managerMap[$manager['admin_id']] = $manager['username'];
+            }
+        }
+        
+        // 为每个明细添加产品经理名称
+        foreach ($items as &$item) {
+            $item['manager_name'] = isset($managerMap[$item['manager_id']]) 
+                ? $managerMap[$item['manager_id']] 
+                : '';
+        }
+        unset($item);
+        
+        return json(['code' => 0, 'msg' => '获取成功', 'data' => $items]);
     }
 
     // 新增：根据关键词通过启信开放平台模糊搜索企业名称
