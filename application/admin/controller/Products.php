@@ -1172,62 +1172,61 @@ class Products extends Common
         $result2 = $query2->field('oi.product_name, o.province, o.city, o.country, count(*) as count')
             ->group('oi.product_name, o.province, o.city, o.country')
             ->select();
-            
-            // 合并结果，在PHP层面组合省市
-            $merged = [];
-            foreach ($result1 as $item) {
-                // 组合省市：如果有province和city，则组合为"省份 城市"，否则使用country
-                $region = '';
-                if (!empty($item['province']) && !empty($item['city'])) {
-                    $region = trim($item['province']) . ' ' . trim($item['city']);
-                } elseif (!empty($item['country'])) {
-                    $region = $item['country'];
-                } else {
-                    continue; // 跳过没有地区信息的记录
-                }
-                
-                $key = $item['product_name'] . '|' . $region;
-                if (!isset($merged[$key])) {
-                    $merged[$key] = [
-                        'product_name' => $item['product_name'],
-                        'country' => $region,
-                        'count' => 0
-                    ];
-                }
-                $merged[$key]['count'] += $item['count'];
+        
+        // 合并结果，在PHP层面组合省市
+        $merged = [];
+        foreach ($result1 as $item) {
+            // 组合省市：如果有province和city，则组合为"省份 城市"，否则使用country
+            $region = '';
+            if (!empty($item['province']) && !empty($item['city'])) {
+                $region = trim($item['province']) . ' ' . trim($item['city']);
+            } elseif (!empty($item['country'])) {
+                $region = $item['country'];
+            } else {
+                continue; // 跳过没有地区信息的记录
             }
             
-            foreach ($result2 as $item) {
-                // 组合省市：如果有province和city，则组合为"省份 城市"，否则使用country
-                $region = '';
-                if (!empty($item['province']) && !empty($item['city'])) {
-                    $region = trim($item['province']) . ' ' . trim($item['city']);
-                } elseif (!empty($item['country'])) {
-                    $region = $item['country'];
-                } else {
-                    continue; // 跳过没有地区信息的记录
-                }
-                
-                $key = $item['product_name'] . '|' . $region;
-                if (!isset($merged[$key])) {
-                    $merged[$key] = [
-                        'product_name' => $item['product_name'],
-                        'country' => $region,
-                        'count' => 0
-                    ];
-                }
-                $merged[$key]['count'] += $item['count'];
+            $key = $item['product_name'] . '|' . $region;
+            if (!isset($merged[$key])) {
+                $merged[$key] = [
+                    'product_name' => $item['product_name'],
+                    'country' => $region,
+                    'count' => 0
+                ];
             }
-            
-            // 转换为数组并按产品名称和数量排序
-            $order_prod_country = array_values($merged);
-            usort($order_prod_country, function($a, $b) {
-                if ($a['product_name'] == $b['product_name']) {
-                    return $b['count'] - $a['count'];
-                }
-                return strcmp($a['product_name'], $b['product_name']);
-            });
+            $merged[$key]['count'] += $item['count'];
         }
+        
+        foreach ($result2 as $item) {
+            // 组合省市：如果有province和city，则组合为"省份 城市"，否则使用country
+            $region = '';
+            if (!empty($item['province']) && !empty($item['city'])) {
+                $region = trim($item['province']) . ' ' . trim($item['city']);
+            } elseif (!empty($item['country'])) {
+                $region = $item['country'];
+            } else {
+                continue; // 跳过没有地区信息的记录
+            }
+            
+            $key = $item['product_name'] . '|' . $region;
+            if (!isset($merged[$key])) {
+                $merged[$key] = [
+                    'product_name' => $item['product_name'],
+                    'country' => $region,
+                    'count' => 0
+                ];
+            }
+            $merged[$key]['count'] += $item['count'];
+        }
+        
+        // 转换为数组并按产品名称和数量排序
+        $order_prod_country = array_values($merged);
+        usort($order_prod_country, function($a, $b) {
+            if ($a['product_name'] == $b['product_name']) {
+                return $b['count'] - $a['count'];
+            }
+            return strcmp($a['product_name'], $b['product_name']);
+        });
         
         //订单产品分类按国家统计
         $order_prod_category_country = [];
