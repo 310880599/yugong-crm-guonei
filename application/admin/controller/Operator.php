@@ -1018,29 +1018,55 @@ private function exportToExcel($data)
                     ->count();
             }
             
-            // 业绩统计 - 根据订单中的 inquiry_id 和 port_id 匹配
-            // 订单表通过 crm_contacts 表关联到 leads 表获取 inquiry_id 和 port_id
+            // 业绩统计 - 根据订单中的 source 和 source_port 匹配运营人员
+            // 订单表的 source 是渠道名称，source_port 是端口名称（文字）
             $timeWhere = $this->buildTimeWhere('month', 'o.order_time');
-            // port_id 是逗号分隔的多选值，需要检查交集
+            
+            // 获取该渠道下所有端口的名称列表
+            $port_names = [];
+            $inquiry_name = '';
+            $inquiry_info = Db::table('crm_inquiry')
+                ->where('id', $current_admin_info['inquiry_id'])
+                ->field('inquiry_name')
+                ->find();
+            if ($inquiry_info) {
+                $inquiry_name = $inquiry_info['inquiry_name'];
+            }
+            
             $admin_port_ids = !empty($current_admin_info['port_id']) ? explode(',', $current_admin_info['port_id']) : [];
-            $port_conditions = [];
             foreach ($admin_port_ids as $port_id) {
                 $port_id = trim($port_id);
                 if ($port_id) {
-                    $port_conditions[] = "FIND_IN_SET('{$port_id}', l.port_id) > 0";
+                    $port_info = Db::table('crm_inquiry_port')
+                        ->where('id', $port_id)
+                        ->where('inquiry_id', $current_admin_info['inquiry_id'])
+                        ->field('port_name')
+                        ->find();
+                    if ($port_info && !empty($port_info['port_name'])) {
+                        $port_names[] = addslashes($port_info['port_name']);
+                    }
                 }
             }
             
             $profit = 0;
-            if (!empty($port_conditions)) {
+            if (!empty($inquiry_name) && !empty($port_names)) {
+                $port_conditions = [];
+                foreach ($port_names as $port_name) {
+                    $port_conditions[] = "o.source_port = '{$port_name}'";
+                }
                 $port_where = '(' . implode(' OR ', $port_conditions) . ')';
                 $profit = Db::table('crm_client_order')
                     ->alias('o')
-                    ->join('crm_contacts c', 'c.contact_value = o.cphone AND c.is_delete = 0 AND c.contact_type IN (1,3)', 'LEFT')
-                    ->join('crm_leads l', 'c.leads_id = l.id', 'LEFT')
                     ->where([$timeWhere])
-                    ->where('l.inquiry_id', $current_admin_info['inquiry_id'])
+                    ->where('o.source', $inquiry_name)
                     ->whereRaw($port_where)
+                    ->sum('o.profit');
+            } elseif (!empty($inquiry_name)) {
+                // 如果没有端口，只按渠道匹配
+                $profit = Db::table('crm_client_order')
+                    ->alias('o')
+                    ->where([$timeWhere])
+                    ->where('o.source', $inquiry_name)
                     ->sum('o.profit');
             }
         }
