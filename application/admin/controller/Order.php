@@ -1752,6 +1752,9 @@ class Order extends Common
         if (isset($keyword['customer_type'])) {
             $where[] = ['customer_type', '=', $keyword['customer_type']];
         }
+        if (isset($keyword['customer_type_flag']) && $keyword['customer_type_flag'] !== '') {
+            $where[] = ['customer_type_flag', '=', $keyword['customer_type_flag']];
+        }
         if (isset($keyword['product_name'])) {
             $where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
             $client_where[] = ['product_name', 'like', "%{$keyword['product_name']}%"];
