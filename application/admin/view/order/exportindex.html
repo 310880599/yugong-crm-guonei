@@ -616,7 +616,7 @@
                     { field: 'sales_commission', title: '佣金', width: 15, type: 'number' },
                     { field: 'split_remarks', title: '分成备注', width: 20 },
                     { field: 'bank_account', title: '收款账户手动录入', width: 20 },
-                    { field: 'source', title: '客户来源手动录入', width: 20 },
+                    { field: 'source_port', title: '客户来源手动录入', width: 20 },
                     { field: 'amount_received', title: '已收款金额', width: 15, type: 'number' },
                     { field: 'profit', title: '预估毛利润', width: 15, type: 'number' },
                     { field: 'margin_rate', title: '预估利润率', width: 15, type: 'number' },
@@ -649,7 +649,7 @@
                                 if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
                                      'shipping_cost', 'invoice_amount', 'tax_amount', 
                                      'debugging_cost', 'sales_commission', 'split_remarks', 
-                                     'bank_account', 'source', 'amount_received', 'profit', 
+                                     'bank_account', 'source_port', 'amount_received', 'profit', 
                                      'margin_rate', 'joint_person', 'client_company', 
                                      'create_time', 'ut_time'].includes(col.field)) {
                                     value = item[col.field] || '';
@@ -725,7 +725,7 @@
                             if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
                                  'shipping_cost', 'invoice_amount', 'tax_amount', 
                                  'debugging_cost', 'sales_commission', 'split_remarks', 
-                                 'source', 'amount_received', 'profit', 
+                                 'source_port', 'amount_received', 'profit', 
                                  'margin_rate', 'joint_person', 'client_company', 
                                  'create_time', 'ut_time'].includes(col.field)) {
                                 value = item[col.field] || '';
