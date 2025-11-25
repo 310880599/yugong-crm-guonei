@@ -577,6 +577,17 @@ class Products extends Common
             $this->assign('data', $data);
             return $this->fetch('main_content');
         }
+        // GET 请求时初始化 product_data 为空数组结构，避免模板访问未定义变量
+        $data['product_data'] = [
+            'oper_prod' => [],
+            'order_prod' => [],
+            'oper_prod_category' => [],
+            'order_prod_category' => [],
+            'oper_prod_country' => [],
+            'order_prod_country' => [],
+            'oper_prod_category_country' => [],
+            'order_prod_category_country' => [],
+        ];
         $this->assign('data', $data);
         return $this->fetch();
     }
