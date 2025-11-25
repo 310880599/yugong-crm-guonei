@@ -727,39 +727,28 @@ class Products extends Common
         
         // 查询销售产品数据
         // 先查询 crm_client_order 中 product_name 不为空的记录
-        // 需要JOIN crm_products表来过滤组织范围
         $result1 = Db::table('crm_client_order')
             ->alias('o')
-            ->join('crm_products p', 'o.product_name = p.product_name', 'LEFT')
-            ->where([$this->getOrgWhere($org, 'p')])
             ->where($o_where)
             ->where('o.product_name', '<>', '')
             ->where('o.product_name', '<>', null)
-            ->where('p.product_name', '<>', '')
-            ->where('p.product_name', '<>', null)
             ->whereRaw($yy_where_raw)
-            ->group('p.product_name')
-            ->field('p.product_name,count(o.id) as count')
+            ->group('o.product_name')
+            ->field('o.product_name,count(o.id) as count')
             ->select();
         
         // 再查询 crm_order_item 中 product_name 不为空的记录（当 crm_client_order.product_name 为空时）
         $result2 = Db::table('crm_client_order')
             ->alias('o')
             ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
-            ->join('crm_products p', 'oi.product_name = p.product_name', 'LEFT')
-            ->where([$this->getOrgWhere($org, 'p')])
             ->where($o_where)
-            ->where(function($query) {
-                $query->where('o.product_name', '=', '')
-                    ->whereOr('o.product_name', '=', null);
-            })
+            ->where('o.product_name', '=', '')
+            ->whereOr('o.product_name', '=', null)
             ->where('oi.product_name', '<>', '')
             ->where('oi.product_name', '<>', null)
-            ->where('p.product_name', '<>', '')
-            ->where('p.product_name', '<>', null)
             ->whereRaw($yy_where_raw)
-            ->group('p.product_name')
-            ->field('p.product_name,count(o.id) as count')
+            ->group('oi.product_name')
+            ->field('oi.product_name,count(o.id) as count')
             ->select();
         
         // 合并结果
@@ -1129,16 +1118,11 @@ class Products extends Common
             
             // 先查询 crm_client_order 中 product_name 不为空的记录
             // 查询province、city和country字段，在PHP层面组合
-            // 需要JOIN crm_products表来过滤组织范围
             $result1 = Db::table('crm_client_order o')
-                ->join('crm_products p', 'o.product_name = p.product_name', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
                 ->where($o_where)
                 ->whereRaw($yy_where_raw)
                 ->where('o.product_name', '<>', '')
                 ->where('o.product_name', '<>', null)
-                ->where('p.product_name', '<>', '')
-                ->where('p.product_name', '<>', null)
                 ->where(function($query) {
                     $query->where(function($q) {
                         $q->where('o.province', '<>', '')
@@ -1150,25 +1134,19 @@ class Products extends Common
                           ->where('o.country', '<>', null);
                     });
                 })
-                ->field('p.product_name, o.province, o.city, o.country, count(*) as count')
-                ->group('p.product_name, o.province, o.city, o.country')
+                ->field('o.product_name, o.province, o.city, o.country, count(*) as count')
+                ->group('o.product_name, o.province, o.city, o.country')
                 ->select();
             
             // 再查询 crm_order_item 中的记录
             $result2 = Db::table('crm_client_order o')
                 ->join('crm_order_item oi', 'o.id = oi.order_id', 'LEFT')
-                ->join('crm_products p', 'oi.product_name = p.product_name', 'LEFT')
-                ->where([$this->getOrgWhere($org, 'p')])
                 ->where($o_where)
                 ->whereRaw($yy_where_raw)
-                ->where(function($query) {
-                    $query->where('o.product_name', '=', '')
-                        ->whereOr('o.product_name', '=', null);
-                })
+                ->where('o.product_name', '=', '')
+                ->whereOr('o.product_name', '=', null)
                 ->where('oi.product_name', '<>', '')
                 ->where('oi.product_name', '<>', null)
-                ->where('p.product_name', '<>', '')
-                ->where('p.product_name', '<>', null)
                 ->where(function($query) {
                     $query->where(function($q) {
                         $q->where('o.province', '<>', '')
@@ -1180,8 +1158,8 @@ class Products extends Common
                           ->where('o.country', '<>', null);
                     });
                 })
-                ->field('p.product_name, o.province, o.city, o.country, count(*) as count')
-                ->group('p.product_name, o.province, o.city, o.country')
+                ->field('oi.product_name, o.province, o.city, o.country, count(*) as count')
+                ->group('oi.product_name, o.province, o.city, o.country')
                 ->select();
             
             // 合并结果，在PHP层面组合省市
