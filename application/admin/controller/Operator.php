@@ -986,11 +986,31 @@ private function exportToExcel($data)
         }
 
         // 个人询盘统计 - 根据当前运营人员的 inquiry_id 和 port_id 匹配
+        // 如果是超级管理员，则统计全部数据
         $current_admin_info = Db::table('admin')->where('admin_id', $current_admin['admin_id'])->find();
+        $isSuper = (session('aid') == 1) || ($current_admin['group_id'] == 1) || ($current_admin['username'] === 'admin');
+        
         $xp_count = 0;
         $profit = 0;
         
-        if (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
+        if ($isSuper) {
+            // 超级管理员：统计全部询盘数量
+            $time_where_at = $this->buildTimeWhere('month', 'at_time');
+            $time_where_kh = $this->buildTimeWhere('month', 'to_kh_time');
+            $xp_count = Db::table('crm_leads')
+                ->where('status', 1)
+                ->where(function($query) use ($time_where_at, $time_where_kh) {
+                    $query->where([$time_where_at])->whereOr([$time_where_kh]);
+                })
+                ->count();
+            
+            // 超级管理员：统计全部业绩
+            $timeWhere = $this->buildTimeWhere('month', 'o.order_time');
+            $profit = Db::table('crm_client_order')
+                ->alias('o')
+                ->where([$timeWhere])
+                ->sum('o.profit');
+        } elseif (!empty($current_admin_info['inquiry_id']) && !empty($current_admin_info['port_id'])) {
             // 匹配当前运营人员的 inquiry_id 和 port_id
             // port_id 是逗号分隔的多选值，需要检查交集
             $admin_port_ids = !empty($current_admin_info['port_id']) ? explode(',', $current_admin_info['port_id']) : [];
