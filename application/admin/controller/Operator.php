@@ -1277,6 +1277,7 @@ private function exportToExcel($data)
             }
         }
         $subQuery = Db::table('crm_leads')
+            ->field('id, ' . $field)  // 明确指定需要的字段
             ->where($sub_where)->where($field,'in',$users)
             ->buildSql();
         return Db::table('admin')->alias('a')
@@ -1332,6 +1333,7 @@ private function exportToExcel($data)
         
         // 构建子查询：查询所有符合条件的 leads（有 inquiry_id 和 port_id）
         $subQuery = Db::table('crm_leads')
+            ->field('id, inquiry_id, port_id')  // 明确指定需要的字段
             ->where($sub_where)
             ->where('inquiry_id', '<>', '')
             ->where('inquiry_id', '<>', null)
