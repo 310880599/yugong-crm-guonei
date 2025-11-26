@@ -115,6 +115,14 @@
         <form class="layui-form layui-form-pane">
             <!-- 隐藏域：订单ID -->
             <input type="hidden" name="id" value="{$orderInfo.id}">
+            <!-- 订单编号 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">订单编号</label>
+                <div class="layui-input-4">
+                    <input type="text" name="order_no" value="{$orderInfo.order_no|default=''|htmlentities}" 
+                           placeholder="订单编号" class="layui-input" readonly>
+                </div>
+            </div>
             <!-- 客户联系方式 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">联系方式<span style="color:red;">*</span></label>
@@ -123,12 +131,36 @@
                            value="{$orderInfo.contact|htmlentities}" placeholder="请输入客户联系方式" class="layui-input">
                 </div>
             </div>
+            <!-- 客户手机号 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户手机号</label>
+                <div class="layui-input-4">
+                    <input type="text" name="cphone" value="{$orderInfo.cphone|default=''|htmlentities}" 
+                           placeholder="客户手机号" class="layui-input" readonly>
+                </div>
+            </div>
             <!-- 发货地址 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">发货地址<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
                     <textarea id="country" name="country" lay-verify="required" placeholder="请输入发货详细地址"
                               class="layui-textarea">{:htmlentities($orderInfo.country)}</textarea>
+                </div>
+            </div>
+            <!-- 省份 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">省份</label>
+                <div class="layui-input-4">
+                    <input type="text" name="province" value="{$orderInfo.province|default=''|htmlentities}" 
+                           placeholder="省份" class="layui-input" readonly>
+                </div>
+            </div>
+            <!-- 城市 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">城市</label>
+                <div class="layui-input-4">
+                    <input type="text" name="city" value="{$orderInfo.city|default=''|htmlentities}" 
+                           placeholder="城市" class="layui-input" readonly>
                 </div>
             </div>
             <!-- 客户名称 -->
@@ -214,12 +246,38 @@
                     </select>
                 </div>
             </div>
+            <!-- 用户属性 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">用户属性</label>
+                <div class="layui-input-4">
+                    <input type="text" name="customer_type_flag_display" 
+                           value="{if $orderInfo.customer_type_flag == 1}个人{else}公司{/if}" 
+                           class="layui-input" readonly>
+                </div>
+            </div>
             <!-- 成交时间 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">成交时间</label>
                 <div class="layui-input-4">
                     <input type="text" id="orderTime" name="order_time" value="{$orderInfo.order_time}"
                            placeholder="请选择成交时间" class="layui-input">
+                </div>
+            </div>
+            <!-- 订单类型 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">订单类型</label>
+                <div class="layui-input-4">
+                    <input type="text" name="order_type_display" 
+                           value="{if $orderInfo.order_type == 2}返单{else}新单{/if}" 
+                           class="layui-input" readonly>
+                </div>
+            </div>
+            <!-- 返单次数 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">返单次数</label>
+                <div class="layui-input-4">
+                    <input type="text" name="return_count" value="{$orderInfo.return_count|default='0'}" 
+                           placeholder="返单次数" class="layui-input" readonly>
                 </div>
             </div>
             <!-- 产品明细表格 -->
@@ -314,6 +372,15 @@
                            value="{$orderInfo.shipping_cost|default='0'}" placeholder="请输入估算运费" class="layui-input">
                 </div>
             </div>
+            <!-- 票种性质 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">票种性质</label>
+                <div class="layui-input-4">
+                    <input type="text" name="invoice_type_display" 
+                           value="{$orderInfo.invoice_type|default=''|htmlentities}" 
+                           placeholder="票种性质（普票、专票、不开票）" class="layui-input" readonly>
+                </div>
+            </div>
             <div class="layui-form-item">
                 <label class="layui-form-label">票种/票金额<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
@@ -379,11 +446,70 @@
                     <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%);">%</span>
                 </div>
             </div>
+            <!-- 提成金额 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">提成金额</label>
+                <div class="layui-input-4">
+                    <input type="text" name="ticheng" value="{$orderInfo.ticheng|default='0.00'}" 
+                           placeholder="提成金额" class="layui-input" readonly>
+                </div>
+            </div>
+            <!-- 业绩状态 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">业绩状态</label>
+                <div class="layui-input-4">
+                    <input type="text" name="status_display" 
+                           value="{if $orderInfo.status == '1'}待审核{elseif $orderInfo.status == '2'}审核不通过{elseif $orderInfo.status == '3'}审核通过{else}{$orderInfo.status}{/if}" 
+                           class="layui-input" readonly>
+                </div>
+            </div>
             <!-- 备注 -->
             <div class="layui-form-item">
                 <label class="layui-form-label">备注</label>
                 <div class="layui-input-4">
                     <textarea name="remark" placeholder="请输入备注信息" class="layui-textarea">{:htmlentities($orderInfo.remark)}</textarea>
+                </div>
+            </div>
+            <!-- 客户微信回执图 -->
+            {if condition="!empty($orderInfo.wechat_receipt_image)"}
+            <div class="layui-form-item">
+                <label class="layui-form-label">客户微信回执图</label>
+                <div class="layui-input-4">
+                    <img src="{$orderInfo.wechat_receipt_image}" alt="客户微信回执图" style="max-width: 500px; max-height: 300px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            </div>
+            {/if}
+            <!-- 产品询盘分配图 -->
+            {if condition="!empty($orderInfo.inquiry_assign_image)"}
+            <div class="layui-form-item">
+                <label class="layui-form-label">产品询盘分配图</label>
+                <div class="layui-input-4">
+                    <img src="{$orderInfo.inquiry_assign_image}" alt="产品询盘分配图" style="max-width: 500px; max-height: 300px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            </div>
+            {/if}
+            <!-- 创建人 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">创建人</label>
+                <div class="layui-input-4">
+                    <input type="text" name="at_user" value="{$orderInfo.at_user|default=''|htmlentities}" 
+                           placeholder="创建人" class="layui-input" readonly>
+                </div>
+            </div>
+            <!-- 创建时间 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">创建时间</label>
+                <div class="layui-input-4">
+                    <input type="text" name="create_time" value="{$orderInfo.create_time|default=''}" 
+                           placeholder="创建时间" class="layui-input" readonly>
+                </div>
+            </div>
+            <!-- 更新时间 -->
+            <div class="layui-form-item">
+                <label class="layui-form-label">更新时间</label>
+                <div class="layui-input-4">
+                    <input type="text" name="ut_time" value="{$orderInfo.ut_time|default=''}" 
+                           placeholder="更新时间" class="layui-input" readonly>
                 </div>
             </div>
             <!-- 提交按钮 -->
