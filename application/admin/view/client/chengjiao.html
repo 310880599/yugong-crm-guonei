@@ -579,24 +579,24 @@ layui.use(['table','form','upload','util','laydate','layer'], function(){
     var tableId = "table-list";
     // 定义表格列
     var cols = [[
-        { type: 'checkbox', fixed: true },
+        { type: 'checkbox', fixed: true , width: 50},
         { field: 'id', title: 'ID', width: 80, hide: true, fixed: true },
         { field: 'kh_name', title: '客户名称', sort: true, templet: function(res){
                 return "<a href='{:url('dialogue')}?id=" + res.id + "' class='client-link'>" + (res.kh_name || '') + "</a>";
-            }
+            }, width:180
         },
-        { field: 'product_name', title: '产品名称' },
-        { field: 'inquiry_name', title: '所属渠道' },
-        { field: 'port_name', title: '运营端口' },
-        { field: 'main_phone', title: '主电话' },
-        { field: 'aux_phone', title: '辅助电话' },
-        { field: 'joint_person_names', title: '协同人' },
-        { field: 'issuccess', title: '成交状态', templet: function(res){ return res.issuccess == 1 ? '已成交' : '未成交'; } },
-        { field: 'last_up_records', title: '最新跟进记录' },
-        { field: 'pr_user', title: '负责人', width: 150 },
-        { field: 'at_time', title: '创建时间', sort: true, width: 150 },
-        { field: 'ut_time', title: '更新时间', sort: true, width: 150 },
-        { field: 'original_creation_time', title: '原创建时间', width: 150, templet: function(d){
+        { field: 'product_name', title: '产品名称' , width:180},
+        { field: 'inquiry_name', title: '所属渠道' , width:180},
+        { field: 'port_name', title: '运营端口', width:180 },
+        { field: 'main_phone', title: '主电话' , width:180},
+        { field: 'aux_phone', title: '辅助电话' , width:180},
+        { field: 'joint_person_names', title: '协同人' , width:180},
+        { field: 'issuccess', title: '成交状态', templet: function(res){ return res.issuccess == 1 ? '已成交' : '未成交'; } , width:180},
+        { field: 'last_up_records', title: '最新跟进记录', width:180 },
+        { field: 'pr_user', title: '负责人', width:180 },
+        { field: 'at_time', title: '创建时间', sort: true, width:180 },
+        { field: 'ut_time', title: '更新时间', sort: true, width:180 },
+        { field: 'original_creation_time', title: '原创建时间', width:180, templet: function(d){
                 var v = d.original_creation_time;
                 if (!v) return '';
                 // 如果是时间戳，格式化为日期
@@ -604,7 +604,7 @@ layui.use(['table','form','upload','util','laydate','layer'], function(){
                 return v;
             }
         },
-        { field: 'original_modification_time', title: '原修改时间', width: 150, templet: function(d){
+        { field: 'original_modification_time', title: '原修改时间', width:180, templet: function(d){
                 var v = d.original_modification_time;
                 if (!v) return '';
                 if (/^\d+$/.test(v)) return layui.util.toDateString(v * 1000);
@@ -614,7 +614,7 @@ layui.use(['table','form','upload','util','laydate','layer'], function(){
         { fixed: 'right', width: 100, align: 'center', toolbar: '#action' }
     ]];
     // 恢复列宽设置（如果有存储）
-    if(typeof restoreColWidth === "function"){ restoreColWidth(cols[0]); }
+    // if(typeof restoreColWidth === "function"){ restoreColWidth(cols[0]); }
     // 初始化表格
     var tableIns = table.render({
         elem: '#' + tableId,
@@ -627,7 +627,7 @@ layui.use(['table','form','upload','util','laydate','layer'], function(){
         page: true,
         limit: 30,
         cols: cols,
-        done: bindResizeSave  // 列宽拖动事件绑定（在 common/foot 脚本中定义）
+        // done: bindResizeSave  // 列宽拖动事件绑定（在 common/foot 脚本中定义）
     });
     // 跟进按钮点击事件 - 打开跟进弹窗
     $(document).on('click', '.follow-btn, .client-link', function() {
@@ -733,23 +733,23 @@ layui.use(['table','form','upload','util','laydate','layer'], function(){
         return false;
     });
     // 拖拽列宽后的保存
-    function bindResizeSave() {
-        $(document).off('mouseup.saveWidth').on('mouseup.saveWidth', function () {
-            setTimeout(saveWidths, 10);
-        });
-    }
-    function saveWidths() {
-        var widths = {};
-        $('#' + tableId).next('.layui-table-view').find('th').each(function () {
-            var field = $(this).data('field');
-            if (field) widths[field] = $(this).outerWidth();
-        });
-        localStorage.setItem(columnWidthKey, JSON.stringify(widths));
-    }
-    function restoreColWidth(colArr) {
-        var saved = JSON.parse(localStorage.getItem(columnWidthKey) || '{}');
-        colArr.forEach(function (c) { if (saved[c.field]) c.width = saved[c.field]; });
-    }
+    // function bindResizeSave() {
+    //     $(document).off('mouseup.saveWidth').on('mouseup.saveWidth', function () {
+    //         setTimeout(saveWidths, 10);
+    //     });
+    // }
+    // function saveWidths() {
+    //     var widths = {};
+    //     $('#' + tableId).next('.layui-table-view').find('th').each(function () {
+    //         var field = $(this).data('field');
+    //         if (field) widths[field] = $(this).outerWidth();
+    //     });
+    //     localStorage.setItem(columnWidthKey, JSON.stringify(widths));
+    // }
+    // function restoreColWidth(colArr) {
+    //     var saved = JSON.parse(localStorage.getItem(columnWidthKey) || '{}');
+    //     colArr.forEach(function (c) { if (saved[c.field]) c.width = saved[c.field]; });
+    // }
     // 高级搜索表单提交
     form.on('submit(LAY-app-contlist-search)', function(data) {
         table.reload('table-list', {

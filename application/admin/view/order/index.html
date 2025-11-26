@@ -222,7 +222,17 @@
 
         .layui-table tbody tr:hover {
             background-color: #f5f7fa;
-            transform: scale(1.01);
+        }
+
+        /* 让单元格内容成为独立可移动的容器 */
+            .layui-table tbody td > * {
+                display: inline-block;
+                transition: transform 0.25s ease;
+        }
+
+        /* hover 行时，只移动内容，不移动整个表格行 */
+        .layui-table tbody tr:hover td > * {
+            transform: translateX(-4px);
         }
 
         .layui-table tbody td {
@@ -539,7 +549,8 @@
                     { field: 'contact', title: '联系方式' },
                     { field: 'customer_type_flag', title: '用户属性', width: 100, templet: function(d) {
                         return d.customer_type_flag == 1 ? '个人' : '公司';
-                    }},
+                        }
+                    },
                     { field: 'money', title: '成交金额(￥)', totalRow: true },
                     { field: 'profit', title: '利润', totalRow: true },
                     { field: 'margin_rate', title: '利润率(%)', totalRowText: '' },

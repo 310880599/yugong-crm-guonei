@@ -222,7 +222,17 @@
 
         .layui-table tbody tr:hover {
             background-color: #f5f7fa;
-            transform: scale(1.01);
+        }
+
+        /* 让单元格内容成为独立可移动的容器 */
+            .layui-table tbody td > * {
+                display: inline-block;
+                transition: transform 0.25s ease;
+        }
+
+        /* hover 行时，只移动内容，不移动整个表格行 */
+        .layui-table tbody tr:hover td > * {
+            transform: translateX(-4px);
         }
 
         .layui-table tbody td {
@@ -892,6 +902,11 @@
                     { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
                     { field: 'order_no', title: '订单编号', width: 180, totalRowText: '合计：' },
                     { field: 'contact', title: '联系方式', width: 180 },
+                    { field: 'contact', title: '联系方式' , width: 180},
+                    { field: 'customer_type_flag', title: '用户属性' , width: 180, templet: function (res) {
+                            return res.customer_type_flag == 1 ? '个人' : '公司';
+                        }
+                    },
                     { field: 'cname', title: '客户名称', width: 180 },
                     { field: 'client_company', title: '客户公司', width: 180 },
                     { field: 'country', title: '发货详细地址', width: 180 },
