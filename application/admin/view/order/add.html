@@ -92,16 +92,89 @@
         // AJAX function to fetch client info by contact (no changes needed here)
         function changeyewu() {
             var contact = $("#contact").val();
+            var contactTrimmed = contact ? contact.trim() : '';
+            
+            // 如果联系方式为空，清空所有字段并重置验证状态
+            if (!contactTrimmed) {
+                $('#cname').val('');
+                $('#pr_user').val('{$username}');
+                $('#oper_user_input').val('');
+                $('#country').val('');
+                $('#kh_username').val('');
+                $('#source').val('');
+                $('#source_port').val('');
+                $('#team_name').val('');
+                $('#client_company').val('');
+                customerValidated = false;
+                $('#checklabel').html('').css('color', '');
+                layui.form.render('select');
+                return;
+            }
+            
             $('#cname').val('');
             customerValidated = false; // 重置验证状态
+            
+            // 清空之前填充的字段
+            $('#pr_user').val('{$username}');
+            $('#oper_user_input').val('');
+            $('#country').val('');
+            $('#kh_username').val('');
+            $('#source').val('');
+            $('#source_port').val('');
+            $('#team_name').val('');
+            $('#client_company').val('');
+            
             $.ajax({
                 type: "GET",
                 dataType: "json",
-                url: "{:url('Order/changeyewu')}" + "?contact=" + encodeURIComponent(contact),
+                url: "{:url('Order/changeyewu')}" + "?contact=" + encodeURIComponent(contactTrimmed),
                 success: function (result) {
                     if (result['msg']['code'] == 0) {
                         $('#checklabel').css('color', 'red');
                         customerValidated = false; // 客户验证失败
+                        
+                        // 验证失败时，清空所有已填充的字段
+                        $('#cname').val('');
+                        $('#pr_user').val('{$username}');
+                        $('#oper_user_input').val('');
+                        $('#country').val('');
+                        $('#kh_username').val('');
+                        $('#source').val('');
+                        $('#source_port').val('');
+                        $('#team_name').val('');
+                        $('#client_company').val('');
+                        
+                        // 清空协同人选择
+                        if (window.collaboratorSelectInstance) {
+                            window.collaboratorSelectInstance.setValue([]);
+                        }
+                        
+                        // 清空产品明细表格
+                        var $tbody = $('#productTableBody');
+                        $tbody.empty();
+                        var emptyRow = document.createElement('tr');
+                        emptyRow.innerHTML =
+                            '<td><select name="product_name[]" lay-search lay-verify="required">' + (window.productOptions || $('select[name="product_name[]"]').first().html()) + '</select></td>' +
+                            '<td><select name="product_manager[]" lay-search lay-verify="required">' + (window.managerOptions || $('select[name="product_manager[]"]').first().html()) + '</select></td>' +
+                            '<td><input type="text" name="spec_model[]" class="layui-input"></td>' +
+                            '<td><select name="unit[]" lay-search lay-verify="required">' + (window.unitOptions || $('select[name="unit[]"]').first().html()) + '</select></td>' +
+                            '<td><input type="number" name="qty[]" class="layui-input" lay-verify="required|number"></td>' +
+                            '<td><input type="number" name="unit_price[]" class="layui-input" lay-verify="required|number" step="0.01"></td>' +
+                            '<td><input type="number" name="total_price[]" class="layui-input" readonly></td>' +
+                            '<td><input type="number" name="purchase_price[]" class="layui-input" lay-verify="required|number" step="0.01"></td>' +
+                            '<td><input type="number" name="sub_profit[]" class="layui-input" readonly></td>' +
+                            '<td><input type="text" name="item_remark[]" class="layui-input"></td>' +
+                            '<td><button type="button" class="layui-btn layui-btn-danger layui-btn-sm delete-row">删除</button></td>';
+                        $tbody.append(emptyRow);
+                        layui.form.render('select');
+                        
+                        // 重置金额字段
+                        $('#money').val('0.00');
+                        $('#profit').val('0.00');
+                        $('#margin_rate').val('0.00');
+                        
+                        // 显示错误提示
+                        layer.msg(result['msg']['msg'] || '该客户不属于您的客户或协同人客户，无法添加订单', { icon: 2, time: 3000 });
                     } else {
                         $('#checklabel').css('color', 'green');
                         customerValidated = true; // 客户验证成功
@@ -271,8 +344,8 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">联系方式<span style="color:red;">*</span></label>
                 <div class="layui-input-4">
-                    <input type="text" id="contact" onchange="changeyewu()" name="contact" lay-verify="required"
-                        placeholder="请输入客户联系方式" class="layui-input">
+                    <input type="text" id="contact" onchange="changeyewu()" onblur="changeyewu()" name="contact" lay-verify="required"
+                        placeholder="请输入客户联系方式（只能输入您的客户或协同人客户的电话）" class="layui-input">
                 </div>
             </div>
             <div class="layui-form-item">
