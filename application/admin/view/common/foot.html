@@ -4,4 +4,18 @@
 <script type="text/javascript" src="/static/plugins/layui/layui.js"></script>
 <!-- xmSelect 多选插件 JS -->
 <script src="/static/admin/js/xm-select.js"></script>
+<script>
+    layui.use(['layer'], function () {
+        var layer = layui.layer;
+
+        document.addEventListener('keydown', function (event) {
+            var key = event.key || event.keyCode;
+
+            if (key === 'Escape' || key === 'Esc' || key === 27) {
+                // 统一响应 ESC 关闭所有打开的弹窗，等价于点击右上角关闭
+                layer.closeAll();
+            }
+        });
+    });
+</script>
 
