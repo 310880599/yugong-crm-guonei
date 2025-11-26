@@ -233,7 +233,7 @@
                             '<td><select name="product_name[]" lay-search lay-verify="required">' + productOptions + '</select></td>' +
                             '<td><select name="product_manager[]" lay-search lay-verify="required">' + managerOptions + '</select></td>' +
                             '<td><input type="text" name="spec_model[]" class="layui-input"></td>' +
-                            '<td><input type="text" name="unit[]" class="layui-input"></td>' +
+                            '<td><select name="unit[]" lay-search lay-verify="required">' + unitOptions + '</select></td>' +
                             '<td><input type="number" name="qty[]" class="layui-input" lay-verify="required|number"></td>' +
                             '<td><input type="number" name="unit_price[]" class="layui-input" lay-verify="required|number" step="0.01"></td>' +
                             '<td><input type="number" name="total_price[]" class="layui-input" readonly></td>' +
@@ -422,7 +422,7 @@
                                 <th>销售单价</th>
                                 <th>销售价合计</th>
                                 <th>进价合计</th>
-                                <th>子项利润</th>
+                                <th>利润</th>
                                 <th>行备注</th>
                                 <th>操作</th>
                             </tr>
@@ -449,7 +449,92 @@
                                     </select>
                                 </td>
                                 <td><input type="text" name="spec_model[]" class="layui-input"></td>
-                                <td><input type="text" name="unit[]" class="layui-input"></td>
+                                <td>
+                                    <select name="unit[]" lay-search lay-verify="required">
+                                        <option value="">请选择单位</option>
+
+                                        <!-- 数量单位 -->
+                                        <option value="台">台</option>
+                                        <option value="套">套</option>
+                                        <option value="件">件</option>
+                                        <option value="个">个</option>
+                                        <option value="批">批</option>
+                                        <option value="根">根</option>
+                                        <option value="米">米</option>
+                                        <option value="吨">吨</option>
+                                        <option value="箱">箱</option>
+                                        <option value="包">包</option>
+                                        <option value="卷">卷</option>
+                                        <option value="片">片</option>
+                                        <option value="块">块</option>
+                                        <option value="组">组</option>
+                                        <option value="束">束</option>
+                                        <option value="副">副</option>
+                                        <option value="双">双</option>
+                                        <option value="袋">袋</option>
+                                        <option value="桶">桶</option>
+                                        <option value="袋">袋</option>
+                                        <option value="支">支</option>
+
+                                        <!-- 重量单位 -->
+                                        <option value="kg">kg</option>
+                                        <option value="g">g</option>
+                                        <option value="t">t</option>
+                                        <option value="吨">吨</option>
+                                        <option value="千克">千克</option>
+                                        <option value="公斤">公斤</option>
+
+                                        <!-- 长度单位 -->
+                                        <option value="mm">mm</option>
+                                        <option value="cm">cm</option>
+                                        <option value="m">m</option>
+                                        <option value="km">km</option>
+                                        <option value="丝">丝</option>
+
+                                        <!-- 面积单位 -->
+                                        <option value="㎡">㎡</option>
+                                        <option value="cm²">cm²</option>
+                                        <option value="mm²">mm²</option>
+
+                                        <!-- 体积单位 -->
+                                        <option value="L">L</option>
+                                        <option value="m³">m³</option>
+                                        <option value="ml">ml</option>
+
+                                        <!-- 工业通用单位（机械行业常用） -->
+                                        <option value="套装">套装</option>
+                                        <option value="车">车</option>
+                                        <option value="架">架</option>
+                                        <option value="头">头</option>
+                                        <option value="盘">盘</option>
+                                        <option value="排">排</option>
+                                        <option value="片">片</option>
+                                        <option value="平方">平方</option>
+                                        <option value="立方">立方</option>
+                                        <option value="节">节</option>
+                                        <option value="段">段</option>
+                                        <option value="条">条</option>
+
+                                        <!-- 包装单位 -->
+                                        <option value="箱">箱</option>
+                                        <option value="木箱">木箱</option>
+                                        <option value="纸箱">纸箱</option>
+                                        <option value="托盘">托盘</option>
+                                        <option value="袋">袋</option>
+                                        <option value="编织袋">编织袋</option>
+
+                                        <!-- 机械行业特殊单位 -->
+                                        <option value="卷">卷</option>
+                                        <option value="盘">盘</option>
+                                        <option value="板">板</option>
+                                        <option value="片">片</option>
+                                        <option value="块">块</option>
+                                        <option value="柱">柱</option>
+                                        <option value="瓶">瓶</option>
+                                        <option value="罐">罐</option>
+
+                                    </select>
+                                </td>
                                 <td><input type="number" name="qty[]" class="layui-input" lay-verify="required|number">
                                 </td>
                                 <td><input type="number" name="unit_price[]" class="layui-input"
@@ -771,6 +856,11 @@
         // 保存到全局作用域，以便 changeyewu 函数可以访问
         window.managerOptions = managerOptions;
 
+        // 获取初始单位下拉的所有选项 HTML（写死的那几个单位）
+        var unitOptions = $('select[name="unit[]"]').first().html();
+        window.unitOptions = unitOptions;
+
+
         // 页面加载时，初始化产品明细表格：清空所有行，只保留一行空行
         function initProductTable() {
             var $tbody = $('#productTableBody');
@@ -783,7 +873,7 @@
                 '<td><select name="product_name[]" lay-search lay-verify="required">' + productOptions + '</select></td>' +
                 '<td><select name="product_manager[]" lay-search lay-verify="required">' + managerOptions + '</select></td>' +
                 '<td><input type="text" name="spec_model[]" class="layui-input"></td>' +
-                '<td><input type="text" name="unit[]" class="layui-input"></td>' +
+                '<td><select name="unit[]" lay-search lay-verify="required">' + unitOptions + '</select></td>' +
                 '<td><input type="number" name="qty[]" class="layui-input" lay-verify="required|number"></td>' +
                 '<td><input type="number" name="unit_price[]" class="layui-input" lay-verify="required|number" step="0.01"></td>' +
                 '<td><input type="number" name="total_price[]" class="layui-input" readonly></td>' +
@@ -821,7 +911,7 @@
                 '<td><select name="product_name[]" lay-search lay-verify="required">' + productOptions + '</select></td>' +
                 '<td><select name="product_manager[]" lay-search lay-verify="required">' + managerOptions + '</select></td>' +
                 '<td><input type="text" name="spec_model[]" class="layui-input"></td>' +
-                '<td><input type="text" name="unit[]" class="layui-input"></td>' +
+                '<td><select name="unit[]" lay-search lay-verify="required">' + unitOptions + '</select></td>' +
                 '<td><input type="number" name="qty[]" class="layui-input" lay-verify="required|number"></td>' +
                 '<td><input type="number" name="unit_price[]" class="layui-input" lay-verify="required|number" step="0.01"></td>' +
                 '<td><input type="number" name="total_price[]" class="layui-input" readonly></td>' +
