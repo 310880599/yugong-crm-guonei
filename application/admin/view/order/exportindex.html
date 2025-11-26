@@ -719,7 +719,13 @@
                                 }
                                 // 格式化日期
                                 if (col.type === 'date' && value) {
-                                    value = value.toString().substring(0, 19);
+                                    // 成交日期只精确到年月日（前10个字符：YYYY-MM-DD）
+                                    if (col.field === 'order_time') {
+                                        value = value.toString().substring(0, 10);
+                                    } else {
+                                        // 其他日期字段保持完整格式（包含时分秒）
+                                        value = value.toString().substring(0, 19);
+                                    }
                                 }
                                 
                                 return value;
@@ -768,7 +774,13 @@
                             }
                             // 格式化日期
                             if (col.type === 'date' && value) {
-                                value = value.toString().substring(0, 19);
+                                // 成交日期只精确到年月日（前10个字符：YYYY-MM-DD）
+                                if (col.field === 'order_time') {
+                                    value = value.toString().substring(0, 10);
+                                } else {
+                                    // 其他日期字段保持完整格式（包含时分秒）
+                                    value = value.toString().substring(0, 19);
+                                }
                             }
                             
                             return value;
