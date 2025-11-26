@@ -243,7 +243,17 @@
 
         .layui-table tbody tr:hover {
             background-color: #f5f7fa;
-            transform: scale(1.01);
+        }
+
+        /* 让单元格内容成为独立可移动的容器 */
+            .layui-table tbody td > * {
+                display: inline-block;
+                transition: transform 0.25s ease;
+        }
+
+        /* hover 行时，只移动内容，不移动整个表格行 */
+        .layui-table tbody tr:hover td > * {
+            transform: translateX(-4px);
         }
 
         .layui-table tbody td {
@@ -515,18 +525,23 @@
                 toolbar: '#topBtn',
                 defaultToolbar: ['filter', 'print', 'exports'],
                 cols: [[
-                    { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
-                    { field: 'order_no', title: '订单编号', totalRowText: '合计：' },
-                    { field: 'cname', title: '客户名称' },
-                    { field: 'contact', title: '联系方式' },
-                    { field: 'money', title: '成交金额(￥)', totalRow: true },
-                    { field: 'profit', title: '利润', totalRow: true },
-                    { field: 'margin_rate', title: '利润率(%)', totalRow: true },
-                    { field: 'order_time', title: '成交时间' },
-                    { field: 'source', title: '运营渠道' },
-                    { field: 'source_port', title: '运营端口' },
-                    { field: 'pr_user', title: '负责人', hide: false },
-                    { field: 'team_name', title: '团队', hide: false },
+                    { field: 'id', title: 'ID', width: 180, fixed: true, hide: true },
+                    { field: 'order_no', title: '订单编号', totalRowText: '合计：', width: 180 },
+                    { field: 'cname', title: '客户名称' , width: 180},
+                    { field: 'contact', title: '联系方式' , width: 180},
+                    { field: 'customer_type_flag', title: '用户属性' , width: 180, templet: function (res) {
+                            return res.customer_type_flag == 1 ? '个人' : '公司';
+                        }
+                    },
+                    { field: 'money', title: '成交金额(￥)', totalRow: true, width: 180 },
+                    { field: 'profit', title: '利润', totalRow: true , width: 180},
+                    { field: 'margin_rate', title: '利润率(%)', totalRow: true, width: 180 },
+                    { field: 'order_time', title: '成交时间', width: 180 },
+                    { field: 'source', title: '运营渠道', width: 180 },
+                    { field: 'source_port', title: '运营端口', width: 180 },
+                    { field: 'pr_user', title: '负责人', hide: false , width: 180},
+                    { field: 'team_name', title: '团队', hide: false , width: 180},
+                    { field: 'create_time', title: '创建时间' ,hide: false , width: 180},
                     { title: '操作', toolbar: '#action', width: 320, minWidth: 320, fixed: 'right', align: 'left' }
                 ]],
                 limit: 100, //每页默认显示的数量
