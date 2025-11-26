@@ -520,8 +520,9 @@
         <!-- 是否审核通过 -->
     <!-- {//if $Think.session.aid == 1} -->
     <!-- <a class="layui-btn  layui-btn-xs" lay-event="shenhe"><i class="layui-icon">&#xe642;</i>审核通过</a> -->
-    
+    {if session('aid') eq 1}
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
+    {/if}
     <!-- {/if} -->
     </script>
 

@@ -97,16 +97,21 @@
         <table class="layui-table" id="table-list" lay-filter="table-list"></table>
     </div>
     <script type="text/html" id="action">
+        {if session('aid') eq 1}
         <a class="layui-btn layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
         <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
+        {/if}
     </script>
 
     <script type="text/html" id="topBtn">
         <button type="button" class="layui-btn layui-btn-primary layui-btn-radius layui-btn-sm" id="add"><i class="layui-icon">&#xe608;</i>添加供应商</button>
+        {if session('aid') eq 1}
         <button class="layui-btn layui-btn-danger layui-btn-sm" lay-event="batchDel"><i class="layui-icon">&#xe640;</i> 批量删除</button>
+        
         <button class="layui-btn layui-btn-warm layui-btn-sm" lay-event="importExcel"><i class="layui-icon">&#xe67c;</i> 导入Excel</button>
         <!-- ★ 新增：下载模板 -->
         <button class="layui-btn layui-btn-normal layui-btn-sm" lay-event="downloadTpl"><i class="layui-icon">&#xe601;</i> 下载模板</button>
+        {/if}
     </script>
 
 
