@@ -1239,6 +1239,12 @@ private function exportToExcel($data)
     {
         $current_admin = Admin::getMyInfo();
         $users = Db::table('admin')->where($this->getOrgWhere($current_admin['org']))->column('username');
+        
+        // 如果用户列表为空，返回空查询
+        if (empty($users)) {
+            return Db::table('admin')->alias('a')->where('1=0');
+        }
+        
         // 处理 where 条件，将带表别名的字段转换为不带别名的（因为子查询中没有别名）
         $sub_where = [];
         foreach ($where as $condition) {
@@ -1276,8 +1282,8 @@ private function exportToExcel($data)
                 $sub_where[] = $condition;
             }
         }
+        // 构建子查询，使用 * 选择所有字段以确保包含 id 字段
         $subQuery = Db::table('crm_leads')
-            ->field('id, ' . $field)  // 明确指定需要的字段
             ->where($sub_where)->where($field,'in',$users)
             ->buildSql();
         return Db::table('admin')->alias('a')
@@ -1332,8 +1338,8 @@ private function exportToExcel($data)
         }
         
         // 构建子查询：查询所有符合条件的 leads（有 inquiry_id 和 port_id）
+        // 使用 * 选择所有字段以确保包含 id 字段
         $subQuery = Db::table('crm_leads')
-            ->field('id, inquiry_id, port_id')  // 明确指定需要的字段
             ->where($sub_where)
             ->where('inquiry_id', '<>', '')
             ->where('inquiry_id', '<>', null)
