@@ -544,9 +544,9 @@
                     { field: 'create_time', title: '创建时间' ,hide: false , width: 180},
                     { title: '操作', toolbar: '#action', width: 320, minWidth: 320, fixed: 'right', align: 'left' }
                 ]],
-                limit: 100, //每页默认显示的数量
+                limit: 10, //每页默认显示的数量
 
-                page: { limits: [10, 20, 30, 40, 50, 100, 9999999] },
+                page: { limits: [10, 20, 30, 40, 50, 100, 200, 500,9999999] },
                 totalRow: true,// 开启统计行
                 done: function (res, curr, count) {
                     $('#total-money').text(res.totalMoney);

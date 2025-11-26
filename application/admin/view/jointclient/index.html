@@ -295,7 +295,9 @@
                 defaultToolbar: ['filter'],
                 page: true,
                 limit: 30,
-                cols: cols
+                cols: cols,
+                limit: 10,
+                page: { limits: [10, 20, 50, 100, 200, 500,9999999] }
             });
 
             // 搜索触发：切到 jointPersonClientSearch
