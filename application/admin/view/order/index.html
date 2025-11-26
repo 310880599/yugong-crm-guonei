@@ -576,8 +576,7 @@
                             totalMoney += Number(d.money) || 0;
                             totalProfit += Number(d.profit) || 0;
                     });
-                    var rate = totalMoney === 0 ? '0' : (totalProfit / totalMoney * 100).toFixed(2);
-
+                    var rate = totalMoney === 0 ? '0' : (totalProfit / totalMoney * 100).toFixed(2); 
                     // 更新合计行单元格（margin_rate 列）
                     $('.layui-table-total td[data-field="margin_rate"] div').text(rate);
 
