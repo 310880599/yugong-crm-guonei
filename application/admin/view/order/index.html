@@ -537,12 +537,18 @@
             const { table, form, laydate, $, upload, util, element } = layui;
 
             // 初始化表格
+            // 根据超级管理员权限设置工具栏按钮
+            var defaultToolbar = ['filter'];
+            {if session('aid') eq 1}
+            defaultToolbar = ['filter', 'print', 'exports'];
+            {/if}
+            
             const tableIn = table.render({
                 elem: '#table-list',
                 url: '{:url("index")}',
                 method: 'post',
                 toolbar: '#topBtn',
-                defaultToolbar: ['filter', 'print', 'exports'],
+                defaultToolbar: defaultToolbar,
                 cols: [[
                     { field: 'id', title: 'ID', width: 80, fixed: true, hide: true },
                     { field: 'order_no', title: '订单编号', totalRowText: '合计：' },

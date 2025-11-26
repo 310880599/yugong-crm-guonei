@@ -14,6 +14,7 @@
     <script src="/static/admin/js/select.js"></script>
     <script src="/static/plugins/layui/layui.js"></script>
     <script src="/static/admin/js/xm-select.js"></script>
+    <script src="/js/xlsx.bundle.js"></script>
     <style>
         .layui-form-pane .layui-form-label {
             width: 110px;
@@ -284,6 +285,16 @@
             <div class="layui-form-item">
                 <label class="layui-form-label">产品明细</label>
                 <div class="layui-input-block">
+                    {if condition="session('aid') == 1"}
+                    <div style="margin-bottom: 10px;">
+                        <button type="button" class="layui-btn layui-btn-sm" id="printBtn">
+                            <i class="layui-icon">&#xe66f;</i>打印
+                        </button>
+                        <button type="button" class="layui-btn layui-btn-sm" id="exportBtn">
+                            <i class="layui-icon layui-icon-export"></i>导出
+                        </button>
+                    </div>
+                    {/if}
                     <table id="product-table" class="layui-table">
                         <thead>
                             <tr>
@@ -716,6 +727,68 @@
             // 将对齐修正函数暴露到全局，便于在其他异步回调中调用
             window.fixSelectAlign = fixSelectAlign;
 
+            // 打印按钮事件（仅超级管理员可见）
+            $('#printBtn').on('click', function() {
+                window.print();
+            });
+
+            // 导出按钮事件（仅超级管理员可见）
+            $('#exportBtn').on('click', function() {
+                // 导出产品明细表格为 Excel
+                if (typeof XLSX === 'undefined') {
+                    layer.msg('导出功能需要加载 XLSX 库，请刷新页面重试', { icon: 2 });
+                    return;
+                }
+                
+                // 获取表格数据
+                var tableData = [];
+                var headers = ['产品名称', '产品经理', '规格型号', '单位', '数量', '销售单价', '销售价合计', '进价合计', '子项利润', '行备注'];
+                tableData.push(headers);
+                
+                $('#productTableBody tr').each(function() {
+                    var row = [];
+                    $(this).find('td').each(function(index) {
+                        if (index < 10) { // 只取前10列
+                            var $select = $(this).find('select');
+                            var $input = $(this).find('input');
+                            if ($select.length > 0) {
+                                // 获取选中的选项文本
+                                var selectedText = $select.find('option:selected').text();
+                                row.push(selectedText || '');
+                            } else if ($input.length > 0) {
+                                row.push($input.val() || '');
+                            } else {
+                                row.push($(this).text().trim() || '');
+                            }
+                        }
+                    });
+                    if (row.length > 0) {
+                        tableData.push(row);
+                    }
+                });
+                
+                // 创建工作簿
+                var wb = XLSX.utils.book_new();
+                var ws = XLSX.utils.aoa_to_sheet(tableData);
+                
+                // 设置列宽
+                ws['!cols'] = [
+                    { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 10 }, 
+                    { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, 
+                    { wch: 15 }, { wch: 20 }
+                ];
+                
+                // 添加工作表
+                XLSX.utils.book_append_sheet(wb, ws, '产品明细');
+                
+                // 生成文件名
+                var fileName = '订单产品明细_' + ($('#order_no').val() || '订单') + '_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.xlsx';
+                
+                // 导出文件
+                XLSX.writeFile(wb, fileName);
+                
+                layer.msg('导出成功！', { icon: 1, time: 1500 });
+            });
 
             // —— 全页只读/禁用 开关（如需恢复编辑，把它改为 false 并重载页面）——
             var FORCE_READONLY = true;
@@ -773,10 +846,16 @@
                 }
             }catch(e){ /* 忽略 */ }
 
-            // 7) 若页面上有按钮（比如你之后恢复了“提交”按钮），统一置灰禁用
+            // 7) 若页面上有按钮（比如你之后恢复了"提交"按钮），统一置灰禁用
+            // 但保留打印和导出按钮的功能（仅超级管理员可见）
             $('button, .layui-btn').each(function(){
-                // 只读模式下屏蔽一切按钮点击
-                $(this).attr('disabled', true).addClass('layui-btn-disabled').off('click');
+                var $btn = $(this);
+                // 如果是打印或导出按钮，不禁用
+                if ($btn.attr('id') === 'printBtn' || $btn.attr('id') === 'exportBtn') {
+                    return; // 跳过打印和导出按钮
+                }
+                // 只读模式下屏蔽其他按钮点击
+                $btn.attr('disabled', true).addClass('layui-btn-disabled').off('click');
             });
 
             // 8) 防止任何表单提交（若你未来要保留“只读查看但允许提交”，注释掉本段）
