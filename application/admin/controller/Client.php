@@ -1897,9 +1897,7 @@ class Client extends Common
         $teamName = session('team_name') ?: '';
         $adminList = Db::name('admin')
             ->where('group_id', '<>', 1)
-            ->where(function ($query) use ($teamName) {
-                if ($teamName) $query->where('team_name', $teamName);
-            })
+            ->whereIn('group_id', [10, 11, 14])
             ->field('admin_id, username')
             ->select();
         $collaboratorData = [];

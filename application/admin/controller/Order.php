@@ -565,9 +565,7 @@ class Order extends Common
         $teamName = session('team_name') ?: '';
         $adminList = Db::name('admin')
             ->where('group_id', '<>', 1)
-            ->where(function ($query) use ($teamName) {
-                if ($teamName) $query->where('team_name', $teamName);
-            })
+            ->whereIn('group_id', [10, 11, 14])
             ->field('admin_id, username')
             ->select();
         $collaboratorData = [];
@@ -578,7 +576,7 @@ class Order extends Common
 
         // 查询所有产品经理（admin表中 group_id=14），按用户名升序
         $managerList = Db::name('admin')
-            ->where('group_id', 14)
+            ->whereIn('group_id', [ 13, 14])
             ->field('admin_id, username')
             ->order('username', 'asc')
             ->select();
