@@ -338,9 +338,9 @@
                             </div>
 
                             <div class="layui-inline">
-                                <label class="layui-form-label">时间查询：</label>
+                                <label class="layui-form-label">成交时间查询：</label>
                                 <div class="layui-input-inline">
-                                    <select id="dateRange" lay-filter="dateRange" name="timebucket" class="layui-select">
+                                    <select id="orderTimeRange" lay-filter="orderTimeRange" name="order_timebucket" class="layui-select">
                                         <option value="">自定义</option>
                                         <option value="today">今天</option>
                                         <option value="yesterday">昨天</option>
@@ -354,7 +354,28 @@
                                     </select>
                                 </div>
                                 <div class="layui-input-inline">
-                                    <input type="text" class="layui-input" id="at_time" name="at_time" placeholder="选择日期范围">
+                                    <input type="text" class="layui-input" id="order_time" name="order_time" placeholder="选择成交日期范围">
+                                </div>
+                            </div>
+
+                            <div class="layui-inline">
+                                <label class="layui-form-label">创建时间查询：</label>
+                                <div class="layui-input-inline">
+                                    <select id="createTimeRange" lay-filter="createTimeRange" name="create_timebucket" class="layui-select">
+                                        <option value="">自定义</option>
+                                        <option value="today">今天</option>
+                                        <option value="yesterday">昨天</option>
+                                        <option value="week">本周</option>
+                                        <option value="last week">上周</option>
+                                        <option value="month">本月</option>
+                                        <option value="last month">上月</option>
+                                        <option value="year">今年</option>
+                                        <option value="last year">去年</option>
+                                        <option value="-2 hours">两个小时内</option>
+                                    </select>
+                                </div>
+                                <div class="layui-input-inline">
+                                    <input type="text" class="layui-input" id="create_time" name="create_time" placeholder="选择创建日期范围">
                                 </div>
                             </div>
 
@@ -1090,9 +1111,37 @@
 
             // 监听搜索
             form.on('submit(LAY-app-contlist-search)', function (data) {
+                // 收集所有搜索条件，确保AND逻辑（所有非空条件都必须满足）
+                const searchParams = {};
+                
+                // 处理所有表单字段，过滤空值
+                Object.keys(data.field).forEach(function(key) {
+                    const value = data.field[key];
+                    // 过滤空值：空字符串、null、undefined都不传递
+                    if (value !== '' && value !== null && value !== undefined) {
+                        searchParams[key] = value;
+                    }
+                });
+                
+                // 处理时间查询字段的互斥逻辑
+                // 如果选择了快捷时间，优先使用快捷时间，忽略自定义时间
+                if (searchParams['order_timebucket']) {
+                    delete searchParams['order_time'];
+                } else if (searchParams['order_time']) {
+                    delete searchParams['order_timebucket'];
+                }
+                
+                if (searchParams['create_timebucket']) {
+                    delete searchParams['create_time'];
+                } else if (searchParams['create_time']) {
+                    delete searchParams['create_timebucket'];
+                }
+                
+                // 重新加载表格，传递所有搜索条件
+                // 后端会使用AND逻辑组合所有条件，只有同时满足所有条件的订单才会被查询出来
                 table.reload('table-list', {
                     url: "{:url('Order/clientSearch')}",
-                    where: { keyword: data.field },
+                    where: { keyword: searchParams },
                     page: { curr: 1 }
                 });
                 return false;
@@ -1101,23 +1150,40 @@
             // 初始化折叠面板
             element.render('collapse');
 
-            // 日期控件
+            // 成交时间日期控件
             laydate.render({
-                elem: '#at_time',
+                elem: '#order_time',
                 range: true, // 开启范围选择
                 trigger: 'click'
             });
-            // 控制日期范围选择框的显示与隐藏
-            form.on('select(dateRange)', function (data) {
+            // 创建时间日期控件
+            laydate.render({
+                elem: '#create_time',
+                range: true, // 开启范围选择
+                trigger: 'click'
+            });
+            
+            // 控制成交时间日期范围选择框的显示与隐藏
+            form.on('select(orderTimeRange)', function (data) {
                 const isCustom = data.value === '';
-                $('#at_time').toggle(isCustom);
+                $('#order_time').toggle(isCustom);
                 if (!isCustom) {
-                    $('#at_time').val('');
+                    $('#order_time').val('');
+                }
+            });
+            
+            // 控制创建时间日期范围选择框的显示与隐藏
+            form.on('select(createTimeRange)', function (data) {
+                const isCustom = data.value === '';
+                $('#create_time').toggle(isCustom);
+                if (!isCustom) {
+                    $('#create_time').val('');
                 }
             });
 
             // 初始隐藏日期范围选择框
-            $('#at_time').hide();
+            $('#order_time').hide();
+            $('#create_time').hide();
         });
 
         function layer_add(title, url) {

@@ -1724,17 +1724,46 @@ class Order extends Common
         $keyword = Request::param('keyword');
         // 过滤掉 null 元素
         if ($keyword) $keyword = array_filter($keyword);
-        if (isset($keyword['timebucket']) || isset($keyword['at_time'])) $keyword['timebucket'] = isset($keyword['timebucket']) ? $keyword['timebucket'] : $keyword['at_time'];
+        
+        // 兼容旧的时间查询字段（timebucket/at_time），优先使用新的字段
+        if (isset($keyword['timebucket']) || isset($keyword['at_time'])) {
+            // 如果没有设置新的成交时间查询，则使用旧的字段
+            if (!isset($keyword['order_timebucket']) && !isset($keyword['order_time'])) {
+                $keyword['order_timebucket'] = isset($keyword['timebucket']) ? $keyword['timebucket'] : $keyword['at_time'];
+            }
+        }
+        
         // if (isset($keyword['status'])) $where[] = ['status', '=', $keyword['status']];
         if (isset($keyword['order_no'])) $where[] = ['order_no', 'like', "%{$keyword['order_no']}%"];
-        if (isset($keyword['timebucket'])) {
-            $where[] = $this->buildTimeWhere($keyword['timebucket'], 'order_time');
-            $timeWhere['at_time'] = $this->buildTimeWhere($keyword['timebucket'], 'at_time');
-            $timeWhere['to_kh_time'] = $this->buildTimeWhere($keyword['timebucket'], 'to_kh_time');
+        
+        // 处理成交时间查询（order_timebucket 或 order_time）
+        if (isset($keyword['order_timebucket']) && $keyword['order_timebucket'] !== '') {
+            // 使用快捷时间选择
+            $where[] = $this->buildTimeWhere($keyword['order_timebucket'], 'order_time');
+            $timeWhere['at_time'] = $this->buildTimeWhere($keyword['order_timebucket'], 'at_time');
+            $timeWhere['to_kh_time'] = $this->buildTimeWhere($keyword['order_timebucket'], 'to_kh_time');
             $client_where[] =  function ($query) use ($timeWhere) {
                 $query->where(...$timeWhere['at_time']);
                 $query->whereOr(...$timeWhere['to_kh_time']);
             };
+        } elseif (isset($keyword['order_time']) && $keyword['order_time'] !== '') {
+            // 使用自定义时间范围
+            $where[] = $this->buildTimeWhere($keyword['order_time'], 'order_time');
+            $timeWhere['at_time'] = $this->buildTimeWhere($keyword['order_time'], 'at_time');
+            $timeWhere['to_kh_time'] = $this->buildTimeWhere($keyword['order_time'], 'to_kh_time');
+            $client_where[] =  function ($query) use ($timeWhere) {
+                $query->where(...$timeWhere['at_time']);
+                $query->whereOr(...$timeWhere['to_kh_time']);
+            };
+        }
+        
+        // 处理创建时间查询（create_timebucket 或 create_time）
+        if (isset($keyword['create_timebucket']) && $keyword['create_timebucket'] !== '') {
+            // 使用快捷时间选择
+            $where[] = $this->buildTimeWhere($keyword['create_timebucket'], 'create_time');
+        } elseif (isset($keyword['create_time']) && $keyword['create_time'] !== '') {
+            // 使用自定义时间范围
+            $where[] = $this->buildTimeWhere($keyword['create_time'], 'create_time');
         }
         if (isset($keyword['min_money'])) $where[] = ['money', '>', $keyword['min_money']];
         if (isset($keyword['max_money'])) $where[] = ['money', '<', $keyword['max_money']];
