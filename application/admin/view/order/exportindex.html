@@ -549,7 +549,7 @@
         layui.use(['table', 'form', 'upload', 'util', 'laydate', 'element'], function () {
             const { table, form, laydate, $, upload, util, element } = layui;
 
-            // 自定义美化导出函数
+            // 自定义美化导出函数 - 导出当前表格显示的数据（应用搜索条件）
             function exportBeautifiedExcel() {
                 if (typeof XLSX === 'undefined') {
                     layer.msg('导出功能需要加载 XLSX 库，请刷新页面重试', { icon: 2 });
@@ -558,19 +558,58 @@
 
                 const loading = layer.load(1, { shade: [0.1, '#fff'] });
                 
-                // 通过 AJAX 获取所有数据（不分页）
+                // 获取当前表格的搜索条件（从表格配置中获取）
+                let searchParams = {};
+                if (tableIn && tableIn.config && tableIn.config.where && tableIn.config.where.keyword) {
+                    searchParams = Object.assign({}, tableIn.config.where.keyword);
+                }
+                
+                // 收集表单中的所有搜索条件（确保获取最新的表单数据）
+                const formData = {};
+                $('#searchForm').serializeArray().forEach(function(item) {
+                    const value = item.value;
+                    // 过滤空值
+                    if (value !== '' && value !== null && value !== undefined) {
+                        formData[item.name] = value;
+                    }
+                });
+                
+                // 处理时间查询字段的互斥逻辑
+                if (formData['order_timebucket']) {
+                    delete formData['order_time'];
+                } else if (formData['order_time']) {
+                    delete formData['order_timebucket'];
+                }
+                
+                if (formData['create_timebucket']) {
+                    delete formData['create_time'];
+                } else if (formData['create_time']) {
+                    delete formData['create_timebucket'];
+                }
+                
+                // 合并表单数据和当前表格的搜索条件（表单数据优先，因为它是用户当前输入的）
+                const exportParams = Object.assign({}, searchParams, formData);
+                
+                // 通过 AJAX 获取当前表格显示的数据（应用搜索条件，不分页）
                 $.ajax({
-                    url: '{:url("index")}',
+                    url: "{:url('Order/clientSearch')}",
                     type: 'POST',
                     data: {
                         page: 1,
-                        limit: 999999
+                        limit: 999999,
+                        keyword: exportParams
                     },
                     dataType: 'json',
                     success: function(res) {
                         if (res.code === 0 && res.data) {
                             // 为每个订单获取订单明细数据
                             const orderIds = res.data.map(item => item.id);
+                            if (orderIds.length === 0) {
+                                layer.close(loading);
+                                layer.msg('没有可导出的数据', { icon: 2 });
+                                return;
+                            }
+                            
                             $.ajax({
                                 url: '{:url("Order/getOrderItems")}',
                                 type: 'POST',
