@@ -1068,16 +1068,16 @@
                     });
                 } else if (event === 'edit') {
                     // 编辑功能已屏蔽
-                    // var indexOpen = layer.open({
-                    //     type: 2,
-                    //     title: '编辑订单',
-                    //     closeBtn: 1,
-                    //     area: ['100%', '86%'],
-                    //     anim: 2,
-                    //     shadeClose: false,
-                    //     maxmin: false,
-                    //     content: ["{:url('Order/edit')}?id=" + data.id]
-                    // });
+                    var indexOpen = layer.open({
+                        type: 2,
+                        title: '编辑订单',
+                        closeBtn: 1,
+                        area: ['100%', '86%'],
+                        anim: 2,
+                        shadeClose: false,
+                        maxmin: false,
+                        content: ["{:url('Order/edit')}?id=" + data.id]
+                    });
                 }
             });
 

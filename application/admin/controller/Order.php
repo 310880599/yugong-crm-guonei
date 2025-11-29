@@ -1148,11 +1148,7 @@ class Order extends Common
         $teamName = $currentAdmin['team_name'] ?? Session::get('team_name') ?: '';
         $adminList = Db::name('admin')
             ->where('group_id', '<>', 1)
-            ->where(function ($query) use ($teamName) {
-                if ($teamName) {
-                    $query->where('team_name', $teamName);
-                }
-            })
+            ->whereIn('group_id', [10, 11, 14])
             ->field('admin_id, username')
             ->select();
         $collaboratorData = [];
@@ -1547,7 +1543,7 @@ class Order extends Common
             $productQuery->where($where);
         }
         $productRows = $productQuery
-            ->group('p.product_name, c.category_name')
+            ->group('p.product_name, c.category_name, p.status')
             ->field('MIN(p.id) as id, p.product_name, c.category_name, p.status')
             ->order('p.product_name', 'asc')
             ->select();
@@ -1597,11 +1593,7 @@ class Order extends Common
         $teamName = $currentAdmin['team_name'] ?? Session::get('team_name') ?: '';
         $adminList = Db::name('admin')
             ->where('group_id', '<>', 1)
-            ->where(function ($query) use ($teamName) {
-                if ($teamName) {
-                    $query->where('team_name', $teamName);
-                }
-            })
+            ->whereIn('group_id', [10, 11, 14])
             ->field('admin_id, username')
             ->select();
         $collaboratorData = [];
