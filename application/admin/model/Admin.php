@@ -16,6 +16,7 @@ class Admin extends Model
             if ($user['is_open'] == 1 && $user['pwd'] == md5($data['password'])) {
                 session('username', $user['username']);
                 session('aid', $user['admin_id']);
+                session('gid', $user['group_id']);
                 $avatar = $user['avatar'] == '' ? '/static/admin/images/0.jpg' : $user['avatar'];
                 session('avatar', $avatar);
                 //记录团队名称
