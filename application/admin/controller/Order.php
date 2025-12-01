@@ -815,11 +815,87 @@ class Order extends Common
             if (!$id) {
                 return json(['code' => -200, 'msg' => '缺少订单ID参数']);
             }
+
+            // ====== 验证客户是否属于当前用户或协同人（与新增逻辑保持一致） ======
+            $contact = Request::param('contact');
+            $leadsId = null;
+            $custinfo = null;
+            if (!empty($contact)) {
+                $currentUsername = Session::get('username');
+                $currentAdminId = Session::get('aid');
+                $currentGroupId = Session::get('gid');
+                $isPrivilegedEditor = ($currentAdminId == 1 || $currentGroupId == 15); // 超管/财务专员可编辑所有订单
+                $coninfo = Db::name('crm_contacts')->where('is_delete', 0)->where(function ($query) use ($contact) {
+                    $_contact = trim(preg_replace('/[+\-\s]/', '', $contact));
+                    $query->whereRaw("CONCAT(contact_extra, contact_value) = '{$contact}'")
+                        ->whereOr('contact_value', $contact);
+                    if ($contact != $_contact) {
+                        $query->whereOr('contact_value', $_contact)
+                            ->whereOrRaw("CONCAT(contact_extra, contact_value) = '{$_contact}'");
+                    }
+                })->find();
+
+                if ($coninfo) {
+                    $custinfo = Db::name('crm_leads')->where('id', $coninfo['leads_id'])->find();
+                    if ($custinfo) {
+                        $leadsId = $custinfo['id'];
+                        $isMyCustomer = ($custinfo['pr_user'] == $currentUsername);
+
+                        $isCollaboratorCustomer = false;
+                        if (!empty($custinfo['joint_person'])) {
+                            $jp = $custinfo['joint_person'];
+                            $jointPersonIds = [];
+                            if (preg_match('/^\s*\[.*\]\s*$/', $jp)) {
+                                $tmp = json_decode($jp, true);
+                                if (is_array($tmp)) {
+                                    $jointPersonIds = $tmp;
+                                }
+                            } else {
+                                $jointPersonIds = array_values(array_filter(explode(',', $jp)));
+                            }
+                            if (in_array($currentAdminId, $jointPersonIds)) {
+                                $isCollaboratorCustomer = true;
+                            }
+                        }
+
+                        if (!$isPrivilegedEditor && !$isMyCustomer && !$isCollaboratorCustomer) {
+                            return fail('该客户不属于您的客户或协同人客户，无法添加订单');
+                        }
+                    }
+                }
+            }
             // ====== 读取并整理主表字段 ======
             $data = [];
             $data['contact']          = Request::param('contact');        // 客户联系方式
-            $data['cname']            = Request::param('cname');          // 客户名称
-            
+            $data['cname']            = Request::param('cname', '');          // 客户名称
+
+            if (empty($data['cname']) && $custinfo && !empty($custinfo['kh_name'])) {
+                $data['cname'] = $custinfo['kh_name'];
+            }
+
+            if (empty($data['cname']) && !empty($contact)) {
+                $coninfo = Db::name('crm_contacts')->where('is_delete', 0)->where(function ($query) use ($contact) {
+                    $_contact = trim(preg_replace('/[+\-\s]/', '', $contact));
+                    $query->whereRaw("CONCAT(contact_extra, contact_value) = '{$contact}'")
+                        ->whereOr('contact_value', $contact);
+                    if ($contact != $_contact) {
+                        $query->whereOr('contact_value', $_contact)
+                            ->whereOrRaw("CONCAT(contact_extra, contact_value) = '{$_contact}'");
+                    }
+                })->find();
+
+                if ($coninfo && !empty($coninfo['leads_id'])) {
+                    $tempCustinfo = Db::name('crm_leads')->where('id', $coninfo['leads_id'])->find();
+                    if ($tempCustinfo && !empty($tempCustinfo['kh_name'])) {
+                        $data['cname'] = $tempCustinfo['kh_name'];
+                    }
+                }
+            }
+
+            if (empty($data['cname'])) {
+                return json(['code' => -200, 'msg' => '客户名称不能为空，请先输入联系方式并验证客户信息']);
+            }
+
             // 用户属性：0=公司，1=个人
             $data['customer_type_flag'] = Request::param('customer_type_flag', 0);
             $data['customer_type_flag'] = in_array($data['customer_type_flag'], ['0', '1']) ? (int)$data['customer_type_flag'] : 0;
@@ -837,12 +913,13 @@ class Order extends Common
                 $data['client_company'] = '';
             }
             
+            $data['province']         = Request::param('province', '');
+            $data['city']             = Request::param('city', '');
             $data['country']          = Request::param('country');        // 发货地址
             $data['customer_type']    = Request::param('customer_type');  // 客户性质
             $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）
             $data['bank_account']     = Request::param('bank_account');  // 收款账户 ID (as string)
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username'); // 客户负责人（默认当前用户）
-            $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['team_name']        = Request::param('team_name');      // 团队名称
             
             // 处理运营端口：将端口ID转换为端口名称（文字）保存
@@ -875,6 +952,8 @@ class Order extends Common
             $data['split_remarks']    = Request::param('split_remarks');  // 分成备注
             $data['amount_received']  = Request::param('amount_received'); // 已收款金额
             $data['remark']           = Request::param('remark');         // 备注
+            $data['wechat_receipt_image'] = Request::param('wechat_receipt_image', '');
+            $data['inquiry_assign_image'] = Request::param('inquiry_assign_image', '');
             $data['ut_time']          = date("Y-m-d H:i:s");              // 更新操作时间
 
             // 解析协同人 joint_person 字段（支持数组/JSON/逗号分隔字符串）
@@ -903,7 +982,7 @@ class Order extends Common
             })));
             $jpStr = implode(',', $jpIds);
             // 若协同人超出字段长度限制则报错
-            if (strlen($jpStr) > 255) {
+            if (strlen($jpStr) > 30) {
                 return json(['code' => -200, 'msg' => '协同人选择过多，超出存储限制']);
             }
             $data['joint_person'] = $jpStr;
@@ -1058,24 +1137,31 @@ class Order extends Common
 
         // 准备下拉选项数据（团队列表、来源列表、客户性质列表、运营人员列表等）
         $teamList   = $this->getTeamList();
-        $sourceList = Db::name('crm_client_status')->distinct(true)->column('status_name');
-        // 使用 array_map 和 trim 去除每个值的前后空格
-        $sourceList = array_map('trim', $sourceList);
-        //var_dump($sourceList);
-        $accountList = Db::name('crm_receive_account')->field('id, account')->select();  // fetch all accounts (id and name)
+        $accountList = Db::name('crm_receive_account')->field('id, account')->select();
         $this->assign('accountList', $accountList);
         $this->assign('teamList', $teamList);
-        $this->assign('sourceList', $sourceList);
         $this->assign('customer_type', self::CUSTOMER_TYPE);
         // 当前登录用户信息
         $currentAdmin = \app\admin\model\Admin::getMyInfo();
         $this->assign('username', $currentAdmin['username'] ?? Session::get('username'));
         $this->assign('team_name', $currentAdmin['team_name'] ?? Session::get('team_name'));
-        // 获取运营人员列表（以及按询盘来源分类的映射，用于联动下拉）
-        $yyData = $this->getYyList();
-        $operUserList = $yyData['_yyList'];
-        $this->assign('operUserList', $operUserList);
-        $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
+
+        // 从 crm_inquiry 表获取询盘来源列表（客户渠道）
+        $inquiryWhere = [];
+        if ($currentAdmin['org'] && strpos($currentAdmin['org'], 'admin') === false) {
+            $inquiryWhere[] = $this->getOrgWhere($currentAdmin['org']);
+        }
+        $inquiryQuery = Db::name('crm_inquiry');
+        if (!empty($inquiryWhere)) {
+            $inquiryQuery->where($inquiryWhere);
+        }
+        $inquiryList = $inquiryQuery
+            ->where('status', '=', 0)
+            ->field('id, inquiry_name')
+            ->order('inquiry_name', 'asc')
+            ->select();
+        $sourceList = array_column($inquiryList, 'inquiry_name');
+        $this->assign('sourceList', $sourceList);
 
         // 产品列表（含分类名）。无组织限制时查询所有产品
         $where = [];
@@ -1148,11 +1234,7 @@ class Order extends Common
         $teamName = $currentAdmin['team_name'] ?? Session::get('team_name') ?: '';
         $adminList = Db::name('admin')
             ->where('group_id', '<>', 1)
-            ->where(function ($query) use ($teamName) {
-                if ($teamName) {
-                    $query->where('team_name', $teamName);
-                }
-            })
+            ->whereIn('group_id', [10, 11, 14])
             ->field('admin_id, username')
             ->select();
         $collaboratorData = [];
@@ -1169,59 +1251,37 @@ class Order extends Common
         }
         $this->assign('collaboratorList', json_encode($collaboratorData, JSON_UNESCAPED_UNICODE));
 
-        // 产品经理列表（group_id = 14）
+        // 产品经理列表（group_id = 13/14）
         $managerList = Db::name('admin')
-            ->where('group_id', 14)
+            ->whereIn('group_id', [13, 14])
             ->field('admin_id, username')
             ->order('username', 'asc')
             ->select();
         $this->assign('managerList', $managerList);
 
         // 获取来源端口列表（按来源名称分组，与订单新增页一致）
-        $khStatusList = Db::name('crm_client_status')->select();
-        $has_shop_names = false;
-        try {
-            $columns = Db::query("SHOW COLUMNS FROM `crm_client_status` LIKE 'shop_names'");
-            if (!empty($columns)) {
-                $has_shop_names = true;
-            }
-        } catch (\Exception $e) {
-            $has_shop_names = false;
-        }
-        if ($has_shop_names) {
-            $khStatusList = Db::name('crm_client_status')->field('id,status_name,shop_names')->select();
-        }
         $shopList = [];
-        foreach ($khStatusList as $status) {
-            $statusName = $status['status_name'];
+        foreach ($inquiryList as $inquiry) {
+            $inquiryName = $inquiry['inquiry_name'];
+            $inquiryId = $inquiry['id'];
+
+            $ports = Db::name('crm_inquiry_port')
+                ->where('inquiry_id', $inquiryId)
+                ->where('status', '=', 0)
+                ->field('id, port_name')
+                ->order('port_name', 'asc')
+                ->select();
+
             $shops = [];
-            
-            // 检查是否有shop_names字段
-            if ($has_shop_names && isset($status['shop_names']) && !empty(trim($status['shop_names']))) {
-                $shop_names = array_filter(array_map('trim', explode(',', $status['shop_names'])));
-                foreach ($shop_names as $shop_name) {
-                    if (!empty($shop_name)) {
-                        $shops[] = [
-                            'id' => md5($status['id'] . '_' . $shop_name),
-                            'name' => $shop_name
-                        ];
-                    }
-                }
+            foreach ($ports as $port) {
+                $shops[] = [
+                    'id' => $port['id'],
+                    'name' => $port['port_name']
+                ];
             }
-            
-            // 如果shop_names为空，尝试从crm_operation_shops表获取
-            if (empty($shops)) {
-                $commonShops = $this->getShopsByChannel('', $statusName);
-                foreach ($commonShops as $shop) {
-                    $shops[] = [
-                        'id' => $shop['id'],
-                        'name' => $shop['name']
-                    ];
-                }
-            }
-            
+
             if (!empty($shops)) {
-                $shopList[$statusName] = $shops;
+                $shopList[$inquiryName] = $shops;
             }
         }
         $this->assign('shopList', json_encode($shopList, JSON_UNESCAPED_UNICODE));
@@ -1547,7 +1607,7 @@ class Order extends Common
             $productQuery->where($where);
         }
         $productRows = $productQuery
-            ->group('p.product_name, c.category_name')
+            ->group('p.product_name, c.category_name, p.status')
             ->field('MIN(p.id) as id, p.product_name, c.category_name, p.status')
             ->order('p.product_name', 'asc')
             ->select();
@@ -1597,11 +1657,7 @@ class Order extends Common
         $teamName = $currentAdmin['team_name'] ?? Session::get('team_name') ?: '';
         $adminList = Db::name('admin')
             ->where('group_id', '<>', 1)
-            ->where(function ($query) use ($teamName) {
-                if ($teamName) {
-                    $query->where('team_name', $teamName);
-                }
-            })
+            ->whereIn('group_id', [10, 11, 14])
             ->field('admin_id, username')
             ->select();
         $collaboratorData = [];
