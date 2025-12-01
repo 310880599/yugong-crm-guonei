@@ -918,7 +918,6 @@ class Order extends Common
             $data['source']           = Request::param('source');         // 询盘来源（运营渠道，存储为文字）
             $data['bank_account']     = Request::param('bank_account');  // 收款账户 ID (as string)
             $data['pr_user']          = Request::param('pr_user') ?: Session::get('username'); // 客户负责人（默认当前用户）
-            $data['oper_user']        = Request::param('oper_user');      // 运营人员
             $data['team_name']        = Request::param('team_name');      // 团队名称
             
             // 处理运营端口：将端口ID转换为端口名称（文字）保存
@@ -1161,12 +1160,6 @@ class Order extends Common
             ->select();
         $sourceList = array_column($inquiryList, 'inquiry_name');
         $this->assign('sourceList', $sourceList);
-
-        // 获取运营人员列表（以及按询盘来源分类的映射，用于联动下拉）
-        $yyData = $this->getYyList();
-        $operUserList = $yyData['_yyList'];
-        $this->assign('operUserList', $operUserList);
-        $this->assign('yyList', json_encode($yyData['yyList'], JSON_UNESCAPED_UNICODE));
 
         // 产品列表（含分类名）。无组织限制时查询所有产品
         $where = [];

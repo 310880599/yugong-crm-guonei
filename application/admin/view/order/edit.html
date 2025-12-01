@@ -102,7 +102,6 @@
             if (!contactTrimmed) {
                 $('#cname').val('');
                 $('#pr_user').val('{$username}');
-                $('#oper_user_input').val('');
                 $('#country').val('');
                 $('#kh_username').val('');
                 $('#source').val('');
@@ -120,7 +119,6 @@
             
             // 清空之前填充的字段
             $('#pr_user').val('{$username}');
-            $('#oper_user_input').val('');
             $('#country').val('');
             $('#kh_username').val('');
             $('#source').val('');
@@ -140,7 +138,6 @@
                         // 验证失败时，清空所有已填充的字段
                         $('#cname').val('');
                         $('#pr_user').val('{$username}');
-                        $('#oper_user_input').val('');
                         $('#country').val('');
                         $('#kh_username').val('');
                         $('#source').val('');
@@ -185,7 +182,6 @@
                         // Fill in returned client info
                         $('#cname').val(result['msg']['custname']);
                         $('#pr_user').val(result['msg']['pr_user']);
-                        $('#oper_user_input').val(result['msg']['oper_user']);
                         $('#country').val(result['msg']['country']);
                         $('#kh_username').val(result['msg']['kh_username']);
                         // Match the source dropdown by text (case-insensitive match)
@@ -442,19 +438,6 @@
                         <option value="">请选择收款账户</option>
                         {volist name="accountList" id="acc"}
                             <option value="{$acc.id}">{$acc.account|htmlentities}</option>
-                        {/volist}
-                    </select>
-                </div>
-            </div>
-
-            <!-- 运营人员 -->
-            <div class="layui-form-item">
-                <label class="layui-form-label">运营人员</label>
-                <div class="layui-input-4">
-                    <select name="oper_user" id="oper_user" lay-search>
-                        <option value="">请选择运营人员</option>
-                        {volist name="operUserList" id="user"}
-                        <option value="{$user.id}">{$user.name}</option>
                         {/volist}
                     </select>
                 </div>
@@ -821,18 +804,15 @@
             // 初始化省市联动下拉框
             var $provinceSelect = $('#province');
             var $citySelect = $('#city');
-            
+
             // 填充省份下拉框
             $.each(chinaProvincesCities, function(provinceName, cities) {
                 $provinceSelect.append('<option value="' + provinceName + '">' + provinceName + '</option>');
             });
             form.render('select');
-            
-            // 省份选择变化时，更新城市下拉框
-            form.on('select(province_select)', function(data) {
-                var selectedProvince = data.value;
+
+            function fillCityOptions(selectedProvince) {
                 $citySelect.empty();
-                
                 if (selectedProvince && chinaProvincesCities[selectedProvince]) {
                     var cities = chinaProvincesCities[selectedProvince];
                     $citySelect.append('<option value="">请选择城市</option>');
@@ -843,6 +823,11 @@
                     $citySelect.append('<option value="">请先选择省份</option>');
                 }
                 form.render('select');
+            }
+
+            // 省份选择变化时，更新城市下拉框
+            form.on('select(province_select)', function(data) {
+                fillCityOptions(data.value);
             });
 
         // 对初始产品名称下拉选项调用 boldCategory，使分类名加粗
@@ -851,8 +836,7 @@
             boldCategory($('select[name="product_name[]"]'));
         }, 100);
 
-        // 动态根据询盘来源过滤运营人员和运营端口选项
-        var yyList = {$yyList|raw};
+        // 动态根据询盘来源更新运营端口选项
         var shopList = {$shopList|raw};  // 店铺列表分组数据：{ 来源名称: [ {id:..., name:...}, ... ], ... }
         
         // 将函数定义到全局作用域，以便 changeyewu 函数可以访问
@@ -878,13 +862,6 @@
         
         form.on('select(kh_status)', function (data) {
             var sourceName = $(data.elem).find("option:selected").text();
-            var users = yyList[sourceName] || [];
-            var $oper = $('select[name="oper_user"]');
-            $oper.empty().append('<option value="">请选择运营人员</option>');
-            $.each(users, function (index, user) {
-                $oper.append('<option value="' + user.id + '">' + user.name + '</option>');
-            });
-            // 更新运营端口选项
             if (typeof window.fillSourcePortBySourceName === 'function') {
                 window.fillSourcePortBySourceName(sourceName);
             }
@@ -1020,7 +997,6 @@
             $('#kh_username').val(orderInfo.kh_username || '');
             $('#source').val(orderInfo.source || '');
             $('#bank_account').val(orderInfo.bank_account || '');
-            $('#oper_user').val(orderInfo.oper_user || '');
             $('#shipping_cost').val(orderInfo.shipping_cost || '');
             $('#invoice_type').val(orderInfo.invoice_type || '');
             $('#invoice_amount').val(orderInfo.invoice_amount || '');
@@ -1041,6 +1017,7 @@
                 ctf = '0';
             }
             $('#customer_type_flag').val(ctf);
+            $('#customer_type').val(orderInfo.customer_type || '');
 
             // 票种字段联动
             form.render('select');
@@ -1052,14 +1029,16 @@
             }
 
             // 省市设置
-            if (orderInfo.province) {
-                $('#province').val(orderInfo.province);
+            var provinceVal = orderInfo.province || '';
+            var cityVal = orderInfo.city || '';
+            if (provinceVal) {
+                $('#province').val(provinceVal);
                 form.render('select');
-                $('#province').trigger('change');
-                setTimeout(function () {
-                    $('#city').val(orderInfo.city || '');
-                    form.render('select');
-                }, 100);
+                fillCityOptions(provinceVal);
+                if (cityVal) {
+                    $('#city').val(cityVal);
+                }
+                form.render('select');
             }
 
             // 用户属性切换显示
