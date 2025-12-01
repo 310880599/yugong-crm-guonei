@@ -823,6 +823,8 @@ class Order extends Common
             if (!empty($contact)) {
                 $currentUsername = Session::get('username');
                 $currentAdminId = Session::get('aid');
+                $currentGroupId = Session::get('gid');
+                $isPrivilegedEditor = ($currentAdminId == 1 || $currentGroupId == 15); // 超管/财务专员可编辑所有订单
                 $coninfo = Db::name('crm_contacts')->where('is_delete', 0)->where(function ($query) use ($contact) {
                     $_contact = trim(preg_replace('/[+\-\s]/', '', $contact));
                     $query->whereRaw("CONCAT(contact_extra, contact_value) = '{$contact}'")
@@ -856,7 +858,7 @@ class Order extends Common
                             }
                         }
 
-                        if (!$isMyCustomer && !$isCollaboratorCustomer) {
+                        if (!$isPrivilegedEditor && !$isMyCustomer && !$isCollaboratorCustomer) {
                             return fail('该客户不属于您的客户或协同人客户，无法添加订单');
                         }
                     }
