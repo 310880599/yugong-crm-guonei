@@ -3398,7 +3398,7 @@ class Client extends Common
             $_key = $value['english_name'] . '(' . $value['chinese_name'] . ')';
             $countries[$_key] =  $value['phone_code'];
         }
-        cache('countries', $countries);
+        //cache('countries', $countries);
         return $countries;
     }
 
