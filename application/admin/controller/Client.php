@@ -2334,9 +2334,61 @@ class Client extends Common
     }
 
 
-    //删除客户
-    // 修改del方法支持批量删除
+    //单个删除客户
     public function del()
+    {
+        $id = Request::post('id');
+
+        if (!$id) {
+            return json(['code' => 500, 'msg' => '请选择要删除的客户']);
+        }
+
+        $username = Session::get('username');
+        $aid = Session::get('aid'); // 获取管理员ID
+        
+        Db::startTrans();
+        try {
+            // 查询客户信息
+            $clientQuery = Db::name('crm_leads')->where('id', $id);
+            
+            // 如果不是超级管理员，需要验证权限
+            if ($aid != 1) {
+                $clientQuery->where(function ($query) use ($username) {
+                    $query->where('pr_user', $username)
+                        ->whereOr('pr_user_bef', $username);
+                });
+            }
+            
+            $client = $clientQuery->find();
+
+            if (!$client) {
+                throw new \Exception('客户不存在或无权限删除');
+            }
+
+            // 删除客户的联系方式
+            Db::name('crm_contacts')->where('leads_id', $id)->delete();
+            
+            // 删除客户主记录
+            Db::name('crm_leads')->where('id', $id)->delete();
+
+            Db::commit();
+            
+            //写入操作日志
+            $this->addOperLog(
+                $id,
+                '删除客户',
+                "$username 删除客户ID:" . $id . ', 客户名称:' . ($client['kh_name'] ?? '') . ($aid == 1 ? ' [超级管理员操作]' : '')
+            );
+            
+            return json(['code' => 0, 'msg' => '删除成功']);
+        } catch (\Exception $e) {
+            Db::rollback();
+            return json(['code' => 500, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    //批量删除客户
+    public function delBatch()
     {
         $ids = Request::post('ids');
 
@@ -2345,16 +2397,27 @@ class Client extends Common
         }
 
         $username = Session::get('username');
+        $aid = Session::get('aid'); // 获取管理员ID
+        
         Db::startTrans();
         try {
-            // 验证并删除客户
-            $clients = model('client')->with('contacts')->where('id', 'in', $ids)->where(function ($query) use ($username) {
-                $query->where('pr_user', $username)
-                    ->whereOr('pr_user_bef', $username);
-            })->select();
-            if ($clients->isEmpty()) {
-                throw new \Exception('无权限删除选中客户');
+            // 查询客户信息
+            $clientQuery = model('client')->with('contacts')->where('id', 'in', $ids);
+            
+            // 如果不是超级管理员，需要验证权限
+            if ($aid != 1) {
+                $clientQuery->where(function ($query) use ($username) {
+                    $query->where('pr_user', $username)
+                        ->whereOr('pr_user_bef', $username);
+                });
             }
+            
+            $clients = $clientQuery->select();
+            
+            if ($clients->isEmpty()) {
+                throw new \Exception('无权限删除选中客户或客户不存在');
+            }
+            
             // 删除主表记录和关联数据
             foreach ($ids as $id) {
                 Db::name('crm_contacts')->where('leads_id', $id)->delete();
@@ -2363,13 +2426,122 @@ class Client extends Common
             Db::name('crm_leads')->where('id', 'in', $ids)->delete();
 
             Db::commit();
+            
             //写入操作日志
             $this->addOperLog(
                 null,
-                '删除客户',
-                "$username 删除客户:" . implode(',', $ids) . '客户明细:' . $clients,
+                '批量删除客户',
+                "$username 批量删除客户:" . implode(',', $ids) . ', 共' . count($ids) . '条' . ($aid == 1 ? ' [超级管理员操作]' : '')
             );
+            
+            return json(['code' => 0, 'msg' => '批量删除成功，共删除' . count($ids) . '条记录']);
+        } catch (\Exception $e) {
+            Db::rollback();
+            return json(['code' => 500, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    //单个删除成交客户
+    public function delSuccessClient()
+    {
+        $id = Request::post('id');
+
+        if (!$id) {
+            return json(['code' => 500, 'msg' => '请选择要删除的客户']);
+        }
+
+        $username = Session::get('username');
+        $aid = Session::get('aid');
+        
+        Db::startTrans();
+        try {
+            // 查询客户信息（必须是成交客户）
+            $clientQuery = Db::name('crm_leads')->where('id', $id)->where('issuccess', 1);
+            
+            // 如果不是超级管理员，需要验证权限
+            if ($aid != 1) {
+                $clientQuery->where(function ($query) use ($username) {
+                    $query->where('pr_user', $username)
+                        ->whereOr('pr_user_bef', $username);
+                });
+            }
+            
+            $client = $clientQuery->find();
+
+            if (!$client) {
+                throw new \Exception('成交客户不存在或无权限删除');
+            }
+
+            // 删除客户的联系方式
+            Db::name('crm_contacts')->where('leads_id', $id)->delete();
+            
+            // 删除客户主记录
+            Db::name('crm_leads')->where('id', $id)->delete();
+
+            Db::commit();
+            
+            //写入操作日志
+            $this->addOperLog(
+                $id,
+                '删除成交客户',
+                "$username 删除成交客户ID:" . $id . ', 客户名称:' . ($client['kh_name'] ?? '') . ($aid == 1 ? ' [超级管理员操作]' : '')
+            );
+            
             return json(['code' => 0, 'msg' => '删除成功']);
+        } catch (\Exception $e) {
+            Db::rollback();
+            return json(['code' => 500, 'msg' => $e->getMessage()]);
+        }
+    }
+
+    //批量删除成交客户
+    public function delSuccessClientBatch()
+    {
+        $ids = Request::post('ids');
+
+        if (!$ids || !is_array($ids)) {
+            return json(['code' => 500, 'msg' => '请选择要删除的客户']);
+        }
+
+        $username = Session::get('username');
+        $aid = Session::get('aid');
+        
+        Db::startTrans();
+        try {
+            // 查询客户信息（必须是成交客户）
+            $clientQuery = model('client')->with('contacts')->where('id', 'in', $ids)->where('issuccess', 1);
+            
+            // 如果不是超级管理员，需要验证权限
+            if ($aid != 1) {
+                $clientQuery->where(function ($query) use ($username) {
+                    $query->where('pr_user', $username)
+                        ->whereOr('pr_user_bef', $username);
+                });
+            }
+            
+            $clients = $clientQuery->select();
+            
+            if ($clients->isEmpty()) {
+                throw new \Exception('无权限删除选中的成交客户或客户不存在');
+            }
+            
+            // 删除主表记录和关联数据
+            foreach ($ids as $id) {
+                Db::name('crm_contacts')->where('leads_id', $id)->delete();
+            }
+
+            Db::name('crm_leads')->where('id', 'in', $ids)->delete();
+
+            Db::commit();
+            
+            //写入操作日志
+            $this->addOperLog(
+                null,
+                '批量删除成交客户',
+                "$username 批量删除成交客户:" . implode(',', $ids) . ', 共' . count($ids) . '条' . ($aid == 1 ? ' [超级管理员操作]' : '')
+            );
+            
+            return json(['code' => 0, 'msg' => '批量删除成功，共删除' . count($ids) . '条记录']);
         } catch (\Exception $e) {
             Db::rollback();
             return json(['code' => 500, 'msg' => $e->getMessage()]);

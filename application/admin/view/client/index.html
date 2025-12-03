@@ -508,6 +508,9 @@
     <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="alter"><i class="layui-icon">&#xe60e;</i>转移</a>
     <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="chengjiao"><i class="layui-icon">&#xe63c;</i>成交</a>
     <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
+    {{# if(d.aid == 1) { }}
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
+    {{# } }}
 </script>
 
     <script type="text/html" id="topBtn">
@@ -651,10 +654,20 @@
                         return v;
                         }
                     },
-                    { width: 320, align: 'center', toolbar: '#action' }
+                    { width: 420, align: 'center', toolbar: '#action' }
                 ]],
                 limit: 10,
-                page: { limits: [10, 20, 50, 100, 200, 500,9999999] }
+                page: { limits: [10, 20, 50, 100, 200, 500,9999999] },
+                parseData: function(res) {
+                    // 给每行数据添加aid字段，用于判断权限
+                    var aid = '{:session("aid")}';
+                    if (res.data && res.data.length > 0) {
+                        res.data.forEach(function(item) {
+                            item.aid = aid;
+                        });
+                    }
+                    return res;
+                }
             });
             // 打开跟进弹窗
             function openFollowDialog(clientId) {
@@ -904,7 +917,7 @@
                             var ids2 = data.map(function (o) { return o.id; });
                             layer.confirm('确定删除选中的' + ids2.length + '个客户？', function (index) {
                                 var loading = layer.load(1, { shade: [0.1, '#fff'] });
-                                $.post("{:url('del')}", { ids: ids2 }, function (res) {
+                                $.post("{:url('delBatch')}", { ids: ids2 }, function (res) {
                                     layer.close(loading);
                                     if (res.code === 0) {
                                         layer.msg(res.msg, { time: 1000, icon: 1 });
