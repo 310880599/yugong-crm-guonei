@@ -720,7 +720,7 @@
                                 if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
                                      'shipping_cost', 'invoice_amount', 'tax_amount', 
                                      'debugging_cost', 'sales_commission', 'split_remarks', 
-                                     'bank_account', 'source_port', 'amount_received', 'profit', 
+                                     'source_port', 'amount_received', 'profit', 
                                      'margin_rate', 'joint_person', 'client_company', 
                                      'create_time', 'ut_time'].includes(col.field)) {
                                     value = item[col.field] || '';
@@ -798,7 +798,7 @@
                         const row = columns.map(col => {
                             let value = '';
                             
-                            // 订单主表字段
+                            // 订单主表字段（注意：bank_account单独处理，不在此列表中）
                             if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
                                  'shipping_cost', 'invoice_amount', 'tax_amount', 
                                  'debugging_cost', 'sales_commission', 'split_remarks', 
@@ -995,8 +995,10 @@
                     { field: 'debugging_cost', title: '调试费', width: 180 },
                     { field: 'sales_commission', title: '佣金', width: 180 },
                     { field: 'split_remarks', title: '分成备注', width: 180 },
+                    { field: 'bank_account', title: '收款账户手动录入', width: 180, templet: function(d){
+                        return d.bank_account_name || d.bank_account || '';
+                    }},
                     { field: 'amount_received', title: '已收款金额', width: 180 },
-                    { field: 'bank_account', title: '收款账户', width: 180 },
                     { field: 'source', title: '运营渠道', width: 180 },
                     { field: 'source_port', title: '运营端口', width: 180 },
                     { field: 'pr_user', title: '负责人', width: 180 },

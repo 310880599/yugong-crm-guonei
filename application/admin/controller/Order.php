@@ -1891,6 +1891,19 @@ class Order extends Common
             ])
             ->toArray();
 
+        // 转换收款账户ID为账户名称
+        foreach ($list['data'] as &$order) {
+            if (!empty($order['bank_account'])) {
+                $accountInfo = Db::name('crm_receive_account')
+                    ->where('id', $order['bank_account'])
+                    ->field('account')
+                    ->find();
+                if ($accountInfo) {
+                    $order['bank_account_name'] = $accountInfo['account'];
+                }
+            }
+        }
+        unset($order);
 
         //成单率
 
