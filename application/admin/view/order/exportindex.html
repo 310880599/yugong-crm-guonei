@@ -747,36 +747,36 @@
 
             // 生成美化的 Excel
             function generateBeautifiedExcel(data) {
-                // 定义列配置（按照用户要求的顺序）
+                // 定义列配置（团队和提交人放在最前面）
                 const columns = [
-                    { field: 'team_name', title: '团队', width: 15 },
-                    { field: 'at_user', title: '提交人', width: 15 },
-                    { field: 'order_time', title: '成交日期', width: 20, type: 'date' },
-                    { field: 'country', title: '发货详细地址', width: 25 },
-                    { field: 'cname', title: '客户姓名', width: 20 },
-                    { field: 'product_manager', title: '产品经理', width: 15 },
+                    { field: 'team_name', title: '团队', width: 12 },
+                    { field: 'at_user', title: '提交人', width: 12 },
+                    { field: 'order_time', title: '成交日期', width: 15, type: 'date' },
+                    { field: 'country', title: '发货详细地址', width: 18 },
+                    { field: 'cname', title: '客户姓名', width: 15 },
+                    { field: 'product_manager', title: '产品经理', width: 12 },
                     { field: 'product_name', title: '产品名称', width: 20 },
-                    { field: 'spec_model', title: '规格型号', width: 20 },
-                    { field: 'supplier', title: '供应商手动录入', width: 20 },
-                    { field: 'unit', title: '单位', width: 10 },
-                    { field: 'qty', title: '数量', width: 10, type: 'number' },
-                    { field: 'unit_price', title: '销售单价', width: 15, type: 'number' },
-                    { field: 'total_price', title: '售价合计', width: 15, type: 'number' },
-                    { field: 'purchase_price', title: '进价合计', width: 15, type: 'number' },
-                    { field: 'shipping_cost', title: '估算运费', width: 15, type: 'number' },
-                    { field: 'invoice_type', title: '票种', width: 12 },
-                    { field: 'invoice_amount', title: '开票金额', width: 15, type: 'number' },
-                    { field: 'tax_amount', title: '税费金额', width: 15, type: 'number' },
-                    { field: 'debugging_cost', title: '调试费', width: 15, type: 'number' },
-                    { field: 'sales_commission', title: '佣金', width: 15, type: 'number' },
-                    { field: 'split_remarks', title: '分成备注', width: 20 },
-                    { field: 'bank_account', title: '收款账户手动录入', width: 20 },
-                    { field: 'source_port', title: '客户来源手动录入', width: 20 },
-                    { field: 'amount_received', title: '已收款金额', width: 15, type: 'number' },
-                    { field: 'profit', title: '预估毛利润', width: 15, type: 'number' },
-                    { field: 'margin_rate', title: '预估利润率', width: 15, type: 'number' },
-                    { field: 'joint_person', title: '协同人', width: 20 },
-                    { field: 'client_company', title: '客户公司全称', width: 25 },
+                    { field: 'spec_model', title: '规格型号', width: 15 },
+                    { field: 'supplier', title: '供应商', width: 18 },
+                    { field: 'unit', title: '单位', width: 8 },
+                    { field: 'qty', title: '数量', width: 8, type: 'number' },
+                    { field: 'unit_price', title: '销售单价', width: 12, type: 'number' },
+                    { field: 'total_price', title: '售价合计', width: 12, type: 'number' },
+                    { field: 'purchase_price', title: '进价合计', width: 12, type: 'number' },
+                    { field: 'shipping_cost', title: '估算运费', width: 12, type: 'number' },
+                    { field: 'invoice_type', title: '票种', width: 10 },
+                    { field: 'invoice_amount', title: '开票金额', width: 12, type: 'number' },
+                    { field: 'tax_amount', title: '税费金额', width: 12, type: 'number' },
+                    { field: 'debugging_cost', title: '调试费', width: 10, type: 'number' },
+                    { field: 'sales_commission', title: '佣金', width: 10, type: 'number' },
+                    { field: 'split_remarks', title: '分成备注', width: 15 },
+                    { field: 'bank_account', title: '收款账户', width: 15 },
+                    { field: 'source_port', title: '客户来源', width: 15 },
+                    { field: 'amount_received', title: '已收款金额', width: 12, type: 'number' },
+                    { field: 'profit', title: '预估毛利润', width: 12, type: 'number' },
+                    { field: 'margin_rate', title: '预估利润率', width: 12, type: 'number' },
+                    { field: 'joint_person', title: '协同人', width: 15 },
+                    { field: 'client_company', title: '客户公司全称', width: 20 },
                     { field: 'product_name_summary', title: '咨询产品', width: 20 },
                     { field: 'create_time_original', title: '原创建时间', width: 20, type: 'date' },
                     { field: 'ut_time_original', title: '原修改时间', width: 20, type: 'date' },
@@ -800,35 +800,59 @@
                             const row = columns.map(col => {
                                 let value = '';
                                 
-                                // 订单主表字段
-                                if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
-                                     'shipping_cost', 'invoice_amount', 'tax_amount', 
-                                     'debugging_cost', 'sales_commission', 'split_remarks', 
-                                     'source_port', 'amount_received', 'profit', 
-                                     'margin_rate', 'client_company', 
-                                     'create_time', 'ut_time'].includes(col.field)) {
-                                    value = item[col.field] || '';
+                                // 订单主表字段 - 只在第一个产品行显示
+                                if (index === 0) {
+                                    // 第一行：显示订单信息
+                                    if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
+                                         'shipping_cost', 'invoice_amount', 'tax_amount', 
+                                         'debugging_cost', 'sales_commission', 'split_remarks', 
+                                         'source_port', 'amount_received', 'profit', 
+                                         'margin_rate', 'client_company'].includes(col.field)) {
+                                        value = item[col.field] || '';
+                                    }
+                                    else if (col.field === 'invoice_type') {
+                                        value = item['invoice_type'] || '';
+                                    }
+                                    else if (col.field === 'bank_account') {
+                                        value = item['bank_account_name'] || item['bank_account'] || '';
+                                    }
+                                    else if (col.field === 'joint_person') {
+                                        value = item['joint_person_names'] || item['joint_person'] || '';
+                                    }
+                                    else if (col.field === 'product_name_summary') {
+                                        value = item['product_name'] || '';
+                                    }
+                                    else if (col.field === 'create_time_original') {
+                                        value = item['original_creation_time'] || '';
+                                    }
+                                    else if (col.field === 'ut_time_original') {
+                                        value = item['original_modification_time'] || '';
+                                    }
+                                    else if (col.field === 'old_crm_data') {
+                                        value = item['old_crm_data'] || '';
+                                    }
+                                    else if (col.field === 'create_time') {
+                                        value = item['create_time'] || '';
+                                    }
+                                    else if (col.field === 'ut_time') {
+                                        value = item['ut_time'] || '';
+                                    }
+                                } else {
+                                    // 第二行及以后：订单信息留空，只显示产品信息
+                                    if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
+                                         'shipping_cost', 'invoice_amount', 'tax_amount', 
+                                         'debugging_cost', 'sales_commission', 'split_remarks', 
+                                         'source_port', 'amount_received', 'profit', 
+                                         'margin_rate', 'client_company', 'invoice_type',
+                                         'bank_account', 'joint_person', 'product_name_summary',
+                                         'create_time_original', 'ut_time_original', 'old_crm_data',
+                                         'create_time', 'ut_time'].includes(col.field)) {
+                                        value = ''; // 订单信息留空
+                                    }
                                 }
-                                else if (col.field === 'invoice_type') {
-                                    // 票种信息
-                                    value = item['invoice_type'] || '';
-                                }
-                                else if (col.field === 'create_time_original') {
-                                    value = item['create_time'] || '';
-                                }
-                                else if (col.field === 'ut_time_original') {
-                                    value = item['ut_time'] || '';
-                                }
-                                else if (col.field === 'bank_account') {
-                                    // 收款账户可能是ID，需要转换为账户名称
-                                    value = item['bank_account_name'] || item['bank_account'] || '';
-                                }
-                                else if (col.field === 'joint_person') {
-                                    // 协同人可能是ID，需要转换为用户名
-                                    value = item['joint_person_names'] || item['joint_person'] || '';
-                                }
-                                // 产品明细字段
-                                else if (col.field === 'product_manager') {
+                                
+                                // 产品明细字段 - 所有行都显示
+                                if (col.field === 'product_manager') {
                                     value = itemDetail.manager_name || '';
                                 }
                                 else if (col.field === 'product_name') {
@@ -838,7 +862,7 @@
                                     value = itemDetail.spec_model || '';
                                 }
                                 else if (col.field === 'supplier') {
-                                    value = itemDetail.supplier || ''; // 可能不存在
+                                    value = itemDetail.supplier || '';
                                 }
                                 else if (col.field === 'unit') {
                                     value = itemDetail.unit || '';
@@ -854,12 +878,6 @@
                                 }
                                 else if (col.field === 'purchase_price') {
                                     value = itemDetail.purchase_price || 0;
-                                }
-                                else if (col.field === 'product_name_summary') {
-                                    value = item.product_name || ''; // 主表的产品名称摘要
-                                }
-                                else if (col.field === 'old_crm_data') {
-                                    value = item.old_crm_data || ''; // 可能不存在
                                 }
                                 
                                 // 格式化数字
@@ -886,40 +904,42 @@
                         const row = columns.map(col => {
                             let value = '';
                             
-                            // 订单主表字段（注意：bank_account和joint_person单独处理，不在此列表中）
+                            // 订单主表字段
                             if (['team_name', 'at_user', 'order_time', 'country', 'cname', 
                                  'shipping_cost', 'invoice_amount', 'tax_amount', 
                                  'debugging_cost', 'sales_commission', 'split_remarks', 
                                  'source_port', 'amount_received', 'profit', 
-                                 'margin_rate', 'client_company', 
-                                 'create_time', 'ut_time'].includes(col.field)) {
+                                 'margin_rate', 'client_company'].includes(col.field)) {
                                 value = item[col.field] || '';
                             }
                             else if (col.field === 'invoice_type') {
-                                // 票种信息
                                 value = item['invoice_type'] || '';
                             }
                             else if (col.field === 'bank_account') {
-                                // 收款账户可能是ID，需要转换为账户名称
                                 value = item['bank_account_name'] || item['bank_account'] || '';
                             }
                             else if (col.field === 'joint_person') {
-                                // 协同人可能是ID，需要转换为用户名
                                 value = item['joint_person_names'] || item['joint_person'] || '';
                             }
+                            else if (col.field === 'product_name_summary') {
+                                value = item['product_name'] || '';
+                            }
                             else if (col.field === 'create_time_original') {
-                                value = item['create_time'] || '';
+                                value = item['original_creation_time'] || '';
                             }
                             else if (col.field === 'ut_time_original') {
-                                value = item['ut_time'] || '';
-                            }
-                            else if (col.field === 'product_name_summary') {
-                                value = item.product_name || ''; // 主表的产品名称摘要
+                                value = item['original_modification_time'] || '';
                             }
                             else if (col.field === 'old_crm_data') {
-                                value = item.old_crm_data || ''; // 可能不存在
+                                value = item['old_crm_data'] || '';
                             }
-                            // 产品明细字段留空
+                            else if (col.field === 'create_time') {
+                                value = item['create_time'] || '';
+                            }
+                            else if (col.field === 'ut_time') {
+                                value = item['ut_time'] || '';
+                            }
+                            // 产品明细字段留空（没有产品）
                             
                             // 格式化数字
                             if (col.type === 'number' && value !== '') {
@@ -927,11 +947,11 @@
                             }
                             // 格式化日期
                             if (col.type === 'date' && value) {
-                                // 成交日期只精确到年月日（前10个字符：YYYY-MM-DD）
+                                // 成交日期只显示年月日
                                 if (col.field === 'order_time') {
                                     value = value.toString().substring(0, 10);
                                 } else {
-                                    // 其他日期字段保持完整格式（包含时分秒）
+                                    // 其他时间字段显示完整时间
                                     value = value.toString().substring(0, 19);
                                 }
                             }
