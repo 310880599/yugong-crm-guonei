@@ -1891,8 +1891,34 @@ class Order extends Common
             ])
             ->toArray();
 
-        // 转换收款账户ID为账户名称
+        // 收集所有需要查询的admin_id（收款账户和协同人）
+        $allAdminIds = [];
+        foreach ($list['data'] as $order) {
+            // 收集协同人ID
+            if (!empty($order['joint_person'])) {
+                $ids = explode(',', $order['joint_person']);
+                foreach ($ids as $id) {
+                    $id = trim($id);
+                    if (is_numeric($id)) {
+                        $allAdminIds[] = $id;
+                    }
+                }
+            }
+        }
+        $allAdminIds = array_unique($allAdminIds);
+        
+        // 批量查询admin表获取用户名映射
+        $adminMap = [];
+        if (!empty($allAdminIds)) {
+            $admins = Db::name('admin')
+                ->whereIn('admin_id', $allAdminIds)
+                ->column('username', 'admin_id');
+            $adminMap = $admins;
+        }
+        
+        // 转换收款账户ID为账户名称 和 协同人ID为用户名
         foreach ($list['data'] as &$order) {
+            // 转换收款账户
             if (!empty($order['bank_account'])) {
                 $accountInfo = Db::name('crm_receive_account')
                     ->where('id', $order['bank_account'])
@@ -1900,6 +1926,21 @@ class Order extends Common
                     ->find();
                 if ($accountInfo) {
                     $order['bank_account_name'] = $accountInfo['account'];
+                }
+            }
+            
+            // 转换协同人ID为用户名
+            if (!empty($order['joint_person'])) {
+                $ids = explode(',', $order['joint_person']);
+                $names = [];
+                foreach ($ids as $id) {
+                    $id = trim($id);
+                    if (isset($adminMap[$id])) {
+                        $names[] = $adminMap[$id];
+                    }
+                }
+                if (!empty($names)) {
+                    $order['joint_person_names'] = implode(',', $names);
                 }
             }
         }
