@@ -1995,6 +1995,52 @@ class Order extends Common
         }
         unset($order);
 
+        // 追加订单明细，便于在列表中展示每个订单的产品信息
+        $orderIds = array_column($list['data'], 'id');
+        if (!empty($orderIds)) {
+            // 查询订单明细并关联产品、品类以获取供应商
+            $items = Db::table('crm_order_item')
+                ->alias('oi')
+                ->leftJoin('crm_products p', 'oi.product_id = p.id')
+                ->leftJoin('crm_product_category c', 'p.category_id = c.id')
+                ->where('oi.order_id', 'in', $orderIds)
+                ->order('oi.order_id asc, oi.line_no asc')
+                ->field('oi.*, c.category_name as supplier')
+                ->select();
+
+            // 批量获取产品经理名称
+            $managerIds = [];
+            foreach ($items as $item) {
+                if (!empty($item['manager_id'])) {
+                    $managerIds[] = $item['manager_id'];
+                }
+            }
+            $managerIds = array_unique($managerIds);
+
+            $managerMap = [];
+            if (!empty($managerIds)) {
+                $managerMap = Db::table('admin')
+                    ->where('admin_id', 'in', $managerIds)
+                    ->column('username', 'admin_id');
+            }
+
+            $itemsMap = [];
+            foreach ($items as &$item) {
+                $item['manager_name'] = $managerMap[$item['manager_id']] ?? '';
+                // 如果没有从产品表获取到供应商，尝试使用明细中的供应商字段
+                if (empty($item['supplier']) && isset($item['supplier'])) {
+                    $item['supplier'] = $item['supplier'] ?? '';
+                }
+                $itemsMap[$item['order_id']][] = $item;
+            }
+            unset($item);
+
+            foreach ($list['data'] as &$order) {
+                $order['order_items'] = $itemsMap[$order['id']] ?? [];
+            }
+            unset($order);
+        }
+
         //成单率
 
         //询盘数 
