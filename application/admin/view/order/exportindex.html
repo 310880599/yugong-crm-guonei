@@ -239,6 +239,47 @@
             padding: 12px 10px;
         }
 
+        /* 产品信息展示样式 */
+        .product-item {
+            background: #f8f9fb;
+            border: 1px solid #eef0f5;
+            border-radius: 6px;
+            padding: 6px 8px;
+            margin-bottom: 6px;
+        }
+
+        .product-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .product-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .product-tag {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            background: #eef4ff;
+            color: #4b7bec;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .product-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .product-empty {
+            color: #999;
+        }
+
         /* 工具栏按钮组优化 */
         #topBtn {
             display: flex;
@@ -992,7 +1033,29 @@
                     { field: 'client_company', title: '客户公司', width: 180 },
                     { field: 'country', title: '发货详细地址', width: 180 },
                     { field: 'customer_type', title: '客户性质', width: 180 },
-                    { field: 'product_name', title: '产品名称', width: 180 },
+                    { field: 'product_name', title: '产品明细', minWidth: 320, templet: function(d){
+                        const items = d.order_items || [];
+                        if (!items.length) {
+                            return '<div class="product-item product-empty">无产品明细</div>';
+                        }
+                        return items.map(function(item){
+                            const name = item.product_name || '-';
+                            const spec = item.spec_model ? '<span class="product-tag">规格：' + item.spec_model + '</span>' : '';
+                            const qty = '数量：' + (item.qty || 0) + (item.unit || '');
+                            const unitPrice = '单价：' + (item.unit_price || 0);
+                            const purchase = '进价：' + (item.purchase_price || 0);
+                            const manager = item.manager_name ? '<span>' + '产品经理：' + item.manager_name + '</span>' : '';
+                            return '<div class="product-item">' +
+                                   '<div class="product-title">' + name + spec + '</div>' +
+                                   '<div class="product-meta">' +
+                                        '<span>' + qty + '</span>' +
+                                        '<span>' + unitPrice + '</span>' +
+                                        '<span>' + purchase + '</span>' +
+                                        manager +
+                                   '</div>' +
+                                '</div>';
+                        }).join('');
+                    }},
                     { field: 'money', title: '成交金额(￥)', totalRow: true, width: 180 },
                     { field: 'profit', title: '利润', totalRow: true, width: 180 },
                     { field: 'margin_rate', title: '利润率(%)', totalRowText: '', width: 180 },
