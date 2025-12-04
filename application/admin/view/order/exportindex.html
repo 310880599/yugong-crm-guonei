@@ -199,6 +199,43 @@
             color: #fff !important;
         }
 
+        /* 产品明细展示样式 */
+        .product-cell {
+            display: block;
+            width: 100%;
+            background: #f5f7fb;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #e6eaf2;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .product-row {
+            display: block;
+            padding: 10px 12px;
+            line-height: 22px;
+            border: 1px dashed #d6dbe6;
+            border-radius: 6px;
+            color: #333;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+
+        .product-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .product-field {
+            display: inline-block;
+            margin-right: 12px;
+            margin-bottom: 6px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            background: #f0f2f5;
+            color: #444;
+            font-size: 12px;
+        }
+
         /* 表格样式优化 */
         .layui-table {
             border-radius: 8px;
@@ -237,6 +274,12 @@
 
         .layui-table tbody td {
             padding: 12px 10px;
+            vertical-align: top;
+            white-space: normal;
+        }
+
+        .layui-table tbody td.product-detail-cell {
+            padding: 14px 12px;
         }
 
         /* 工具栏按钮组优化 */
@@ -992,7 +1035,28 @@
                     { field: 'client_company', title: '客户公司', width: 180 },
                     { field: 'country', title: '发货详细地址', width: 180 },
                     { field: 'customer_type', title: '客户性质', width: 180 },
-                    { field: 'product_name', title: '产品名称', width: 180 },
+                    { field: 'order_items', title: '产品明细', width: 480, templet: function(d){
+                        if (!d.order_items || d.order_items.length === 0) {
+                            return '';
+                        }
+                        const rows = d.order_items.map(function(item){
+                            const detailParts = [];
+                            if (item.manager_name) detailParts.push('产品经理：' + item.manager_name);
+                            if (item.product_name) detailParts.push('产品名称：' + item.product_name);
+                            if (item.spec_model) detailParts.push('规格型号：' + item.spec_model);
+                            if (item.supplier) detailParts.push('供应商：' + item.supplier);
+                            if (item.unit) detailParts.push('单位：' + item.unit);
+                            if (item.qty !== undefined && item.qty !== null) detailParts.push('数量：' + item.qty);
+                            if (item.unit_price !== undefined && item.unit_price !== null) detailParts.push('销售单价：' + item.unit_price);
+                            if (item.total_price !== undefined && item.total_price !== null) detailParts.push('售价合计：' + item.total_price);
+                            if (item.purchase_price !== undefined && item.purchase_price !== null) detailParts.push('进价合计：' + item.purchase_price);
+                            const fields = detailParts.map(function(text){
+                                return '<span class="product-field">' + text + '</span>';
+                            }).join('');
+                            return '<div class="product-row">' + fields + '</div>';
+                        }).join('');
+                        return '<div class="product-cell">' + rows + '</div>';
+                    }},
                     { field: 'money', title: '成交金额(￥)', totalRow: true, width: 180 },
                     { field: 'profit', title: '利润', totalRow: true, width: 180 },
                     { field: 'margin_rate', title: '利润率(%)', totalRowText: '', width: 180 },
@@ -1041,6 +1105,9 @@
 
                     // 更新合计行单元格（margin_rate 列）
                     $('.layui-table-total td[data-field="margin_rate"] div').text(rate);
+
+                    // 为产品明细列添加专用样式，确保有足够的展示空间
+                    $('.layui-table-body td[data-field="order_items"]').addClass('product-detail-cell');
 
                 }
             });
