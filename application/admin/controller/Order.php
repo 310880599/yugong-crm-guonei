@@ -298,7 +298,7 @@ class Order extends Common
             $data['sales_commission'] = Request::param('sales_commission'); // 佣金
             $data['split_remarks']    = Request::param('split_remarks');  // 分成备注
             $data['amount_received']  = Request::param('amount_received'); // 已收款金额
-            $data['remark']           = Request::param('remark');         // 备注
+            //$data['remark']           = Request::param('remark');         // 备注
             $data['wechat_receipt_image'] = Request::param('wechat_receipt_image', ''); // 客户微信回执图
             $data['inquiry_assign_image'] = Request::param('inquiry_assign_image', ''); // 产品询盘分配图
             $managerIds   = Request::param('product_manager/a'); // ★ 产品经理（管理员）ID 数组
@@ -951,7 +951,7 @@ class Order extends Common
             $data['sales_commission'] = Request::param('sales_commission'); // 佣金
             $data['split_remarks']    = Request::param('split_remarks');  // 分成备注
             $data['amount_received']  = Request::param('amount_received'); // 已收款金额
-            $data['remark']           = Request::param('remark');         // 备注
+            //$data['remark']           = Request::param('remark');         // 备注
             $data['wechat_receipt_image'] = Request::param('wechat_receipt_image', '');
             $data['inquiry_assign_image'] = Request::param('inquiry_assign_image', '');
             $data['ut_time']          = date("Y-m-d H:i:s");              // 更新操作时间
@@ -1390,7 +1390,7 @@ class Order extends Common
             $data['sales_commission'] = Request::param('sales_commission'); // 佣金
             $data['split_remarks']    = Request::param('split_remarks');  // 分成备注
             $data['amount_received']  = Request::param('amount_received'); // 已收款金额
-            $data['remark']           = Request::param('remark');         // 备注
+            //$data['remark']           = Request::param('remark');         // 备注
             $data['ut_time']          = date("Y-m-d H:i:s");              // 更新操作时间
 
             // 解析协同人 joint_person 字段（支持数组/JSON/逗号分隔字符串）
