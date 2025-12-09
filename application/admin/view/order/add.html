@@ -359,12 +359,12 @@
                 <div class="layui-input-4">
                     <div style="display: flex; gap: 10px;">
                         <div style="flex: 1;">
-                            <select name="province" id="province" lay-search lay-filter="province_select">
+                            <select name="province" id="province" lay-search lay-filter="province_select" lay-verify="required">
                                 <option value="">请选择省份</option>
                             </select>
                         </div>
                         <div style="flex: 1;">
-                            <select name="city" id="city" lay-search>
+                            <select name="city" id="city" lay-search lay-filter="city" lay-verify="required">
                                 <option value="">请先选择省份</option>
                             </select>
                         </div>
@@ -810,6 +810,72 @@
             });
             form.render('select');
             
+            // 保存省和市的固定前缀
+            var provinceCityPrefix = '';
+            var $countryInput = $('#country');
+            
+            // 更新收货地址的函数
+            function updateCountryAddress() {
+                var selectedProvince = $provinceSelect.val();
+                var selectedCity = $citySelect.val();
+                
+                if (selectedProvince && selectedCity) {
+                    // 省和市都选择了，保存旧的前缀用于提取用户输入
+                    var oldPrefix = provinceCityPrefix;
+                    var newPrefix = selectedProvince + selectedCity;
+                    provinceCityPrefix = newPrefix;
+                    
+                    // 获取当前收货地址
+                    var currentValue = $countryInput.val();
+                    var userInput = '';
+                    
+                    // 如果当前值以旧的省和市开头，保留后面的用户输入
+                    if (oldPrefix && currentValue.indexOf(oldPrefix) === 0) {
+                        userInput = currentValue.substring(oldPrefix.length);
+                    } else if (currentValue) {
+                        // 如果当前值不是以旧的省和市开头，但有内容
+                        // 检查是否以新的省和市开头
+                        if (currentValue.indexOf(newPrefix) === 0) {
+                            userInput = currentValue.substring(newPrefix.length);
+                        } else {
+                            // 保留全部内容作为用户输入
+                            userInput = currentValue;
+                        }
+                    }
+                    
+                    // 设置收货地址：省和市 + 用户输入
+                    var newValue = newPrefix + userInput;
+                    $countryInput.val(newValue);
+                    
+                    // 设置光标位置到省和市之后
+                    setTimeout(function() {
+                        var cursorPos = newPrefix.length;
+                        if ($countryInput[0].setSelectionRange) {
+                            $countryInput[0].setSelectionRange(cursorPos, cursorPos);
+                        } else if ($countryInput[0].createTextRange) {
+                            var range = $countryInput[0].createTextRange();
+                            range.collapse(true);
+                            range.moveEnd('character', cursorPos);
+                            range.moveStart('character', cursorPos);
+                            range.select();
+                        }
+                        $countryInput.focus();
+                    }, 10);
+                } else {
+                    // 省或市未选择，保存旧的前缀用于检查
+                    var oldPrefix = provinceCityPrefix;
+                    provinceCityPrefix = '';
+                    
+                    // 如果当前值以之前的省和市开头，移除省和市部分，保留用户输入
+                    var currentValue = $countryInput.val();
+                    if (currentValue && oldPrefix && currentValue.indexOf(oldPrefix) === 0) {
+                        // 保留省和市之后的内容
+                        var userInput = currentValue.substring(oldPrefix.length);
+                        $countryInput.val(userInput);
+                    }
+                }
+            }
+            
             // 省份选择变化时，更新城市下拉框
             form.on('select(province_select)', function(data) {
                 var selectedProvince = data.value;
@@ -825,8 +891,123 @@
                     $citySelect.append('<option value="">请先选择省份</option>');
                 }
                 form.render('select');
+                
+                // 省份选择变化后，更新收货地址（如果城市已选择，会更新；如果省份清空，会移除省和市）
+                updateCountryAddress();
             });
-
+            
+            // 城市选择变化时，更新收货地址
+            form.on('select(city)', function(data) {
+                updateCountryAddress();
+            });
+            
+            // 保护收货地址中的省和市部分，防止修改
+            $countryInput.on('input', function(e) {
+                var currentValue = $(this).val();
+                var cursorPos = this.selectionStart || 0;
+                
+                // 如果省和市已选择
+                if (provinceCityPrefix) {
+                    // 如果当前值不以省和市开头，说明用户删除了省和市，需要恢复
+                    if (currentValue.indexOf(provinceCityPrefix) !== 0) {
+                        // 提取用户输入的部分（省和市之后的内容）
+                        var userInput = '';
+                        
+                        // 如果当前值长度小于省和市前缀长度，说明用户删除了省和市
+                        if (currentValue.length < provinceCityPrefix.length) {
+                            userInput = '';
+                        } else {
+                            // 尝试从当前位置提取用户输入
+                            // 如果当前值包含省和市的一部分，提取后面的内容
+                            var prefixIndex = currentValue.indexOf(provinceCityPrefix);
+                            if (prefixIndex >= 0) {
+                                userInput = currentValue.substring(prefixIndex + provinceCityPrefix.length);
+                            } else {
+                                // 如果完全不包含省和市，保留全部作为用户输入
+                                userInput = currentValue;
+                            }
+                        }
+                        
+                        // 恢复省和市前缀
+                        var newValue = provinceCityPrefix + userInput;
+                        $(this).val(newValue);
+                        
+                        // 设置光标位置到省和市之后
+                        setTimeout(function() {
+                            var newCursorPos = provinceCityPrefix.length;
+                            if ($countryInput[0].setSelectionRange) {
+                                $countryInput[0].setSelectionRange(newCursorPos, newCursorPos);
+                            }
+                        }, 0);
+                        return false;
+                    }
+                    
+                    // 如果光标在省和市之前，移动到省和市之后
+                    if (cursorPos < provinceCityPrefix.length) {
+                        setTimeout(function() {
+                            if ($countryInput[0].setSelectionRange) {
+                                $countryInput[0].setSelectionRange(provinceCityPrefix.length, provinceCityPrefix.length);
+                            }
+                        }, 0);
+                    }
+                }
+            });
+            
+            // 监听键盘事件，防止在省和市之前输入
+            $countryInput.on('keydown', function(e) {
+                if (provinceCityPrefix) {
+                    var cursorPos = this.selectionStart || 0;
+                    
+                    // 如果光标在省和市之前，且不是方向键，阻止输入
+                    if (cursorPos < provinceCityPrefix.length) {
+                        // 允许方向键、删除键等
+                        var allowedKeys = [37, 38, 39, 40, 35, 36, 8, 46]; // 方向键、Home、End、Backspace、Delete
+                        if (allowedKeys.indexOf(e.keyCode) === -1) {
+                            e.preventDefault();
+                            // 将光标移到省和市之后
+                            setTimeout(function() {
+                                if ($countryInput[0].setSelectionRange) {
+                                    $countryInput[0].setSelectionRange(provinceCityPrefix.length, provinceCityPrefix.length);
+                                }
+                            }, 0);
+                            return false;
+                        }
+                    }
+                    
+                    // 如果尝试删除省和市部分，阻止删除
+                    if (e.keyCode === 8 || e.keyCode === 46) { // Backspace 或 Delete
+                        var start = this.selectionStart || 0;
+                        var end = this.selectionEnd || 0;
+                        
+                        // 如果选中的范围包含省和市部分，阻止删除
+                        if (start < provinceCityPrefix.length || end <= provinceCityPrefix.length) {
+                            e.preventDefault();
+                            // 将光标移到省和市之后
+                            setTimeout(function() {
+                                if ($countryInput[0].setSelectionRange) {
+                                    $countryInput[0].setSelectionRange(provinceCityPrefix.length, provinceCityPrefix.length);
+                                }
+                            }, 0);
+                            return false;
+                        }
+                    }
+                }
+            });
+            
+            // 监听鼠标点击，防止在省和市之前定位光标
+            $countryInput.on('click', function(e) {
+                if (provinceCityPrefix) {
+                    setTimeout(function() {
+                        var cursorPos = $countryInput[0].selectionStart || 0;
+                        if (cursorPos < provinceCityPrefix.length) {
+                            if ($countryInput[0].setSelectionRange) {
+                                $countryInput[0].setSelectionRange(provinceCityPrefix.length, provinceCityPrefix.length);
+                            }
+                        }
+                    }, 0);
+                }
+            });
+            
         // 对初始产品名称下拉选项调用 boldCategory，使分类名加粗
         // 注意：boldCategory 函数已移到全局作用域
         setTimeout(function() {

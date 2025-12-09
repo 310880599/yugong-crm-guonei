@@ -88,11 +88,7 @@ class Common extends Controller
         //     return $teamList;
         // }
         $teamList = Db::name('admin')->group('team_name')->column('team_name');
-<<<<<<< HEAD
         //cache('teamList', $teamList);
-=======
-        // cache('teamList', $teamList);
->>>>>>> github
         return $teamList;
     }
 
