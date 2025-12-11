@@ -184,25 +184,11 @@
                         $('#oper_user_input').val(result['msg']['oper_user']);
                         $('#country').val(result['msg']['country']);
                         $('#kh_username').val(result['msg']['kh_username']);
-                        // Match the source dropdown by text (case-insensitive match)
+                        // 获取来源值用于更新运营端口选项（不自动设置询盘来源）
                         var sourceValue = result['msg']['source'] || "";
-                        var lowerSourceValue = sourceValue.toLowerCase();
                         var $sourceSelect = $('#source');
-                        var matched = false;
-                        $sourceSelect.find('option').each(function () {
-                            var optionValue = $(this).val();
-                            if (optionValue !== '' && lowerSourceValue.includes(optionValue.toLowerCase())) {
-                                $sourceSelect.val(optionValue);
-                                matched = true;
-                                return false; // break loop
-                            }
-                        });
-                        if (!matched) {
-                            $sourceSelect.val('');
-                        }
-                        layui.form.render('select');
-                        // 如果来源匹配成功，更新运营端口选项并自动选择
-                        if (matched) {
+                        // 更新运营端口选项并自动选择（不依赖于询盘来源是否匹配）
+                        if (sourceValue) {
                             // 使用 setTimeout 确保 layui 已经初始化完成
                             setTimeout(function() {
                                 // 触发 select 事件以更新运营端口选项列表
@@ -329,7 +315,12 @@
                         $('#profit').val('0.00');
                         $('#margin_rate').val('0.00');
                     }
-                    $('#checklabel').html(result['msg']['msg']);
+                    // 显示提示信息，如果是成交客户，在绿色消息后面添加红色字符
+                    var messageHtml = result['msg']['msg'] || '';
+                    if (result['msg']['is_success'] == 1 || result['msg']['is_success'] === true) {
+                        messageHtml += '<span style="color: red;">由于该客户已成交，询盘来源请选择返单，运营端口根据实际情况选择</span>';
+                    }
+                    $('#checklabel').html(messageHtml);
                 },
                 error: function () {
                     alert("异常！");
