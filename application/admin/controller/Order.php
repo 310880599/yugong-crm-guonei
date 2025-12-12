@@ -1823,7 +1823,133 @@ class Order extends Common
     //订单审核拒绝的处理
     public function rejectIndex()
     {
+        $id = input('post.id/d', 0);
+        $reason = input('post.audit_remark/s', '');
+
+        if (!$id || $reason === '') {
+            return json(['code' => 0, 'msg' => '参数错误']);
+        }
+
+        $adminId = session('aid');
+
+        $res = Db::name('crm_client_order')
+            ->where('id', $id)
+            ->update([
+                'check_status'  => 3,
+                'audit_user_id' => $adminId,
+                'audit_time'    => date('Y-m-d H:i:s'),
+                'audit_remark'  => $reason,
+            ]);
+
+        if ($res !== false) {
+            return json(['code' => 1, 'msg' => '已拒绝该订单']);
+        } else {
+            return json(['code' => 0, 'msg' => '操作失败，请重试']);
+        }
        
+    }
+
+    
+    /**
+     * ★★★ 新增：审核失败订单重新提交到“待审核” ★★★
+     */
+    public function resubmitIndex()
+    {
+        if (!request()->isPost()) {
+            return json(['code' => 0, 'msg' => '非法请求']);
+        }
+
+        $id = input('post.id/d', 0);
+        if (!$id) {
+            return json(['code' => 0, 'msg' => '参数错误']);
+        }
+
+        // 权限校验：目前简单限制为超级管理员，后续你可以扩展为财务等
+        $adminId = (int)session('aid');
+        $groupId = (int)session('gid');   // 若你在登录时有写入 gid，可用它区分财务
+
+        if ($adminId !== 1 && $groupId !== 15) {
+            return json(['code' => 0, 'msg' => '您没有重新提交的权限']);
+        }
+
+        // 先确认这条订单确实是“审核失败”状态
+        $order = Db::name('crm_client_order')
+            ->where('id', $id)
+            ->field('id,check_status')
+            ->find();
+
+        if (!$order) {
+            return json(['code' => 0, 'msg' => '订单不存在或已删除']);
+        }
+
+        if ((int)$order['check_status'] !== 3) {
+            return json(['code' => 0, 'msg' => '只有审核失败的订单才能重新提交']);
+        }
+
+        // 更新为待审核状态
+        $updateData = [
+            'check_status'  => 1,                 // 待审核
+            'status'        => '待审核',          // 文本字段，兼容历史逻辑
+            // 重新提交时，可以清空审核人和审核时间，让下一次审核更干净
+            'audit_user_id' => null,
+            'audit_time'    => null,
+            // 是否清空上一次的审核意见，看你业务需求：
+            // 想保留历史就不要清空；想让下一次审核写新的理由就清空
+            'audit_remark'  => null,
+        ];
+
+        $res = Db::name('crm_client_order')
+            ->where('id', $id)
+            ->update($updateData);
+
+        if ($res !== false) {
+            return json(['code' => 1, 'msg' => '重新提交成功，该订单已回到待审核列表']);
+        } else {
+            return json(['code' => 0, 'msg' => '重新提交失败，请重试']);
+        }
+    }
+
+    /**
+     * 【新增】获取审核失败信息（给“原因”按钮用）
+     */
+    public function auditInfo()
+    {
+        if (!request()->isAjax()) {
+            return json(['code' => 0, 'msg' => '非法请求']);
+        }
+
+        $id = input('id/d', 0);
+        if (!$id) {
+            return json(['code' => 0, 'msg' => '参数错误']);
+        }
+
+        // 关联 admin 表，取审核人名字
+        $info = Db::name('crm_client_order')
+            ->alias('o')
+            ->leftJoin('admin a', 'a.admin_id = o.audit_user_id')
+            ->field('o.check_status,o.audit_remark,o.audit_time,a.username as audit_user_name')
+            ->where('o.id', $id)
+            ->find();
+
+        if (!$info) {
+            return json(['code' => 0, 'msg' => '订单不存在或已删除']);
+        }
+
+        // 状态文字
+        $statusMap = [
+            1 => '待审核',
+            2 => '审核通过',
+            3 => '审核失败',
+        ];
+        $info['check_status_text'] = isset($statusMap[$info['check_status']])
+            ? $statusMap[$info['check_status']]
+            : '未知状态';
+
+        return json([
+            'code' => 1,
+            'msg'  => '获取成功',
+            'data' => $info,
+        ]);
     }
 
 
@@ -2359,15 +2485,16 @@ class Order extends Common
         $pr_user = Session::get('username') ?? '';
         
         // 确保只显示当前用户的订单：自己创建的或自己是负责人的
-        if (!empty($pr_user)) {
-            $where[] = function($query) use ($pr_user) {
-                $query->where('at_user', '=', $pr_user)
-                      ->whereOr('pr_user', '=', $pr_user);
-            };
-        } else {
-            // 如果没有用户名，返回空结果
-            $where[] = ['id', '=', 0];
-        }
+        // if (!empty($pr_user)) {
+        //     $where[] = function($query) use ($pr_user) {
+        //         $query->where('at_user', '=', $pr_user)
+        //               ->whereOr('pr_user', '=', $pr_user);
+        //     };
+        // } else {
+        //     // 如果没有用户名，返回空结果
+        //     $where[] = ['id', '=', 0];
+        // }
+        if (empty($pr_user)) { $where[] = ['id', '=', 0]; }
         
         $client_where[] = ['pr_user', '=', $pr_user];
         //判断权限
@@ -2487,15 +2614,16 @@ class Order extends Common
         $pr_user = Session::get('username') ?? '';
         
         // 确保只显示当前用户的订单：自己创建的或自己是负责人的
-        if (!empty($pr_user)) {
-            $where[] = function($query) use ($pr_user) {
-                $query->where('at_user', '=', $pr_user)
-                      ->whereOr('pr_user', '=', $pr_user);
-            };
-        } else {
-            // 如果没有用户名，返回空结果
-            $where[] = ['id', '=', 0];
-        }
+        // if (!empty($pr_user)) {
+        //     $where[] = function($query) use ($pr_user) {
+        //         $query->where('at_user', '=', $pr_user)
+        //               ->whereOr('pr_user', '=', $pr_user);
+        //     };
+        // } else {
+        //     // 如果没有用户名，返回空结果
+        //     $where[] = ['id', '=', 0];
+        // }
+        if (empty($pr_user)) { $where[] = ['id', '=', 0]; }
         
         $client_where[] = ['pr_user', '=', $pr_user];
         //判断权限

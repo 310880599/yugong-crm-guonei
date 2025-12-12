@@ -499,7 +499,16 @@
     <!-- {//if $Think.session.aid == 1} -->
     <!-- <a class="layui-btn  layui-btn-xs" lay-event="shenhe"><i class="layui-icon">&#xe642;</i>审核通过</a> -->
     <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="details"><i class="layui-icon">&#xe615;</i> 详情</a>
+    <!-- 【新增】审核失败原因按钮，所有人都能看到 -->
+    <a class="layui-btn layui-btn-warm layui-btn-xs" lay-event="reason">
+        <i class="layui-icon">&#xe60b;</i> 原因
+    </a>
     {if session('aid') eq 1} 
+    <a class="layui-btn  layui-btn-xs" lay-event="edit"><i class="layui-icon">&#xe642;</i>编辑</a>
+    <!-- ★★★ 新增：重新提交按钮 ★★★ -->
+    <a class="layui-btn layui-btn-xs layui-btn-normal" lay-event="resubmit">
+        <i class="layui-icon">&#xe669;</i> 重新提交
+    </a>
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon">&#xe640;</i>删除</a>
     {/if}
     <!-- {/if} -->
@@ -547,7 +556,7 @@
                     { field: 'pr_user', title: '负责人', hide: false , width: 180},
                     { field: 'team_name', title: '团队', hide: false , width: 180},
                     { field: 'create_time', title: '创建时间' ,hide: false , width: 180},
-                    { title: '操作', toolbar: '#action', width: 320, minWidth: 320, fixed: 'right', align: 'left' }
+                    { title: '操作', toolbar: '#action', width: 520, minWidth: 520, fixed: 'right', align: 'left' }
                 ]],
                 limit: 10, //每页默认显示的数量
 
@@ -601,6 +610,88 @@
                         maxmin: false, //开启最大化最小化按钮
                         content: ["{:url('Order/details')}?id=" + data.id]
                     });
+                }
+                // 【新增】审核失败原因弹窗
+                else if (obj.event === 'reason') {
+                    $.getJSON("{:url('Order/auditInfo')}", {id: data.id}, function(res) {
+                        if (res.code === 1) {
+                            var d = res.data || {};
+
+                            var content = ''
+                                + '<div class="layui-form" style="padding:15px 25px 10px 10px;">'
+                                + '  <div class="layui-form-item">'
+                                + '    <label class="layui-form-label">审核状态：</label>'
+                                + '    <div class="layui-input-block" style="line-height:36px;">'
+                                + (d.check_status_text || '审核失败')
+                                + '    </div>'
+                                + '  </div>'
+
+                                + '  <div class="layui-form-item">'
+                                + '    <label class="layui-form-label">失败原因：</label>'
+                                + '    <div class="layui-input-block" style="line-height:24px;white-space:pre-wrap;">'
+                                + (d.audit_remark || '未填写')
+                                + '    </div>'
+                                + '  </div>'
+
+                                + '  <div class="layui-form-item">'
+                                + '    <label class="layui-form-label">审核人：</label>'
+                                + '    <div class="layui-input-block" style="line-height:36px;">'
+                                + (d.audit_user_name || '')
+                                + '    </div>'
+                                + '  </div>'
+
+                                + '  <div class="layui-form-item">'
+                                + '    <label class="layui-form-label">审核时间：</label>'
+                                + '    <div class="layui-input-block" style="line-height:36px;">'
+                                + (d.audit_time || '')
+                                + '    </div>'
+                                + '  </div>'
+                                + '</div>';
+
+                            layer.open({
+                                type: 1,
+                                title: '审核失败原因',
+                                area: ['520px', 'auto'],
+                                shadeClose: true,
+                                btn: ['确定', '关闭'],
+                                content: content,
+                                yes: function(index){
+                                    // 点击“确定”关闭
+                                    layer.close(index);
+                                }
+                                // 第二个“关闭”按钮 layer 会自动关闭，无需再写
+                            });
+                        } else {
+                            layer.msg(res.msg || '获取审核信息失败', {icon: 2});
+                        }
+                    }).fail(function () {
+                        layer.msg('请求失败，请稍后重试', {icon: 2});
+                    });
+                }
+                // ★★★ 新增：重新提交审核 ★★★
+                else if (obj.event === 'resubmit') {
+                    layer.confirm(
+                        '确认要将该订单重新提交到“待审核订单”吗？',
+                        {icon: 3, title: '重新提交确认'},
+                        function (index) {
+                            var loading = layer.load(1, { shade: [0.1, '#fff'] });
+
+                            $.post("{:url('Order/resubmitIndex')}", {id: data.id}, function (res) {
+                                layer.close(loading);
+                                if (res.code === 1) {
+                                    layer.msg(res.msg || '重新提交成功', {time: 1000, icon: 1});
+                                    tableIn.reload();
+                                } else {
+                                    layer.msg(res.msg || '操作失败', {time: 2000, icon: 2});
+                                }
+                            }).fail(function () {
+                                layer.close(loading);
+                                layer.msg('请求失败，请稍后重试', {time: 2000, icon: 2});
+                            });
+
+                            layer.close(index);
+                        }
+                    );
                 }
                 else if (obj.event === 'shenhe') {
                     layer.confirm('确认金额和客户信息,确认审核业绩吗？', function (index) {
